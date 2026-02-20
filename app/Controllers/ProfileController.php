@@ -4,9 +4,13 @@ namespace App\Controllers;
 use Core\Controller;
 use App\Models\Profile;
 use App\Models\Structure;
+use App\ListConfig;
 
 class ProfileController extends Controller
 {
+    private const BASE_URL = '/profile';
+    private const MODULE = 'profile';
+
     public function __construct()
     {
         $this->requireAuth();
@@ -15,8 +19,27 @@ class ProfileController extends Controller
     public function index(): void
     {
         $this->requireCapability('view_profiles');
-        $profiles = Profile::all();
-        $this->view('profile/index', ['profiles' => $profiles]);
+        $columns = ListConfig::resolveFromRequest(self::MODULE);
+        $_SESSION['list_columns'][self::MODULE] = $columns;
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+
+        $pagination = Profile::listPaginated($search, $columns, $sort, $order, $page, $perPage);
+
+        $this->view('profile/index', [
+            'profiles' => $pagination['items'],
+            'listModule' => self::MODULE,
+            'listBaseUrl' => self::BASE_URL,
+            'listSearch' => $search,
+            'listSort' => $sort,
+            'listOrder' => $order,
+            'listColumns' => $columns,
+            'listAllColumns' => ListConfig::getColumns(self::MODULE),
+            'listPagination' => $pagination,
+        ]);
     }
 
     public function create(): void
