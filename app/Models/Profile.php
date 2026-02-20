@@ -51,6 +51,8 @@ class Profile extends Model
         if (!$aidPapsid) return ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => $perPage, 'total_pages' => 0];
 
         $projNameAttrId = $db->query("SELECT id FROM eav_attributes WHERE entity_type='project' AND name='name'")->fetchColumn();
+        $structOwnerAttrId = $db->query("SELECT id FROM eav_attributes WHERE entity_type='structure' AND name='owner_id'")->fetchColumn();
+        $structOwnerAttrId = $structOwnerAttrId ? (int) $structOwnerAttrId : 0;
 
         $sortCol = match ($sortBy) {
             'papsid' => 'p.papsid',
@@ -59,6 +61,7 @@ class Profile extends Model
             'age' => 'CAST(p.age AS UNSIGNED)',
             'contact_number' => 'p.contact_number',
             'project_name' => 'project_name',
+            'other_details' => 'structure_count',
             default => 'p.id',
         };
         $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
@@ -74,6 +77,7 @@ class Profile extends Model
             if (in_array('age', $searchColumns)) { $conds[] = 'CAST(p.age AS CHAR) LIKE ?'; $params[] = $term; }
             if (in_array('contact_number', $searchColumns)) { $conds[] = 'p.contact_number LIKE ?'; $params[] = $term; }
             if (in_array('project_name', $searchColumns)) { $conds[] = 'COALESCE(proj.vname, \'\') LIKE ?'; $params[] = $term; }
+            if (in_array('other_details', $searchColumns)) { $conds[] = 'CAST(COALESCE(struct_cnt.cnt, 0) AS CHAR) LIKE ?'; $params[] = $term; }
             if (!empty($conds)) {
                 $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
             }
@@ -83,7 +87,8 @@ class Profile extends Model
         $limit = max(1, min(100, $perPage));
 
         $sql = "SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id,
-            COALESCE(proj.vname, '') as project_name
+            COALESCE(proj.vname, '') as project_name,
+            COALESCE(struct_cnt.cnt, 0) as structure_count
 FROM (
   SELECT e.id,
     MAX(CASE WHEN v.attribute_id = $aidPapsid THEN v.value END) as papsid,
@@ -103,6 +108,13 @@ LEFT JOIN (
   LEFT JOIN eav_values pv ON pv.entity_id = pe.id AND pv.attribute_id = " . (int)$projNameAttrId . "
   WHERE pe.entity_type = 'project'
 ) proj ON proj.pid = p.project_id
+LEFT JOIN (
+  SELECT CAST(ov.value AS UNSIGNED) as profile_id, COUNT(*) as cnt
+  FROM eav_values ov
+  JOIN eav_entities se ON ov.entity_id = se.id
+  WHERE ov.attribute_id = $structOwnerAttrId AND se.entity_type = 'structure'
+  GROUP BY ov.value
+) struct_cnt ON struct_cnt.profile_id = p.id
 WHERE 1=1 $searchCond
 ORDER BY $sortCol $dir
 LIMIT $limit OFFSET $offset";
@@ -130,6 +142,13 @@ LEFT JOIN (
   LEFT JOIN eav_values pv ON pv.entity_id = pe.id AND pv.attribute_id = " . (int)$projNameAttrId . "
   WHERE pe.entity_type = 'project'
 ) proj ON proj.pid = p.project_id
+LEFT JOIN (
+  SELECT CAST(ov.value AS UNSIGNED) as profile_id, COUNT(*) as cnt
+  FROM eav_values ov
+  JOIN eav_entities se ON ov.entity_id = se.id
+  WHERE ov.attribute_id = $structOwnerAttrId AND se.entity_type = 'structure'
+  GROUP BY ov.value
+) struct_cnt ON struct_cnt.profile_id = p.id
 WHERE 1=1 $searchCond";
 
         $stmtCount = $db->prepare($countSql);

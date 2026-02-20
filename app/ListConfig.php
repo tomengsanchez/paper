@@ -14,6 +14,7 @@ class ListConfig
             ['key' => 'age', 'label' => 'Age', 'sortable' => true],
             ['key' => 'contact_number', 'label' => 'Contact', 'sortable' => true],
             ['key' => 'project_name', 'label' => 'Project', 'sortable' => true],
+            ['key' => 'other_details', 'label' => 'Other Details', 'sortable' => true],
         ],
         'structure' => [
             ['key' => 'strid', 'label' => 'Structure ID', 'sortable' => true],

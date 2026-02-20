@@ -32,9 +32,14 @@ ob_start();
                 <tr>
                     <?php foreach ($listColumns as $key): ?>
                     <td><?php
-                        $v = \App\ListHelper::getValue($p, $key);
-                        if ($key === 'age') echo (int)$v;
-                        else echo htmlspecialchars($v ?? '-');
+                        if ($key === 'other_details') {
+                            $cnt = (int)($p->structure_count ?? 0);
+                            echo htmlspecialchars('Number of Structure: ' . $cnt);
+                        } else {
+                            $v = \App\ListHelper::getValue($p, $key);
+                            if ($key === 'age') echo (int)$v;
+                            else echo htmlspecialchars($v ?? '-');
+                        }
                     ?></td>
                     <?php endforeach; ?>
                     <td>
