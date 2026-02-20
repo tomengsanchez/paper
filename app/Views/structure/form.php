@@ -40,32 +40,40 @@ $imgIdx = 0;
             <div class="mb-3">
                 <label class="form-label">Tagging Images</label>
                 <input type="file" name="tagging_images[]" class="form-control" accept="image/*" multiple>
+                <div id="taggingImagesContainer" class="d-flex flex-wrap gap-2 mt-2">
                 <?php if (!empty($taggingImages)): ?>
-                <div class="d-flex flex-wrap gap-2 mt-2">
                     <?php foreach ($taggingImages as $img): 
                         $imgUrl = \App\Controllers\StructureController::imageUrl($img);
                     ?>
-                    <a href="#" class="img-thumb" data-src="<?= htmlspecialchars($imgUrl) ?>" data-index="<?= $imgIdx++ ?>" style="cursor:pointer;">
-                        <img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="rounded" style="width:80px;height:80px;object-fit:cover;" onerror="this.style.background='#eee';this.alt='Image failed to load';">
-                    </a>
+                    <div class="struct-img-wrapper position-relative d-inline-block">
+                        <a href="#" class="img-thumb" data-src="<?= htmlspecialchars($imgUrl) ?>" data-index="<?= $imgIdx++ ?>" style="cursor:pointer;">
+                            <img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="rounded" style="width:80px;height:80px;object-fit:cover;" onerror="this.style.background='#eee';this.alt='Image failed to load';">
+                        </a>
+                        <button type="button" class="struct-img-remove btn btn-danger btn-sm position-absolute top-0 end-0" data-path="<?= htmlspecialchars($img) ?>" data-type="tagging" title="Remove image" style="padding:1px 5px;font-size:12px;">&times;</button>
+                    </div>
                     <?php endforeach; ?>
-                </div>
                 <?php endif; ?>
+                </div>
+                <div id="taggingImagesRemove"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Structure Images</label>
                 <input type="file" name="structure_images[]" class="form-control" accept="image/*" multiple>
+                <div id="structureImagesContainer" class="d-flex flex-wrap gap-2 mt-2">
                 <?php if (!empty($structureImages)): ?>
-                <div class="d-flex flex-wrap gap-2 mt-2">
                     <?php foreach ($structureImages as $img): 
                         $imgUrl = \App\Controllers\StructureController::imageUrl($img);
                     ?>
-                    <a href="#" class="img-thumb" data-src="<?= htmlspecialchars($imgUrl) ?>" data-index="<?= $imgIdx++ ?>" style="cursor:pointer;">
-                        <img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="rounded" style="width:80px;height:80px;object-fit:cover;" onerror="this.style.background='#eee';this.alt='Image failed to load';">
-                    </a>
+                    <div class="struct-img-wrapper position-relative d-inline-block">
+                        <a href="#" class="img-thumb" data-src="<?= htmlspecialchars($imgUrl) ?>" data-index="<?= $imgIdx++ ?>" style="cursor:pointer;">
+                            <img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="rounded" style="width:80px;height:80px;object-fit:cover;" onerror="this.style.background='#eee';this.alt='Image failed to load';">
+                        </a>
+                        <button type="button" class="struct-img-remove btn btn-danger btn-sm position-absolute top-0 end-0" data-path="<?= htmlspecialchars($img) ?>" data-type="structure" title="Remove image" style="padding:1px 5px;font-size:12px;">&times;</button>
+                    </div>
                     <?php endforeach; ?>
-                </div>
                 <?php endif; ?>
+                </div>
+                <div id="structureImagesRemove"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Other Details</label>
@@ -184,6 +192,15 @@ $(function(){
             $('#imgModalViewport').css('cursor', 'grab');
             isDragging = false;
         }
+    });
+    $(document).on('click', '.struct-img-remove', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        var path = $(this).data('path');
+        var type = $(this).data('type');
+        var removeEl = type === 'tagging' ? '#taggingImagesRemove' : '#structureImagesRemove';
+        $(this).closest('.struct-img-wrapper').remove();
+        $('<input>').attr({ type: 'hidden', name: type + '_images_remove[]', value: path }).appendTo(removeEl);
     });
 });
 </script>";

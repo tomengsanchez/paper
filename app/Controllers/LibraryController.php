@@ -32,7 +32,7 @@ class LibraryController extends Controller
             'description' => trim($_POST['description'] ?? ''),
             'coordinator_id' => (int) ($_POST['coordinator_id'] ?? 0) ?: null,
         ]);
-        $this->redirect('/library');
+        $this->redirect('/library/view/' . $id);
     }
 
     public function show(int $id): void
@@ -65,7 +65,7 @@ class LibraryController extends Controller
             'description' => trim($_POST['description'] ?? ''),
             'coordinator_id' => (int) ($_POST['coordinator_id'] ?? 0) ?: null,
         ]);
-        $this->redirect('/library');
+        $this->redirect('/library/view/' . $id);
     }
 
     public function delete(int $id): void

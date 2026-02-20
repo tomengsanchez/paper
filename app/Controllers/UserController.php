@@ -45,7 +45,7 @@ class UserController extends Controller
         $db = Database::getInstance();
         $stmt = $db->prepare('INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)');
         $stmt->execute([$username, $email ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId]);
-        $this->redirect('/users');
+        $this->redirect('/users/view/' . (int) $db->lastInsertId());
     }
 
     public function show(int $id): void
@@ -93,7 +93,7 @@ class UserController extends Controller
             $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, role_id = ? WHERE id = ?');
             $stmt->execute([$username, $email ?: null, $roleId, $id]);
         }
-        $this->redirect('/users');
+        $this->redirect('/users/view/' . $id);
     }
 
     public function delete(int $id): void

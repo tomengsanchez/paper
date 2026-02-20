@@ -29,7 +29,7 @@ class ProfileController extends Controller
     public function store(): void
     {
         $this->requireCapability('add_profiles');
-        Profile::create([
+        $id = Profile::create([
             'papsid' => trim($_POST['papsid'] ?? Profile::generatePAPSID()),
             'control_number' => trim($_POST['control_number'] ?? ''),
             'full_name' => trim($_POST['full_name'] ?? ''),
@@ -37,7 +37,7 @@ class ProfileController extends Controller
             'contact_number' => trim($_POST['contact_number'] ?? ''),
             'project_id' => (int) ($_POST['project_id'] ?? 0) ?: null,
         ]);
-        $this->redirect('/profile');
+        $this->redirect('/profile/view/' . $id);
     }
 
     public function show(int $id): void
@@ -74,7 +74,7 @@ class ProfileController extends Controller
             'contact_number' => trim($_POST['contact_number'] ?? ''),
             'project_id' => (int) ($_POST['project_id'] ?? 0) ?: null,
         ]);
-        $this->redirect('/profile');
+        $this->redirect('/profile/view/' . $id);
     }
 
     public function delete(int $id): void

@@ -44,7 +44,7 @@ class StructureController extends Controller
         $this->requireCapability('add_structure');
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
-        Structure::create([
+        $id = Structure::create([
             'strid' => trim($_POST['strid'] ?? Structure::generateSTRID()),
             'owner_id' => (int) ($_POST['owner_id'] ?? 0) ?: null,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
@@ -53,7 +53,7 @@ class StructureController extends Controller
             'structure_images' => json_encode($structurePaths),
             'other_details' => trim($_POST['other_details'] ?? ''),
         ]);
-        $this->redirect('/structure');
+        $this->redirect('/structure/view/' . $id);
     }
 
     public function show(int $id): void
@@ -88,6 +88,10 @@ class StructureController extends Controller
         }
         $taggingPaths = Structure::parseImages($structure->tagging_images ?? '[]');
         $structurePaths = Structure::parseImages($structure->structure_images ?? '[]');
+        $removeTagging = (array) ($_POST['tagging_images_remove'] ?? []);
+        $removeStructure = (array) ($_POST['structure_images_remove'] ?? []);
+        $taggingPaths = array_values(array_diff($taggingPaths, $removeTagging));
+        $structurePaths = array_values(array_diff($structurePaths, $removeStructure));
         $taggingPaths = array_merge($taggingPaths, $this->handleUpload('tagging_images', 'tagging'));
         $structurePaths = array_merge($structurePaths, $this->handleUpload('structure_images', 'images'));
         Structure::update($id, [
@@ -99,7 +103,7 @@ class StructureController extends Controller
             'structure_images' => json_encode($structurePaths),
             'other_details' => trim($_POST['other_details'] ?? ''),
         ]);
-        $this->redirect('/structure');
+        $this->redirect('/structure/view/' . $id);
     }
 
     public function delete(int $id): void
@@ -144,6 +148,10 @@ class StructureController extends Controller
         }
         $taggingPaths = Structure::parseImages($structure->tagging_images ?? '[]');
         $structurePaths = Structure::parseImages($structure->structure_images ?? '[]');
+        $removeTagging = (array) ($_POST['tagging_images_remove'] ?? []);
+        $removeStructure = (array) ($_POST['structure_images_remove'] ?? []);
+        $taggingPaths = array_values(array_diff($taggingPaths, $removeTagging));
+        $structurePaths = array_values(array_diff($structurePaths, $removeStructure));
         $taggingPaths = array_merge($taggingPaths, $this->handleUpload('tagging_images', 'tagging'));
         $structurePaths = array_merge($structurePaths, $this->handleUpload('structure_images', 'images'));
         Structure::update($id, [

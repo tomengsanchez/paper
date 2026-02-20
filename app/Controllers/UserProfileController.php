@@ -32,12 +32,12 @@ class UserProfileController extends Controller
     {
         $this->requireCapability('add_user_profiles');
         try {
-            UserProfile::create([
+            $id = UserProfile::create([
                 'name' => trim($_POST['name'] ?? ''),
                 'role_id' => (int)($_POST['role_id'] ?? 0) ?: null,
                 'user_id' => (int)($_POST['user_id'] ?? 0) ?: null,
             ]);
-            $this->redirect('/users/profiles');
+            $this->redirect('/users/profiles/view/' . $id);
         } catch (\RuntimeException $e) {
             $roles = Database::getInstance()->query('SELECT * FROM roles ORDER BY name')->fetchAll(\PDO::FETCH_OBJ);
             $users = UserProfile::getUsersForDropdown(null);
@@ -83,7 +83,7 @@ class UserProfileController extends Controller
                 'role_id' => (int)($_POST['role_id'] ?? 0) ?: null,
                 'user_id' => (int)($_POST['user_id'] ?? 0) ?: null,
             ]);
-            $this->redirect('/users/profiles');
+            $this->redirect('/users/profiles/view/' . $id);
         } catch (\RuntimeException $e) {
             $profile = UserProfile::find($id);
             $roles = Database::getInstance()->query('SELECT * FROM roles ORDER BY name')->fetchAll(\PDO::FETCH_OBJ);

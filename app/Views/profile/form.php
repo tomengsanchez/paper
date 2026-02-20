@@ -118,6 +118,7 @@ $(function(){
     });
     var profileId = " . $profileIdForStructures . ";
     var baseUrl = " . json_encode($baseUrl) . ";
+    var removedTagging = [], removedStructure = [];
     function imgUrl(path) {
         if (!path) return '';
         if (/^\\/uploads\\/structure\\/(tagging|images)\\/([a-zA-Z0-9_.-]+)$/.test(path)) {
@@ -154,21 +155,25 @@ $(function(){
         $('input[name=strid]').val('').attr('placeholder', 'auto-generated');
         $('#embedTaggingImages').empty();
         $('#embedStructureImages').empty();
+        removedTagging = []; removedStructure = [];
         $('#structuresModalTitle').text('Add Structure');
         $.get('/api/structure/next-strid', function(r) { $('input[name=strid]').val(r.strid || ''); });
         new bootstrap.Modal(document.getElementById('structuresModal')).show();
     });
-    function renderImgThumbs(urls) {
-        if (!urls || !urls.length) return '';
+    function renderImgThumbs(paths, type) {
+        if (!paths || !paths.length) return '';
         var html = '';
-        urls.forEach(function(u) {
-            var safe = u.replace(/\"/g,'&quot;').replace(/&/g,'&amp;');
-            html += '<a href=\"#\" class=\"struct-img-thumb\" data-src=\"'+safe+'\" style=\"cursor:pointer;\"><img src=\"'+safe+'\" alt=\"\" class=\"rounded\" style=\"width:40px;height:40px;object-fit:cover;\" onerror=\"this.style.display=\\'none\\'\"></a>';
+        paths.forEach(function(p) {
+            var u = imgUrl(p);
+            var safeUrl = u.replace(/\"/g,'&quot;').replace(/&/g,'&amp;');
+            var safePath = (p||'').replace(/\"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            html += '<div class=\"struct-img-wrapper position-relative d-inline-block\"><a href=\"#\" class=\"struct-img-thumb\" data-src=\"'+safeUrl+'\" style=\"cursor:pointer;\"><img src=\"'+u+'\" alt=\"\" class=\"rounded\" style=\"width:40px;height:40px;object-fit:cover;\" onerror=\"this.style.display=\\'none\\'\"></a><button type=\"button\" class=\"embed-struct-img-remove btn btn-danger btn-sm position-absolute top-0 end-0\" data-path=\"'+safePath+'\" data-type=\"'+type+'\" title=\"Remove image\" style=\"padding:1px 5px;font-size:11px;\">&times;</button></div>';
         });
         return html;
     }
     $(document).on('click', '.structure-edit', function() {
         var id = $(this).data('id');
+        removedTagging = []; removedStructure = [];
         $.get('/api/structure/' + id, function(s) {
             $('input[name=owner_id]').val(profileId);
             $('input[name=structure_id]').val(s.id);
@@ -179,8 +184,8 @@ $(function(){
             $('#structureFormLightbox input[type=file]').val('');
             var taggingImgs = []; try { taggingImgs = JSON.parse(s.tagging_images || '[]'); } catch(e){}
             var structureImgs = []; try { structureImgs = JSON.parse(s.structure_images || '[]'); } catch(e){}
-            $('#embedTaggingImages').html(renderImgThumbs(taggingImgs.map(imgUrl)));
-            $('#embedStructureImages').html(renderImgThumbs(structureImgs.map(imgUrl)));
+            $('#embedTaggingImages').html(renderImgThumbs(taggingImgs, 'tagging'));
+            $('#embedStructureImages').html(renderImgThumbs(structureImgs, 'structure'));
             $('#structuresModalTitle').text('Edit Structure');
             new bootstrap.Modal(document.getElementById('structuresModal')).show();
         });
@@ -196,13 +201,23 @@ $(function(){
         var src = $(this).attr('data-src') || $(this).find('img').attr('src');
         if (src) { $('#profileStructImgSrc').attr('src', src); $('#profileStructImgModal').modal('show'); }
     });
+    $(document).on('click', '.embed-struct-img-remove', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var path = $(this).data('path');
+        var type = $(this).data('type');
+        if (type === 'tagging') removedTagging.push(path); else removedStructure.push(path);
+        $(this).closest('.struct-img-wrapper').remove();
+    });
     $('#structureFormLightbox').on('submit', function(e) {
         e.preventDefault();
         var fid = $('input[name=structure_id]').val();
         var url = fid ? '/api/structure/update/' + fid : '/api/structure/store';
         var fd = new FormData(this);
+        removedTagging.forEach(function(p){ fd.append('tagging_images_remove[]', p); });
+        removedStructure.forEach(function(p){ fd.append('structure_images_remove[]', p); });
         $.ajax({ url: url, type: 'POST', data: fd, processData: false, contentType: false })
-            .done(function() { loadStructures(); $('#structuresModal').modal('hide'); $('#structureFormLightbox')[0].reset(); })
+            .done(function() { loadStructures(); $('#structuresModal').modal('hide'); $('#structureFormLightbox')[0].reset(); removedTagging = []; removedStructure = []; })
             .fail(function(x) { alert('Error: ' + (x.responseJSON && x.responseJSON.error || x.statusText || 'Failed')); });
     });
 });
