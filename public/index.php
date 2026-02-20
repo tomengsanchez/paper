@@ -19,6 +19,11 @@ $router->get('/profile/edit/{id}', 'ProfileController@edit');
 $router->post('/profile/update/{id}', 'ProfileController@update');
 $router->get('/profile/delete/{id}', 'ProfileController@delete');
 $router->get('/structure', 'StructureController@index');
+$router->get('/structure/create', 'StructureController@create');
+$router->post('/structure/store', 'StructureController@store');
+$router->get('/structure/edit/{id}', 'StructureController@edit');
+$router->post('/structure/update/{id}', 'StructureController@update');
+$router->get('/structure/delete/{id}', 'StructureController@delete');
 $router->get('/grievance', 'GrievanceController@index');
 $router->get('/library', 'LibraryController@index');
 $router->get('/library/create', 'LibraryController@create');
@@ -50,8 +55,12 @@ $router->get('/users/roles', 'RoleController@index');
 $router->get('/users/roles/edit/{id}', 'RoleController@edit');
 $router->post('/users/roles/update/{id}', 'RoleController@update');
 
+// Serve structure upload images (works when doc root is not public/)
+$router->get('/serve/structure', 'StructureController@serveImage');
+
 // API for dropdown search (AJAX)
 $router->get('/api/coordinators', 'ApiController@coordinators');
 $router->get('/api/projects', 'ApiController@projects');
+$router->get('/api/profiles', 'ApiController@profiles');
 
 $router->dispatch();

@@ -54,4 +54,38 @@ class ApiController extends Controller
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $this->json($rows);
     }
+
+    public function profiles(): void
+    {
+        if (!\Core\Auth::canAny(['view_structure', 'add_structure', 'edit_structure', 'view_profiles'])) {
+            $this->json([]);
+            return;
+        }
+        $q = trim($_GET['q'] ?? '');
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT id FROM eav_attributes WHERE entity_type = ? AND name = ?');
+        $stmt->execute(['profile', 'full_name']);
+        $fullNameAttrId = $stmt->fetchColumn();
+        $stmt->execute(['profile', 'papsid']);
+        $papsidAttrId = $stmt->fetchColumn();
+        if (!$fullNameAttrId && !$papsidAttrId) {
+            $this->json([]);
+            return;
+        }
+        $search = '%' . $q . '%';
+        $stmt = $db->prepare('
+            SELECT e.id, COALESCE(vf.value, vp.value, "") as name
+            FROM eav_entities e
+            LEFT JOIN eav_values vf ON e.id = vf.entity_id AND vf.attribute_id = ?
+            LEFT JOIN eav_values vp ON e.id = vp.entity_id AND vp.attribute_id = ?
+            WHERE e.entity_type = "profile"
+            AND (? = "" OR vf.value LIKE ? OR vp.value LIKE ?)
+            ORDER BY COALESCE(NULLIF(vf.value,""), vp.value)
+            LIMIT 20');
+        $fnId = (int) ($fullNameAttrId ?: 0);
+        $psId = (int) ($papsidAttrId ?: 0);
+        $stmt->execute([$fnId, $psId, $q, $search, $search]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $this->json($rows);
+    }
 }
