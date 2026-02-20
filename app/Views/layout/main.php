@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
-        :root { --sidebar-width: 240px; --header-height: 56px; }
+        :root { --sidebar-width: 240px; --header-height: 56px; font-size: 13px; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f6fa; }
         .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: #1e293b; color: #94a3b8; z-index: 1000; }
         .sidebar .brand { padding: 1rem 1.25rem; font-weight: 700; color: #f8fafc; border-bottom: 1px solid #334155; }
