@@ -1,7 +1,7 @@
 <?php ob_start(); ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>User Management</h2>
-    <a href="/users/create" class="btn btn-primary">Add User</a>
+    <h2>Users</h2>
+    <?php if (\Core\Auth::can('add_users')): ?><a href="/users/create" class="btn btn-primary">Add User</a><?php endif; ?>
 </div>
 <?php if (isset($_GET['error']) && $_GET['error'] === 'self'): ?>
 <div class="alert alert-warning">You cannot delete your own account.</div>
@@ -19,8 +19,8 @@
                     <td><?= htmlspecialchars($u->username) ?></td>
                     <td><?= htmlspecialchars($u->role_name ?? '') ?></td>
                     <td>
-                        <a href="/users/edit/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-primary">Edit</a>
-                        <?php if ($u->id != \Core\Auth::id()): ?>
+                        <?php if (\Core\Auth::can('edit_users')): ?><a href="/users/edit/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
+                        <?php if (\Core\Auth::can('delete_users') && $u->id != \Core\Auth::id()): ?>
                         <a href="/users/delete/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user?')">Delete</a>
                         <?php endif; ?>
                     </td>

@@ -10,17 +10,19 @@ class UserProfileController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_user_profiles');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_user_profiles');
         $profiles = UserProfile::all();
         $this->view('user_profiles/index', ['profiles' => $profiles]);
     }
 
     public function create(): void
     {
+        $this->requireCapability('add_user_profiles');
         $roles = Database::getInstance()->query('SELECT * FROM roles ORDER BY name')->fetchAll(\PDO::FETCH_OBJ);
         $users = UserProfile::getUsersForDropdown(null);
         $this->view('user_profiles/form', ['profile' => null, 'roles' => $roles, 'users' => $users]);
@@ -28,6 +30,7 @@ class UserProfileController extends Controller
 
     public function store(): void
     {
+        $this->requireCapability('add_user_profiles');
         try {
             UserProfile::create([
                 'name' => trim($_POST['name'] ?? ''),
@@ -49,6 +52,7 @@ class UserProfileController extends Controller
 
     public function edit(int $id): void
     {
+        $this->requireCapability('edit_user_profiles');
         $profile = UserProfile::find($id);
         if (!$profile) {
             $this->redirect('/users/profiles');
@@ -61,6 +65,7 @@ class UserProfileController extends Controller
 
     public function update(int $id): void
     {
+        $this->requireCapability('edit_user_profiles');
         try {
             UserProfile::update($id, [
                 'name' => trim($_POST['name'] ?? ''),
@@ -83,6 +88,7 @@ class UserProfileController extends Controller
 
     public function delete(int $id): void
     {
+        $this->requireCapability('delete_user_profiles');
         UserProfile::delete($id);
         $this->redirect('/users/profiles');
     }

@@ -2,61 +2,112 @@
 namespace App;
 
 /**
- * Central registry of modules and their capabilities.
- * Add new modules here - capabilities are derived from modules.
+ * Central registry of entity capabilities.
+ * Each entity has: view (list), add, edit, delete.
+ * Add new entities here - capabilities are derived from modules.
  */
 class Capabilities
 {
-    /** [capability_key => display_label] - one capability per module/feature */
-    private static array $registry = [
-        'manage_profiles'      => 'Profile',
-        'manage_structure'     => 'Structure',
-        'manage_grievance'     => 'Grievance',
-        'manage_projects'      => 'Library - Project',
-        'manage_settings'      => 'Settings',
-        'manage_user_profiles' => 'User Profile',
-        'manage_users'         => 'Users',
-        'manage_roles'         => 'User Roles & Capabilities',
+    /** [entity_key => [capability_key => label]] */
+    private static array $entities = [
+        'Profile' => [
+            'view_profiles'   => 'View List',
+            'add_profiles'    => 'Add',
+            'edit_profiles'   => 'Edit',
+            'delete_profiles' => 'Delete',
+        ],
+        'Structure' => [
+            'view_structure'   => 'View List',
+            'add_structure'    => 'Add',
+            'edit_structure'   => 'Edit',
+            'delete_structure' => 'Delete',
+        ],
+        'Grievance' => [
+            'view_grievance'   => 'View List',
+            'add_grievance'    => 'Add',
+            'edit_grievance'   => 'Edit',
+            'delete_grievance' => 'Delete',
+        ],
+        'Library - Project' => [
+            'view_projects'   => 'View List',
+            'add_projects'    => 'Add',
+            'edit_projects'   => 'Edit',
+            'delete_projects' => 'Delete',
+        ],
+        'Settings' => [
+            'view_settings' => 'View',
+            'manage_settings' => 'Manage',
+        ],
+        'User Profile' => [
+            'view_user_profiles'   => 'View List',
+            'add_user_profiles'    => 'Add',
+            'edit_user_profiles'   => 'Edit',
+            'delete_user_profiles' => 'Delete',
+        ],
+        'Users' => [
+            'view_users'   => 'View List',
+            'add_users'    => 'Add',
+            'edit_users'   => 'Edit',
+            'delete_users' => 'Delete',
+        ],
+        'User Roles & Capabilities' => [
+            'view_roles'  => 'View List',
+            'edit_roles'  => 'Edit',
+        ],
     ];
 
-    /** Map capability to route/menu for access check */
-    private static array $routeMap = [
-        'profile'       => 'manage_profiles',
-        'structure'     => 'manage_structure',
-        'grievance'     => 'manage_grievance',
-        'library'       => 'manage_projects',
-        'settings'      => 'manage_settings',
-        'user-profiles' => 'manage_user_profiles',
-        'users'         => 'manage_users',
-        'user-roles'    => 'manage_roles',
+    /** Map page/menu to view capability for visibility */
+    private static array $menuCapability = [
+        'profile'       => 'view_profiles',
+        'structure'     => 'view_structure',
+        'grievance'     => 'view_grievance',
+        'library'       => 'view_projects',
+        'settings'      => 'view_settings',
+        'user-profiles' => 'view_user_profiles',
+        'users'         => 'view_users',
+        'user-roles'    => 'view_roles',
     ];
 
+    public static function entities(): array
+    {
+        return self::$entities;
+    }
+
+    /** Flat list [cap_key => label] for backward compat */
     public static function all(): array
     {
-        return self::$registry;
+        $flat = [];
+        foreach (self::$entities as $caps) {
+            $flat = array_merge($flat, $caps);
+        }
+        return $flat;
     }
 
     public static function keys(): array
     {
-        return array_keys(self::$registry);
+        return array_keys(self::all());
     }
 
     public static function getLabel(string $key): string
     {
-        return self::$registry[$key] ?? $key;
+        foreach (self::$entities as $caps) {
+            if (isset($caps[$key])) return $caps[$key];
+        }
+        return $key;
     }
 
-    public static function forPage(string $page): ?string
+    public static function forMenu(string $page): ?string
     {
-        return self::$routeMap[$page] ?? null;
+        return self::$menuCapability[$page] ?? null;
     }
 
-    /** Add a new module - call this when adding features */
-    public static function register(string $capability, string $label, string $pageKey = null): void
+    /** Add a new entity - call when adding features */
+    public static function registerEntity(string $entityName, array $capabilities, ?string $menuKey = null): void
     {
-        self::$registry[$capability] = $label;
-        if ($pageKey !== null) {
-            self::$routeMap[$pageKey] = $capability;
+        self::$entities[$entityName] = $capabilities;
+        $viewKey = array_key_first($capabilities);
+        if ($menuKey && $viewKey) {
+            self::$menuCapability[$menuKey] = $viewKey;
         }
     }
 }

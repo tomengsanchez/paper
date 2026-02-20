@@ -7,11 +7,12 @@ class GrievanceController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_grievance');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_grievance');
         $this->view('grievance/index');
     }
 }

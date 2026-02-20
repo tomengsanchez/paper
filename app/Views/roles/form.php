@@ -9,28 +9,45 @@
         <div class="alert alert-info">Administrator capabilities are locked and cannot be changed.</div>
         <?php endif; ?>
         <form method="post" action="/users/roles/update/<?= (int)$role->id ?>">
-            <div class="mb-3">
-                <label class="form-label">Role Name</label>
-                <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($role->name) ?>" required <?= !empty($isLocked) ? 'readonly' : '' ?>>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Role Name</label>
+                <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($role->name) ?>" required <?= !empty($isLocked) ? 'readonly' : '' ?> style="max-width: 300px;">
             </div>
-            <div class="mb-3">
-                <label class="form-label">Capabilities</label>
-                <small class="text-muted d-block mb-2">Capabilities are defined by system modules. Add modules in app/Capabilities.php.</small>
-                <div class="row">
-                    <?php foreach ($allCapabilities as $capKey => $capLabel): ?>
-                    <div class="col-md-4 col-lg-3">
-                        <div class="form-check">
-                            <input type="checkbox" name="capabilities[]" value="<?= htmlspecialchars($capKey) ?>" class="form-check-input" id="cap_<?= htmlspecialchars($capKey) ?>"
-                                <?= in_array($capKey, $role->capabilities) ? 'checked' : '' ?>
-                                <?= !empty($isLocked) ? 'disabled' : '' ?>>
-                            <label class="form-check-label" for="cap_<?= htmlspecialchars($capKey) ?>"><?= htmlspecialchars($capLabel) ?></label>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Entity Access Control</label>
+                <p class="text-muted small mb-3">Grant view, add, edit, and delete permissions for each entity. Capabilities are defined by system modules.</p>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" style="max-width: 900px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="min-width: 200px;">Entity</th>
+                                <th>Access Capabilities</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($allCapabilities as $entityName => $caps): ?>
+                            <tr>
+                                <td class="fw-medium"><?= htmlspecialchars($entityName) ?></td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-4">
+                                        <?php foreach ($caps as $capKey => $capLabel): ?>
+                                        <div class="form-check">
+                                            <input type="checkbox" name="capabilities[]" value="<?= htmlspecialchars($capKey) ?>" class="form-check-input" id="cap_<?= htmlspecialchars($capKey) ?>"
+                                                <?= in_array($capKey, $role->capabilities) ? 'checked' : '' ?>
+                                                <?= !empty($isLocked) ? 'disabled' : '' ?>>
+                                            <label class="form-check-label" for="cap_<?= htmlspecialchars($capKey) ?>"><?= htmlspecialchars($capLabel) ?></label>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <?php if (empty($isLocked)): ?>
-            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="submit" class="btn btn-primary">Save Capabilities</button>
             <?php else: ?>
             <a href="/users/roles" class="btn btn-outline-secondary">Back</a>
             <?php endif; ?>

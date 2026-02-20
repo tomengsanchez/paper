@@ -8,23 +8,26 @@ class ProfileController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_profiles');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_profiles');
         $profiles = Profile::all();
         $this->view('profile/index', ['profiles' => $profiles]);
     }
 
     public function create(): void
     {
+        $this->requireCapability('add_profiles');
         $papsid = Profile::generatePAPSID();
         $this->view('profile/form', ['profile' => null, 'papsid' => $papsid]);
     }
 
     public function store(): void
     {
+        $this->requireCapability('add_profiles');
         Profile::create([
             'papsid' => trim($_POST['papsid'] ?? Profile::generatePAPSID()),
             'control_number' => trim($_POST['control_number'] ?? ''),
@@ -38,6 +41,7 @@ class ProfileController extends Controller
 
     public function edit(int $id): void
     {
+        $this->requireCapability('edit_profiles');
         $profile = Profile::find($id);
         if (!$profile) {
             $this->redirect('/profile');
@@ -48,6 +52,7 @@ class ProfileController extends Controller
 
     public function update(int $id): void
     {
+        $this->requireCapability('edit_profiles');
         Profile::update($id, [
             'papsid' => trim($_POST['papsid'] ?? ''),
             'control_number' => trim($_POST['control_number'] ?? ''),
@@ -61,6 +66,7 @@ class ProfileController extends Controller
 
     public function delete(int $id): void
     {
+        $this->requireCapability('delete_profiles');
         Profile::delete($id);
         $this->redirect('/profile');
     }

@@ -10,11 +10,12 @@ class RoleController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_roles');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_roles');
         $db = Database::getInstance();
         $roles = $db->query('SELECT * FROM roles ORDER BY name')->fetchAll(\PDO::FETCH_OBJ);
         $capMap = [];
@@ -30,6 +31,7 @@ class RoleController extends Controller
 
     public function edit(int $id): void
     {
+        $this->requireCapability('edit_roles');
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT * FROM roles WHERE id = ?');
         $stmt->execute([$id]);
@@ -41,13 +43,14 @@ class RoleController extends Controller
         $stmt = $db->prepare('SELECT capability FROM role_capabilities WHERE role_id = ? ORDER BY capability');
         $stmt->execute([$id]);
         $role->capabilities = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-        $allCapabilities = Capabilities::all();
+        $allCapabilities = Capabilities::entities();
         $isLocked = (strcasecmp($role->name, 'Administrator') === 0);
         $this->view('roles/form', ['role' => $role, 'allCapabilities' => $allCapabilities, 'isLocked' => $isLocked]);
     }
 
     public function update(int $id): void
     {
+        $this->requireCapability('edit_roles');
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT id, name FROM roles WHERE id = ?');
         $stmt->execute([$id]);

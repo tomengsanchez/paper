@@ -7,11 +7,12 @@ class StructureController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_structure');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_structure');
         $this->view('structure/index');
     }
 }

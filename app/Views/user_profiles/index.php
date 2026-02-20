@@ -1,7 +1,7 @@
 <?php ob_start(); ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>User Profile</h2>
-    <a href="/users/profiles/create" class="btn btn-primary">Add User Profile</a>
+    <?php if (\Core\Auth::can('add_user_profiles')): ?><a href="/users/profiles/create" class="btn btn-primary">Add User Profile</a><?php endif; ?>
 </div>
 <div class="card">
     <div class="table-responsive">
@@ -16,8 +16,8 @@
                     <td><?= htmlspecialchars($p->role_name ?? '-') ?></td>
                     <td><?= htmlspecialchars($p->username ?? '-') ?></td>
                     <td>
-                        <a href="/users/profiles/edit/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-primary">Edit</a>
-                        <a href="/users/profiles/delete/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user profile?')">Delete</a>
+                        <?php if (\Core\Auth::can('edit_user_profiles')): ?><a href="/users/profiles/edit/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
+                        <?php if (\Core\Auth::can('delete_user_profiles')): ?><a href="/users/profiles/delete/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user profile?')">Delete</a><?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
