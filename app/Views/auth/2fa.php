@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - PAPS</title>
+    <title>Two-Factor Verification - PAPS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -13,24 +13,22 @@
 <body>
     <div class="card login-card">
         <div class="card-body p-4">
-            <h4 class="mb-4 text-center">PAPS Login</h4>
+            <h4 class="mb-4 text-center">Two-Factor Verification</h4>
+            <p class="text-muted text-center small mb-3">Enter the 6-digit code sent to your email.</p>
             <?php if (!empty($error)): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
-            <?php if (isset($_GET['error']) && $_GET['error'] === '2fa_expired'): ?>
-            <div class="alert alert-warning">Verification session expired. Please log in again.</div>
-            <?php endif; ?>
-            <form method="post" action="/login">
+            <form method="post" action="/login/2fa/verify">
                 <div class="mb-3">
-                    <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-control" required autofocus>
+                    <label class="form-label">Verification Code</label>
+                    <input type="text" name="code" class="form-control text-center" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required autofocus
+                        style="letter-spacing: 0.5em; font-size: 1.25rem;">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Sign In</button>
+                <button type="submit" class="btn btn-primary w-100">Verify</button>
             </form>
+            <p class="text-center mt-3 mb-0">
+                <a href="/login" class="text-muted small">Back to login</a>
+            </p>
         </div>
     </div>
 </body>

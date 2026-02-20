@@ -11,6 +11,10 @@
                 <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($user->username ?? '') ?>" required>
             </div>
             <div class="mb-3">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user->email ?? '') ?>" placeholder="user@example.com">
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Password <?= $user ? '(leave blank to keep)' : '' ?></label>
                 <input type="password" name="password" class="form-control" <?= $user ? '' : 'required' ?>>
             </div>

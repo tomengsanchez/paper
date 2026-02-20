@@ -45,8 +45,20 @@
                 <a href="/library" class="<?= ($currentPage ?? '') === 'library' ? 'active' : '' ?>">Project</a>
             </div>
             <?php endif; ?>
-            <?php if (\Core\Auth::can('view_settings')): ?>
-            <a href="/settings" class="<?= ($currentPage ?? '') === 'settings' ? 'active' : '' ?>">Settings</a>
+            <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_email_settings') || \Core\Auth::can('view_security_settings')): ?>
+            <?php $settingsActive = in_array($currentPage ?? '', ['settings', 'email-settings', 'security-settings']); ?>
+            <div class="nav-parent <?= $settingsActive ? 'open' : '' ?>">Settings</div>
+            <div class="nav-sub">
+                <?php if (\Core\Auth::can('view_settings')): ?>
+                <a href="/settings" class="<?= ($currentPage ?? '') === 'settings' ? 'active' : '' ?>">General</a>
+                <?php endif; ?>
+                <?php if (\Core\Auth::can('view_email_settings')): ?>
+                <a href="/settings/email" class="<?= ($currentPage ?? '') === 'email-settings' ? 'active' : '' ?>">Email Settings</a>
+                <?php endif; ?>
+                <?php if (\Core\Auth::can('view_security_settings')): ?>
+                <a href="/settings/security" class="<?= ($currentPage ?? '') === 'security-settings' ? 'active' : '' ?>">Security</a>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_user_profiles') || \Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
             <?php $umActive = in_array($currentPage ?? '', ['user-profiles', 'users', 'user-roles']); ?>

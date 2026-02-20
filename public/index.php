@@ -6,6 +6,8 @@ $router = new \Core\Router();
 // Auth routes (public)
 $router->get('/login', 'AuthController@loginForm');
 $router->post('/login', 'AuthController@login');
+$router->get('/login/2fa', 'AuthController@twoFactorForm');
+$router->post('/login/2fa/verify', 'AuthController@twoFactorVerify');
 $router->get('/logout', 'AuthController@logout');
 
 // Protected routes
@@ -25,6 +27,11 @@ $router->get('/library/edit/{id}', 'LibraryController@edit');
 $router->post('/library/update/{id}', 'LibraryController@update');
 $router->get('/library/delete/{id}', 'LibraryController@delete');
 $router->get('/settings', 'SettingsController@index');
+$router->get('/settings/email', 'EmailSettingsController@index');
+$router->post('/settings/email/update', 'EmailSettingsController@update');
+$router->post('/settings/email/test', 'EmailSettingsController@testMail');
+$router->get('/settings/security', 'SecuritySettingsController@index');
+$router->post('/settings/security/update', 'SecuritySettingsController@update');
 
 // User Management (Admin)
 $router->get('/users/profiles', 'UserProfileController@index');

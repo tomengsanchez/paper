@@ -38,6 +38,14 @@ class Capabilities
             'view_settings' => 'View',
             'manage_settings' => 'Manage',
         ],
+        'Email Settings' => [
+            'view_email_settings' => 'View',
+            'manage_email_settings' => 'Manage',
+        ],
+        'Security' => [
+            'view_security_settings' => 'View',
+            'manage_security_settings' => 'Manage',
+        ],
         'User Profile' => [
             'view_user_profiles'   => 'View List',
             'add_user_profiles'    => 'Add',
@@ -63,6 +71,8 @@ class Capabilities
         'grievance'     => 'view_grievance',
         'library'       => 'view_projects',
         'settings'      => 'view_settings',
+        'email-settings' => 'view_email_settings',
+        'security-settings' => 'view_security_settings',
         'user-profiles' => 'view_user_profiles',
         'users'         => 'view_users',
         'user-roles'    => 'view_roles',

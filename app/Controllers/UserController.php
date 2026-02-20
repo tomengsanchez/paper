@@ -33,6 +33,7 @@ class UserController extends Controller
     {
         $this->requireCapability('add_users');
         $username = trim($_POST['username'] ?? '');
+        $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
 
@@ -42,8 +43,8 @@ class UserController extends Controller
         }
 
         $db = Database::getInstance();
-        $stmt = $db->prepare('INSERT INTO users (username, password_hash, role_id) VALUES (?, ?, ?)');
-        $stmt->execute([$username, password_hash($password, PASSWORD_DEFAULT), $roleId]);
+        $stmt = $db->prepare('INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$username, $email ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId]);
         $this->redirect('/users');
     }
 
@@ -66,16 +67,17 @@ class UserController extends Controller
     {
         $this->requireCapability('edit_users');
         $username = trim($_POST['username'] ?? '');
+        $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
 
         $db = Database::getInstance();
         if (!empty($password)) {
-            $stmt = $db->prepare('UPDATE users SET username = ?, password_hash = ?, role_id = ? WHERE id = ?');
-            $stmt->execute([$username, password_hash($password, PASSWORD_DEFAULT), $roleId, $id]);
+            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, password_hash = ?, role_id = ? WHERE id = ?');
+            $stmt->execute([$username, $email ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId, $id]);
         } else {
-            $stmt = $db->prepare('UPDATE users SET username = ?, role_id = ? WHERE id = ?');
-            $stmt->execute([$username, $roleId, $id]);
+            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, role_id = ? WHERE id = ?');
+            $stmt->execute([$username, $email ?: null, $roleId, $id]);
         }
         $this->redirect('/users');
     }
