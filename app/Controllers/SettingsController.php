@@ -7,7 +7,7 @@ class SettingsController extends Controller
 {
     public function __construct()
     {
-        $this->requireAuth();
+        $this->requireCapability('manage_settings');
     }
 
     public function index(): void

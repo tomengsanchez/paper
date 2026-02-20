@@ -32,7 +32,7 @@
 </div>
 <?php
 $content = ob_get_clean();
-$pageTitle = 'User Management';
+$pageTitle = 'Users';
 $currentPage = 'users';
 require __DIR__ . '/../layout/main.php';
 ?>

@@ -30,16 +30,38 @@
     <aside class="sidebar">
         <div class="brand">PAPS</div>
         <nav class="py-2">
+            <?php if (\Core\Auth::can('manage_profiles')): ?>
             <a href="/profile" class="<?= ($currentPage ?? '') === 'profile' ? 'active' : '' ?>">Profile</a>
+            <?php endif; ?>
+            <?php if (\Core\Auth::can('manage_structure')): ?>
             <a href="/structure" class="<?= ($currentPage ?? '') === 'structure' ? 'active' : '' ?>">Structure</a>
+            <?php endif; ?>
+            <?php if (\Core\Auth::can('manage_grievance')): ?>
             <a href="/grievance" class="<?= ($currentPage ?? '') === 'grievance' ? 'active' : '' ?>">Grievance</a>
-            <div class="nav-parent <?= ($currentPage ?? '') === 'library' ? 'open' : '' ?>" data-toggle="library">Library</div>
+            <?php endif; ?>
+            <?php if (\Core\Auth::can('manage_projects')): ?>
+            <div class="nav-parent <?= ($currentPage ?? '') === 'library' ? 'open' : '' ?>">Library</div>
             <div class="nav-sub">
                 <a href="/library" class="<?= ($currentPage ?? '') === 'library' ? 'active' : '' ?>">Project</a>
             </div>
+            <?php endif; ?>
+            <?php if (\Core\Auth::can('manage_settings')): ?>
             <a href="/settings" class="<?= ($currentPage ?? '') === 'settings' ? 'active' : '' ?>">Settings</a>
-            <?php if (\Core\Auth::isAdmin()): ?>
-            <a href="/users" class="<?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>">User Management</a>
+            <?php endif; ?>
+            <?php if (\Core\Auth::can('manage_user_profiles') || \Core\Auth::can('manage_users') || \Core\Auth::can('manage_roles')): ?>
+            <?php $umActive = in_array($currentPage ?? '', ['user-profiles', 'users', 'user-roles']); ?>
+            <div class="nav-parent <?= $umActive ? 'open' : '' ?>">User Management</div>
+            <div class="nav-sub">
+                <?php if (\Core\Auth::can('manage_user_profiles')): ?>
+                <a href="/users/profiles" class="<?= ($currentPage ?? '') === 'user-profiles' ? 'active' : '' ?>">User Profile</a>
+                <?php endif; ?>
+                <?php if (\Core\Auth::can('manage_users')): ?>
+                <a href="/users" class="<?= ($currentPage ?? '') === 'users' ? 'active' : '' ?>">Users</a>
+                <?php endif; ?>
+                <?php if (\Core\Auth::can('manage_roles')): ?>
+                <a href="/users/roles" class="<?= ($currentPage ?? '') === 'user-roles' ? 'active' : '' ?>">User Roles &amp; Capabilities</a>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
         </nav>
     </aside>

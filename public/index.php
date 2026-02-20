@@ -27,12 +27,21 @@ $router->get('/library/delete/{id}', 'LibraryController@delete');
 $router->get('/settings', 'SettingsController@index');
 
 // User Management (Admin)
+$router->get('/users/profiles', 'UserProfileController@index');
+$router->get('/users/profiles/create', 'UserProfileController@create');
+$router->post('/users/profiles/store', 'UserProfileController@store');
+$router->get('/users/profiles/edit/{id}', 'UserProfileController@edit');
+$router->post('/users/profiles/update/{id}', 'UserProfileController@update');
+$router->get('/users/profiles/delete/{id}', 'UserProfileController@delete');
 $router->get('/users', 'UserController@index');
 $router->get('/users/create', 'UserController@create');
 $router->post('/users/store', 'UserController@store');
 $router->get('/users/edit/{id}', 'UserController@edit');
 $router->post('/users/update/{id}', 'UserController@update');
 $router->get('/users/delete/{id}', 'UserController@delete');
+$router->get('/users/roles', 'RoleController@index');
+$router->get('/users/roles/edit/{id}', 'RoleController@edit');
+$router->post('/users/roles/update/{id}', 'RoleController@update');
 
 // API for dropdown search (AJAX)
 $router->get('/api/coordinators', 'ApiController@coordinators');

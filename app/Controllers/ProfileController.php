@@ -8,7 +8,7 @@ class ProfileController extends Controller
 {
     public function __construct()
     {
-        $this->requireAuth();
+        $this->requireCapability('manage_profiles');
     }
 
     public function index(): void

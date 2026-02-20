@@ -16,6 +16,14 @@ CREATE TABLE IF NOT EXISTS users (
     FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
+CREATE TABLE IF NOT EXISTS role_capabilities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role_id INT NOT NULL,
+    capability VARCHAR(100) NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_role_cap (role_id, capability)
+);
+
 -- EAV Core Tables (install only - attributes are registered at runtime from models)
 CREATE TABLE IF NOT EXISTS eav_entities (
     id INT AUTO_INCREMENT PRIMARY KEY,
