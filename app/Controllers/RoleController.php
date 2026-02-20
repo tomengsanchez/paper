@@ -93,6 +93,6 @@ class RoleController extends Controller
                 $ins->execute([$id, $cap]);
             }
         }
-        $this->redirect('/users/roles');
+        $this->redirect('/users/roles/view/' . $id);
     }
 }
