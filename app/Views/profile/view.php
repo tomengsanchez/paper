@@ -50,10 +50,9 @@ $structures = $structures ?? [];
                         <td>
                             <?php if (!empty($allImgs)): ?>
                             <div class="d-flex flex-wrap gap-1">
-                                <?php foreach (array_slice($allImgs, 0, 6) as $img): $imgUrl = \App\Controllers\StructureController::imageUrl($img); ?>
-                                <a href="#" class="profile-view-struct-img" data-src="<?= htmlspecialchars($imgUrl) ?>" style="cursor:pointer;display:inline-block;"><img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="rounded" style="width:36px;height:36px;object-fit:cover;" onerror="this.style.display='none'"></a>
+                                <?php foreach ($allImgs as $img): $imgUrl = \App\Controllers\StructureController::imageUrl($img); ?>
+                                <a href="#" class="profile-view-struct-img" data-src="<?= htmlspecialchars($imgUrl) ?>" style="cursor:pointer;display:inline-block;" title="Click for full size"><img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="rounded" style="width:36px;height:36px;object-fit:cover;" loading="lazy" onerror="this.style.display='none'"></a>
                                 <?php endforeach; ?>
-                                <?php if (count($allImgs) > 6): ?><span class="text-muted small">+<?= count($allImgs) - 6 ?></span><?php endif; ?>
                             </div>
                             <?php else: ?>-<?php endif; ?>
                         </td>
@@ -84,6 +83,7 @@ $structures = $structures ?? [];
                 </div>
             </div>
             <div class="modal-body p-0 overflow-hidden position-relative" id="profileViewImgViewport" style="min-height:70vh;">
+                <div id="profileViewImgLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark d-none" style="z-index:5;"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>
                 <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" id="profileViewImgWrapper" style="cursor:grab;touch-action:none;transform-origin:center center;">
                     <img id="profileViewStructImgSrc" src="" alt="" draggable="false" style="user-select:none;pointer-events:none;display:block;max-width:100%;max-height:70vh;object-fit:contain;">
                 </div>
@@ -147,7 +147,7 @@ $(function(){
         document.getElementById(\'profileViewImgZoomReset\') && document.getElementById(\'profileViewImgZoomReset\').addEventListener(\'click\', reset);
         return { reset: reset };
     })();
-    $(document).on(\'click\',\'.profile-view-struct-img\',function(e){ e.preventDefault(); var s=$(this).attr(\'data-src\')||$(this).find(\'img\').attr(\'src\'); if(s){ var $img=$(\'#profileViewStructImgSrc\'); $img.attr(\'src\',s); imgLightbox.reset && imgLightbox.reset(); $(\'#profileViewStructImgModal\').modal(\'show\'); }});
+    $(document).on(\'click\',\'.profile-view-struct-img\',function(e){ e.preventDefault(); var fullSrc=$(this).attr(\'data-src\')||$(this).find(\'img\').attr(\'src\'); if(fullSrc){ var $img=$(\'#profileViewStructImgSrc\'); var $loading=$(\'#profileViewImgLoading\'); $img.attr(\'src\',\'\'); $img.hide(); $loading.removeClass(\'d-none\'); imgLightbox.reset && imgLightbox.reset(); $(\'#profileViewStructImgModal\').modal(\'show\'); $img.one(\'load\',function(){ $loading.addClass(\'d-none\'); $img.show(); }).attr(\'src\',fullSrc); if($img[0].complete) $img.trigger(\'load\'); }});
     $(document).on(\'click\',\'.profile-view-structure-btn\',function(){
         var id=$(this).data(\'id\');
         $.get(\'/api/structure/\'+id,function(s){
