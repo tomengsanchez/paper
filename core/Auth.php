@@ -10,6 +10,18 @@ class Auth
     {
         session_start();
         if (isset($_SESSION['user_id'])) {
+            $logoutMins = (int) \App\Models\AppSettings::get('user_logout_after_minutes', 30);
+            if ($logoutMins > 0) {
+                $lastActivity = (int) ($_SESSION['last_activity'] ?? 0);
+                if ($lastActivity && (time() - $lastActivity) > $logoutMins * 60) {
+                    session_unset();
+                    session_destroy();
+                    header('Location: /login?timeout=1');
+                    exit;
+                }
+            }
+            $_SESSION['last_activity'] = time();
+
             $db = Database::getInstance();
             $stmt = $db->prepare('SELECT u.*, r.name as role_name FROM users u 
                 LEFT JOIN roles r ON u.role_id = r.id 
@@ -58,6 +70,7 @@ class Auth
     public static function login(int $userId): void
     {
         $_SESSION['user_id'] = $userId;
+        $_SESSION['last_activity'] = time();
     }
 
     public static function logout(): void

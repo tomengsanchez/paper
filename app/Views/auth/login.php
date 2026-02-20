@@ -20,6 +20,9 @@
             <?php if (isset($_GET['error']) && $_GET['error'] === '2fa_expired'): ?>
             <div class="alert alert-warning">Verification session expired. Please log in again.</div>
             <?php endif; ?>
+            <?php if (isset($_GET['timeout'])): ?>
+            <div class="alert alert-info">You were logged out due to inactivity. Please sign in again.</div>
+            <?php endif; ?>
             <form method="post" action="/login">
                 <div class="mb-3">
                     <label class="form-label">Username</label>

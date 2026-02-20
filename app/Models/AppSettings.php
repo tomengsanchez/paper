@@ -53,6 +53,7 @@ class AppSettings
         return (object) [
             'enable_email_2fa' => $enabled,
             '2fa_expiration_minutes' => (int) self::get('2fa_expiration_minutes', 15),
+            'user_logout_after_minutes' => (int) self::get('user_logout_after_minutes', 30),
         ];
     }
 
@@ -64,5 +65,7 @@ class AppSettings
             $mins = max(1, min(1440, (int) ($data['2fa_expiration_minutes'] ?? 15)));
             self::set('2fa_expiration_minutes', (string) $mins);
         }
+        $logoutMins = max(0, min(10080, (int) ($data['user_logout_after_minutes'] ?? 30)));
+        self::set('user_logout_after_minutes', (string) $logoutMins);
     }
 }
