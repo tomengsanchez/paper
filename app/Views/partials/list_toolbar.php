@@ -22,7 +22,7 @@ $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
         <?php if ($listSearch): ?><a href="<?= htmlspecialchars($listBaseUrl) ?>?columns=<?= htmlspecialchars(implode(',', $listColumns)) ?>&sort=<?= htmlspecialchars($listSort) ?>&order=<?= htmlspecialchars($listOrder) ?>&per_page=<?= (int)($p['per_page'] ?? 15) ?>" class="btn btn-sm btn-outline-secondary">Clear</a><?php endif; ?>
     </form>
     <div class="d-flex align-items-center gap-2">
-        <span class="text-muted small"><?= (int)$p['total'] ?> total</span>
+        <span class="text-muted small fw-medium"><?= number_format((int)$p['total']) ?> record<?= (int)$p['total'] !== 1 ? 's' : '' ?></span>
         <div class="dropdown">
             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"><?= (int)($p['per_page'] ?? 15) ?> / page</button>
             <ul class="dropdown-menu">
