@@ -9,10 +9,7 @@ class UserController extends Controller
 {
     public function __construct()
     {
-        $this->requireAuth();
-        if (!Auth::isAdmin()) {
-            $this->redirect('/');
-        }
+        $this->requireCapability('manage_users');
     }
 
     public function index(): void

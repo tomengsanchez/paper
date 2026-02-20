@@ -38,4 +38,12 @@ abstract class Controller
             $this->redirect('/login');
         }
     }
+
+    protected function requireCapability(string $capability): void
+    {
+        $this->requireAuth();
+        if (!Auth::can($capability)) {
+            $this->redirect('/');
+        }
+    }
 }

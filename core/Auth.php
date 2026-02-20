@@ -4,6 +4,7 @@ namespace Core;
 class Auth
 {
     private static ?object $user = null;
+    private static ?array $userCapabilities = null;
 
     public static function init(): void
     {
@@ -16,6 +17,27 @@ class Auth
             $stmt->execute([$_SESSION['user_id']]);
             self::$user = $stmt->fetch(\PDO::FETCH_OBJ);
         }
+    }
+
+    public static function can(string $capability): bool
+    {
+        if (!self::check()) return false;
+        if (self::isAdmin()) return true;
+        if (self::$userCapabilities === null) {
+            $db = Database::getInstance();
+            $stmt = $db->prepare('SELECT capability FROM role_capabilities WHERE role_id = ?');
+            $stmt->execute([self::$user->role_id]);
+            self::$userCapabilities = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        }
+        return in_array($capability, self::$userCapabilities, true);
+    }
+
+    public static function canAny(array $capabilities): bool
+    {
+        foreach ($capabilities as $cap) {
+            if (self::can($cap)) return true;
+        }
+        return false;
     }
 
     public static function check(): bool

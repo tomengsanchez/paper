@@ -14,6 +14,10 @@ class ApiController extends Controller
 
     public function coordinators(): void
     {
+        if (!Auth::can('manage_projects')) {
+            $this->json([]);
+            return;
+        }
         $q = $_GET['q'] ?? '';
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT u.id, u.username FROM users u 
@@ -27,6 +31,10 @@ class ApiController extends Controller
 
     public function projects(): void
     {
+        if (!Auth::canAny(['manage_projects', 'manage_profiles'])) {
+            $this->json([]);
+            return;
+        }
         $q = $_GET['q'] ?? '';
         $db = Database::getInstance();
         $attrId = $db->prepare('SELECT id FROM eav_attributes WHERE entity_type = ? AND name = ?');
