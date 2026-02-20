@@ -70,10 +70,24 @@ $structures = $structures ?? [];
 </div>
 
 <div class="modal fade" id="profileViewStructImgModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Image Preview</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body text-center"><img id="profileViewStructImgSrc" src="" alt="" class="img-fluid" style="max-height:80vh;"></div>
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-secondary py-2">
+                <h5 class="modal-title text-light">Image Preview</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-light" id="profileViewImgZoomOut" title="Zoom out">−</button>
+                        <button type="button" class="btn btn-outline-light" id="profileViewImgZoomReset" title="Reset">1:1</button>
+                        <button type="button" class="btn btn-outline-light" id="profileViewImgZoomIn" title="Zoom in">+</button>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 overflow-hidden position-relative" id="profileViewImgViewport" style="min-height:70vh;">
+                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" id="profileViewImgWrapper" style="cursor:grab;touch-action:none;transform-origin:center center;">
+                    <img id="profileViewStructImgSrc" src="" alt="" draggable="false" style="user-select:none;pointer-events:none;display:block;max-width:100%;max-height:70vh;object-fit:contain;">
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -88,43 +102,70 @@ $structures = $structures ?? [];
 </div>
 <?php
 $baseUrl = defined('BASE_URL') && BASE_URL ? BASE_URL : '';
-$scripts = "<script>
-var baseUrl = ".json_encode($baseUrl).";
+$scripts = '<script>
+var baseUrl = '.json_encode($baseUrl).';
 function imgUrl(path) {
-    if (!path) return '';
-    if (/^\\/uploads\\/structure\\/(tagging|images)\\/([a-zA-Z0-9_.-]+)$/.test(path)) {
-        var m = path.match(/(tagging|images)\\/([a-zA-Z0-9_.-]+)/);
-        return baseUrl + '/serve/structure?subdir=' + encodeURIComponent(m[1]) + '&file=' + encodeURIComponent(m[2]);
+    if (!path) return "";
+    var re = new RegExp("^/uploads/structure/(tagging|images)/([a-zA-Z0-9_.-]+)$");
+    if (re.test(path)) {
+        var m = path.match(new RegExp("(tagging|images)/([a-zA-Z0-9_.-]+)"));
+        return baseUrl + \'/serve/structure?subdir=\' + encodeURIComponent(m[1]) + \'&file=\' + encodeURIComponent(m[2]);
     }
-    return baseUrl + (path[0]==='/' ? path : '/'+path);
+    return baseUrl + (path[0]===\'/\' ? path : \'/\'+path);
 }
-function escapeHtml(t){ return $('<div>').text(t||'').html(); }
+function escapeHtml(t){ return $(\'<div>\').text(t||\'\').html(); }
 function renderImgs(arr) {
-    if (!arr || !arr.length) return '-';
-    var h = '';
-    arr.forEach(function(p){ var u=imgUrl(p); if(u) h += '<a href=\"#\" class=\"profile-view-struct-img\" data-src=\"'+u.replace(/\"/g,'&quot;')+'\" style=\"cursor:pointer;margin:2px;\"><img src=\"'+u+'\" alt=\"\" class=\"rounded\" style=\"width:60px;height:60px;object-fit:cover;\" onerror=\"this.style.display=none\"></a>'; });
-    return h || '-';
+    if (!arr || !arr.length) return \'-\';
+    var h = \'\';
+    arr.forEach(function(p){ var u=imgUrl(p); if(u) h += \'<a href="#" class="profile-view-struct-img" data-src="\'+u.replace(/"/g,"&quot;")+\'" style="cursor:pointer;margin:2px;"><img src="\'+u+\'" alt="" class="rounded" style="width:60px;height:60px;object-fit:cover;" onerror="this.style.display=none"></a>\'; });
+    return h || \'-\';
 }
 $(function(){
-    $(document).on('click','.profile-view-struct-img',function(e){ e.preventDefault(); var s=$(this).attr('data-src')||$(this).find('img').attr('src'); if(s){ $('#profileViewStructImgSrc').attr('src',s); $('#profileViewStructImgModal').modal('show'); }});
-    $(document).on('click','.profile-view-structure-btn',function(){
-        var id=$(this).data('id');
-        $.get('/api/structure/'+id,function(s){
-            var tagImgs=[]; try{ tagImgs=JSON.parse(s.tagging_images||'[]'); }catch(e){}
-            var structImgs=[]; try{ structImgs=JSON.parse(s.structure_images||'[]'); }catch(e){}
-            var html='<dl class=\"row mb-0\"><dt class=\"col-sm-4\">Structure ID</dt><dd class=\"col-sm-8\">'+escapeHtml(s.strid)+'</dd>';
-            html+='<dt class=\"col-sm-4\">Paps/Owner</dt><dd class=\"col-sm-8\">'+escapeHtml(s.owner_name||s.owner_id||'-')+'</dd>';
-            html+='<dt class=\"col-sm-4\">Structure Tag #</dt><dd class=\"col-sm-8\">'+escapeHtml(s.structure_tag)+'</dd>';
-            html+='<dt class=\"col-sm-4\">Description</dt><dd class=\"col-sm-8\">'+escapeHtml(s.description).replace(/\\n/g,'<br>')+'</dd>';
-            html+='<dt class=\"col-sm-4\">Tagging Images</dt><dd class=\"col-sm-8\">'+renderImgs(tagImgs)+'</dd>';
-            html+='<dt class=\"col-sm-4\">Structure Images</dt><dd class=\"col-sm-8\">'+renderImgs(structImgs)+'</dd>';
-            html+='<dt class=\"col-sm-4\">Other Details</dt><dd class=\"col-sm-8\">'+escapeHtml(s.other_details).replace(/\\n/g,'<br>')+'</dd></dl>';
-            $('#profileViewStructureBody').html(html);
-            $('#profileViewStructureModal').modal('show');
+    var imgLightbox = (function(){
+        var img = document.getElementById(\'profileViewStructImgSrc\');
+        var wrap = document.getElementById(\'profileViewImgWrapper\');
+        var viewport = document.getElementById(\'profileViewImgViewport\');
+        if (!img || !wrap || !viewport) return {};
+        var scale = 1, tx = 0, ty = 0;
+        var minScale = 0.25, maxScale = 8, step = 0.25;
+        var isDragging = false, lastX = 0, lastY = 0;
+        function applyTransform(){ wrap.style.transform = \'translate(\'+tx+\'px,\'+ty+\'px) scale(\'+scale+\')\'; wrap.style.cursor = scale > 1 ? (isDragging ? \'grabbing\' : \'grab\') : \'grab\'; }
+        function zoomAt(clientX, clientY, delta){
+            var rect = viewport.getBoundingClientRect();
+            var cx = clientX - rect.left - rect.width/2, cy = clientY - rect.top - rect.height/2;
+            var s0 = scale; scale = Math.max(minScale, Math.min(maxScale, scale + delta));
+            tx = tx - cx * (scale/s0 - 1); ty = ty - cy * (scale/s0 - 1);
+            applyTransform();
+        }
+        function reset(){ scale = 1; tx = 0; ty = 0; applyTransform(); }
+        wrap.addEventListener(\'mousedown\', function(e){ if (scale > 1){ isDragging = true; lastX = e.clientX; lastY = e.clientY; } });
+        document.addEventListener(\'mousemove\', function(e){ if (isDragging){ tx += e.clientX - lastX; ty += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; applyTransform(); } });
+        document.addEventListener(\'mouseup\', function(){ isDragging = false; wrap.style.cursor = scale > 1 ? \'grab\' : \'grab\'; });
+        viewport.addEventListener(\'wheel\', function(e){ e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? -step : step); }, { passive: false });
+        document.getElementById(\'profileViewImgZoomIn\') && document.getElementById(\'profileViewImgZoomIn\').addEventListener(\'click\', function(){ zoomAt(viewport.getBoundingClientRect().left + viewport.offsetWidth/2, viewport.getBoundingClientRect().top + viewport.offsetHeight/2, step); });
+        document.getElementById(\'profileViewImgZoomOut\') && document.getElementById(\'profileViewImgZoomOut\').addEventListener(\'click\', function(){ zoomAt(viewport.getBoundingClientRect().left + viewport.offsetWidth/2, viewport.getBoundingClientRect().top + viewport.offsetHeight/2, -step); });
+        document.getElementById(\'profileViewImgZoomReset\') && document.getElementById(\'profileViewImgZoomReset\').addEventListener(\'click\', reset);
+        return { reset: reset };
+    })();
+    $(document).on(\'click\',\'.profile-view-struct-img\',function(e){ e.preventDefault(); var s=$(this).attr(\'data-src\')||$(this).find(\'img\').attr(\'src\'); if(s){ var $img=$(\'#profileViewStructImgSrc\'); $img.attr(\'src\',s); imgLightbox.reset && imgLightbox.reset(); $(\'#profileViewStructImgModal\').modal(\'show\'); }});
+    $(document).on(\'click\',\'.profile-view-structure-btn\',function(){
+        var id=$(this).data(\'id\');
+        $.get(\'/api/structure/\'+id,function(s){
+            var tagImgs=[]; try{ tagImgs=JSON.parse(s.tagging_images||\'[]\'); }catch(e){}
+            var structImgs=[]; try{ structImgs=JSON.parse(s.structure_images||\'[]\'); }catch(e){}
+            var html=\'<dl class="row mb-0"><dt class="col-sm-4">Structure ID</dt><dd class="col-sm-8">\'+escapeHtml(s.strid)+\'</dd>\';
+            html+=\'<dt class="col-sm-4">Paps/Owner</dt><dd class="col-sm-8">\'+escapeHtml(s.owner_name||s.owner_id||\'-\')+\'</dd>\';
+            html+=\'<dt class="col-sm-4">Structure Tag #</dt><dd class="col-sm-8">\'+escapeHtml(s.structure_tag)+\'</dd>\';
+            html+=\'<dt class="col-sm-4">Description</dt><dd class="col-sm-8">\'+escapeHtml(s.description).replace(/\\n/g,"<br>")+\'</dd>\';
+            html+=\'<dt class="col-sm-4">Tagging Images</dt><dd class="col-sm-8">\'+renderImgs(tagImgs)+\'</dd>\';
+            html+=\'<dt class="col-sm-4">Structure Images</dt><dd class="col-sm-8">\'+renderImgs(structImgs)+\'</dd>\';
+            html+=\'<dt class="col-sm-4">Other Details</dt><dd class="col-sm-8">\'+escapeHtml(s.other_details).replace(/\\n/g,"<br>")+\'</dd></dl>\';
+            $(\'#profileViewStructureBody\').html(html);
+            $(\'#profileViewStructureModal\').modal(\'show\');
         });
     });
 });
-</script>";
+</script>';
 ?>
 <?php endif; ?>
 <?php $content = ob_get_clean(); $pageTitle = 'View Profile'; $currentPage = 'profile'; require __DIR__ . '/../layout/main.php'; ?>
