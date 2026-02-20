@@ -18,3 +18,6 @@ ini_set('error_log', $logDir . '/php_error.log');
 \Core\Logger::init();
 \Core\Database::init(require ROOT . '/config/database.php');
 \Core\Auth::init();
+
+$appConfig = file_exists(ROOT . '/config/app.php') ? require ROOT . '/config/app.php' : [];
+define('BASE_URL', rtrim($appConfig['base_url'] ?? '', '/'));
