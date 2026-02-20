@@ -9,11 +9,12 @@ class UserController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_users');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_users');
         $db = Database::getInstance();
         $stmt = $db->query('SELECT u.*, r.name as role_name FROM users u 
             LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.id');
@@ -23,12 +24,14 @@ class UserController extends Controller
 
     public function create(): void
     {
+        $this->requireCapability('add_users');
         $roles = Database::getInstance()->query('SELECT * FROM roles')->fetchAll(\PDO::FETCH_OBJ);
         $this->view('users/form', ['user' => null, 'roles' => $roles]);
     }
 
     public function store(): void
     {
+        $this->requireCapability('add_users');
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -46,6 +49,7 @@ class UserController extends Controller
 
     public function edit(int $id): void
     {
+        $this->requireCapability('edit_users');
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT * FROM users WHERE id = ?');
         $stmt->execute([$id]);
@@ -60,6 +64,7 @@ class UserController extends Controller
 
     public function update(int $id): void
     {
+        $this->requireCapability('edit_users');
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
@@ -77,6 +82,7 @@ class UserController extends Controller
 
     public function delete(int $id): void
     {
+        $this->requireCapability('delete_users');
         if ($id === Auth::id()) {
             $this->redirect('/users?error=self');
             return;

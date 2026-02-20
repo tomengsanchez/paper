@@ -8,22 +8,25 @@ class LibraryController extends Controller
 {
     public function __construct()
     {
-        $this->requireCapability('manage_projects');
+        $this->requireAuth();
     }
 
     public function index(): void
     {
+        $this->requireCapability('view_projects');
         $projects = Project::all();
         $this->view('library/index', ['projects' => $projects]);
     }
 
     public function create(): void
     {
+        $this->requireCapability('add_projects');
         $this->view('library/form', ['project' => null]);
     }
 
     public function store(): void
     {
+        $this->requireCapability('add_projects');
         $id = Project::create([
             'name' => trim($_POST['name'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
@@ -34,6 +37,7 @@ class LibraryController extends Controller
 
     public function edit(int $id): void
     {
+        $this->requireCapability('edit_projects');
         $project = Project::find($id);
         if (!$project) {
             $this->redirect('/library');
@@ -44,6 +48,7 @@ class LibraryController extends Controller
 
     public function update(int $id): void
     {
+        $this->requireCapability('edit_projects');
         Project::update($id, [
             'name' => trim($_POST['name'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
@@ -54,6 +59,7 @@ class LibraryController extends Controller
 
     public function delete(int $id): void
     {
+        $this->requireCapability('delete_projects');
         Project::delete($id);
         $this->redirect('/library');
     }

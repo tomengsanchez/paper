@@ -14,7 +14,7 @@ class ApiController extends Controller
 
     public function coordinators(): void
     {
-        if (!Auth::can('manage_projects')) {
+        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects'])) {
             $this->json([]);
             return;
         }
@@ -31,7 +31,7 @@ class ApiController extends Controller
 
     public function projects(): void
     {
-        if (!Auth::canAny(['manage_projects', 'manage_profiles'])) {
+        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects', 'view_profiles', 'add_profiles', 'edit_profiles'])) {
             $this->json([]);
             return;
         }

@@ -1,4 +1,6 @@
-<?php ob_start(); ?>
+<?php
+use App\Capabilities;
+ob_start(); ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>User Roles &amp; Capabilities</h2>
 </div>
@@ -15,14 +17,14 @@
                     <td>
                         <?php if (!empty($r->capabilities)): ?>
                         <?php foreach ($r->capabilities as $c): ?>
-                        <span class="badge bg-secondary me-1"><?= htmlspecialchars($c) ?></span>
+                        <span class="badge bg-secondary me-1"><?= htmlspecialchars(Capabilities::getLabel($c)) ?></span>
                         <?php endforeach; ?>
                         <?php else: ?>
                         <span class="text-muted">None</span>
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a href="/users/roles/edit/<?= (int)$r->id ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <?php if (\Core\Auth::can('edit_roles')): ?><a href="/users/roles/edit/<?= (int)$r->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

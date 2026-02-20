@@ -1,13 +1,32 @@
 -- Seed Administrator with all capabilities (optional - Administrator bypasses checks via Auth::can)
 -- Run this to show capabilities in the Roles UI for Administrator
--- Administrator is locked from editing, so this is for display consistency only
 
 INSERT IGNORE INTO role_capabilities (role_id, capability)
-SELECT r.id, 'manage_profiles' FROM roles r WHERE r.name = 'Administrator'
-UNION SELECT r.id, 'manage_structure' FROM roles r WHERE r.name = 'Administrator'
-UNION SELECT r.id, 'manage_grievance' FROM roles r WHERE r.name = 'Administrator'
-UNION SELECT r.id, 'manage_projects' FROM roles r WHERE r.name = 'Administrator'
+SELECT r.id, 'view_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'add_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'delete_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'view_structure' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'add_structure' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_structure' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'delete_structure' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'view_grievance' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'add_grievance' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_grievance' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'delete_grievance' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'view_projects' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'add_projects' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_projects' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'delete_projects' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'view_settings' FROM roles r WHERE r.name = 'Administrator'
 UNION SELECT r.id, 'manage_settings' FROM roles r WHERE r.name = 'Administrator'
-UNION SELECT r.id, 'manage_user_profiles' FROM roles r WHERE r.name = 'Administrator'
-UNION SELECT r.id, 'manage_users' FROM roles r WHERE r.name = 'Administrator'
-UNION SELECT r.id, 'manage_roles' FROM roles r WHERE r.name = 'Administrator';
+UNION SELECT r.id, 'view_user_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'add_user_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_user_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'delete_user_profiles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'view_users' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'add_users' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_users' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'delete_users' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'view_roles' FROM roles r WHERE r.name = 'Administrator'
+UNION SELECT r.id, 'edit_roles' FROM roles r WHERE r.name = 'Administrator';
