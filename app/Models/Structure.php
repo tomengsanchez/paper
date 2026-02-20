@@ -59,17 +59,67 @@ class Structure extends Model
 
     /**
      * Paginated list with search and sort at DB level. Returns ['items' => [...], 'total' => N, 'page' => N, 'per_page' => N, 'total_pages' => N].
+     * Uses denormalized structure_list table for fast path when no search (40K+ records).
      */
     public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $limit = max(1, min(100, $perPage));
+
+        if ($search === '' && self::structureListTableExists()) {
+            return self::listPaginatedFromCache($sortBy, $sortOrder, $page, $perPage, $limit);
+        }
+
+        return self::listPaginatedFromEav($search, $searchColumns, $sortBy, $sortOrder, $page, $perPage, $limit);
+    }
+
+    private static function structureListTableExists(): bool
+    {
+        try {
+            $db = self::db();
+            $stmt = $db->query("SHOW TABLES LIKE 'structure_list'");
+            return $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private static function listPaginatedFromCache(string $sortBy, string $sortOrder, int $page, int $perPage, int $limit): array
+    {
+        $db = self::db();
+        $sortCol = match ($sortBy) {
+            'strid' => 'strid',
+            'owner_name' => 'owner_name',
+            'structure_tag' => 'structure_tag',
+            'description' => 'description',
+            default => 'id',
+        };
+        $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
+        $offset = ($page - 1) * $limit;
+
+        $total = (int) $db->query("SELECT COUNT(*) FROM structure_list")->fetchColumn();
+        $totalPages = (int) ceil($total / $limit);
+
+        $sql = "SELECT id, strid, owner_id, owner_name, structure_tag, description FROM structure_list ORDER BY `$sortCol` $dir LIMIT $limit OFFSET $offset";
+        $stmt = $db->query($sql);
+        $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $limit,
+            'total_pages' => $totalPages,
+        ];
+    }
+
+    private static function listPaginatedFromEav(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage, int $limit): array
     {
         $db = self::db();
         $aidStrid = self::getAttributeId('strid');
         $aidOwner = self::getAttributeId('owner_id');
         $aidTag = self::getAttributeId('structure_tag');
         $aidDesc = self::getAttributeId('description');
-        $aidTimg = self::getAttributeId('tagging_images');
-        $aidSimg = self::getAttributeId('structure_images');
-        $aidOther = self::getAttributeId('other_details');
         if (!$aidStrid) return ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => $perPage, 'total_pages' => 0];
 
         $aidFullName = $db->query("SELECT id FROM eav_attributes WHERE entity_type='profile' AND name='full_name'")->fetchColumn();
@@ -98,22 +148,18 @@ class Structure extends Model
             }
         }
 
-        $offset = ($page - 1) * $perPage;
-        $limit = max(1, min(100, $perPage));
+        $offset = ($page - 1) * $limit;
 
-        $sql = "SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
+        $sql = "SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description,
             COALESCE(prof.fn_val, prof.pa_val, '') as owner_name
 FROM (
   SELECT e.id,
     MAX(CASE WHEN v.attribute_id = $aidStrid THEN v.value END) as strid,
     MAX(CASE WHEN v.attribute_id = $aidOwner THEN v.value END) as owner_id,
     MAX(CASE WHEN v.attribute_id = $aidTag THEN v.value END) as structure_tag,
-    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description,
-    MAX(CASE WHEN v.attribute_id = $aidTimg THEN v.value END) as tagging_images,
-    MAX(CASE WHEN v.attribute_id = $aidSimg THEN v.value END) as structure_images,
-    MAX(CASE WHEN v.attribute_id = $aidOther THEN v.value END) as other_details
+    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description
   FROM eav_entities e
-  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc,$aidTimg,$aidSimg,$aidOther)
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc)
   WHERE e.entity_type = 'structure'
   GROUP BY e.id
 ) s
@@ -134,14 +180,18 @@ LIMIT $limit OFFSET $offset";
         $stmt->execute($params);
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        $countSql = "SELECT COUNT(*) FROM (
+        if ($search === '') {
+            $stmtTotal = $db->query("SELECT COUNT(*) FROM eav_entities WHERE entity_type = 'structure'");
+            $total = (int) $stmtTotal->fetchColumn();
+        } else {
+            $countSql = "SELECT COUNT(*) FROM (
   SELECT e.id,
     MAX(CASE WHEN v.attribute_id = $aidStrid THEN v.value END) as strid,
     MAX(CASE WHEN v.attribute_id = $aidOwner THEN v.value END) as owner_id,
     MAX(CASE WHEN v.attribute_id = $aidTag THEN v.value END) as structure_tag,
     MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description
   FROM eav_entities e
-  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc,$aidTimg,$aidSimg,$aidOther)
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc)
   WHERE e.entity_type = 'structure'
   GROUP BY e.id
 ) s
@@ -153,10 +203,10 @@ LEFT JOIN (
   WHERE p.entity_type = 'profile'
 ) prof ON prof.pid = s.owner_id
 WHERE 1=1 $searchCond";
-
-        $stmtCount = $db->prepare($countSql);
-        $stmtCount->execute($params);
-        $total = (int) $stmtCount->fetchColumn();
+            $stmtCount = $db->prepare($countSql);
+            $stmtCount->execute($params);
+            $total = (int) $stmtCount->fetchColumn();
+        }
         $totalPages = (int) ceil($total / $limit);
 
         return [
@@ -253,6 +303,7 @@ WHERE 1=1 $searchCond";
         self::setValue($id, 'tagging_images', $data['tagging_images'] ?? '[]');
         self::setValue($id, 'structure_images', $data['structure_images'] ?? '[]');
         self::setValue($id, 'other_details', $data['other_details'] ?? '');
+        self::syncStructureList($id);
         return $id;
     }
 
@@ -266,6 +317,7 @@ WHERE 1=1 $searchCond";
         self::setValue($id, 'tagging_images', $data['tagging_images'] ?? '[]');
         self::setValue($id, 'structure_images', $data['structure_images'] ?? '[]');
         self::setValue($id, 'other_details', $data['other_details'] ?? '');
+        self::syncStructureList($id);
         return true;
     }
 
@@ -273,6 +325,73 @@ WHERE 1=1 $searchCond";
     {
         $stmt = self::db()->prepare('DELETE FROM eav_entities WHERE id = ? AND entity_type = "structure"');
         $stmt->execute([$id]);
-        return $stmt->rowCount() > 0;
+        if ($stmt->rowCount() > 0) {
+            self::deleteFromStructureList($id);
+            return true;
+        }
+        return false;
+    }
+
+    /** Sync one structure to structure_list (for fast list page) */
+    public static function syncStructureList(int $id): void
+    {
+        if (!self::structureListTableExists()) return;
+        $s = self::find($id);
+        if (!$s) return;
+        $db = self::db();
+        $stmt = $db->prepare('INSERT INTO structure_list (id, strid, owner_id, owner_name, structure_tag, description) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE strid=VALUES(strid), owner_id=VALUES(owner_id), owner_name=VALUES(owner_name), structure_tag=VALUES(structure_tag), description=VALUES(description)');
+        $stmt->execute([
+            $id,
+            $s->strid ?? '',
+            $s->owner_id ?: null,
+            $s->owner_name ?? null,
+            $s->structure_tag ?? null,
+            $s->description ?? null,
+        ]);
+    }
+
+    private static function deleteFromStructureList(int $id): void
+    {
+        if (!self::structureListTableExists()) return;
+        $db = self::db();
+        $db->prepare('DELETE FROM structure_list WHERE id = ?')->execute([$id]);
+    }
+
+    /** Rebuild structure_list from EAV (run after migration or if cache is stale) */
+    public static function rebuildStructureList(): int
+    {
+        if (!self::structureListTableExists()) return 0;
+        $db = self::db();
+        $aidStrid = self::getAttributeId('strid');
+        $aidOwner = self::getAttributeId('owner_id');
+        $aidTag = self::getAttributeId('structure_tag');
+        $aidDesc = self::getAttributeId('description');
+        if (!$aidStrid) return 0;
+        $aidFullName = $db->query("SELECT id FROM eav_attributes WHERE entity_type='profile' AND name='full_name'")->fetchColumn();
+        $aidPapsid = $db->query("SELECT id FROM eav_attributes WHERE entity_type='profile' AND name='papsid'")->fetchColumn();
+
+        $db->exec('TRUNCATE TABLE structure_list');
+        $sql = "INSERT INTO structure_list (id, strid, owner_id, owner_name, structure_tag, description)
+SELECT s.id, s.strid, s.owner_id, COALESCE(prof.fn_val, prof.pa_val), s.structure_tag, s.description
+FROM (
+  SELECT e.id,
+    MAX(CASE WHEN v.attribute_id = $aidStrid THEN v.value END) as strid,
+    MAX(CASE WHEN v.attribute_id = $aidOwner THEN v.value END) as owner_id,
+    MAX(CASE WHEN v.attribute_id = $aidTag THEN v.value END) as structure_tag,
+    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description
+  FROM eav_entities e
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc)
+  WHERE e.entity_type = 'structure'
+  GROUP BY e.id
+) s
+LEFT JOIN (
+  SELECT p.id as pid, fn.value as fn_val, pa.value as pa_val
+  FROM eav_entities p
+  LEFT JOIN eav_values fn ON fn.entity_id = p.id AND fn.attribute_id = " . (int)$aidFullName . "
+  LEFT JOIN eav_values pa ON pa.entity_id = p.id AND pa.attribute_id = " . (int)$aidPapsid . "
+  WHERE p.entity_type = 'profile'
+) prof ON prof.pid = s.owner_id";
+        $db->exec($sql);
+        return (int) $db->query('SELECT COUNT(*) FROM structure_list')->fetchColumn();
     }
 }
