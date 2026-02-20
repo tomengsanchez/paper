@@ -9,6 +9,7 @@ class Mailer
     {
         $config = AppSettings::getEmailConfig();
         if (empty($config->smtp_host)) {
+            Logger::email('Send failed', ['to' => $to, 'subject' => $subject, 'error' => 'SMTP host is not configured.']);
             return ['success' => false, 'error' => 'SMTP host is not configured.'];
         }
 
@@ -27,6 +28,7 @@ class Mailer
             stream_context_create(['ssl' => ['verify_peer' => false]])
         );
         if (!$fp) {
+            Logger::email('Send failed', ['to' => $to, 'subject' => $subject, 'error' => "Connection failed: $errstr ($errno)"]);
             return ['success' => false, 'error' => "Connection failed: $errstr ($errno)"];
         }
 
@@ -62,6 +64,7 @@ class Mailer
             $resp = $read();
             if (strpos($resp, '235') === false && strpos($resp, 'Authentication successful') === false) {
                 fclose($fp);
+                Logger::email('Send failed', ['to' => $to, 'subject' => $subject, 'error' => 'SMTP authentication failed.', 'response' => trim($resp)]);
                 return ['success' => false, 'error' => 'SMTP authentication failed.'];
             }
         }
@@ -80,8 +83,10 @@ class Mailer
         $write('QUIT');
         fclose($fp);
         if (strpos($resp, '250') !== false) {
+            Logger::email('Sent', ['to' => $to, 'subject' => $subject, 'response' => trim($resp)]);
             return ['success' => true];
         }
+        Logger::email('Send failed', ['to' => $to, 'subject' => $subject, 'error' => trim($resp), 'response' => trim($resp)]);
         return ['success' => false, 'error' => trim($resp)];
     }
 }
