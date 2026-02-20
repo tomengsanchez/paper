@@ -4,6 +4,7 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Auth;
 use Core\Database;
+use App\Models\Structure;
 
 class ApiController extends Controller
 {
@@ -87,5 +88,28 @@ class ApiController extends Controller
         $stmt->execute([$fnId, $psId, $q, $search, $search]);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $this->json($rows);
+    }
+
+    public function profileStructures(int $profileId): void
+    {
+        if (!Auth::canAny(['view_structure', 'view_profiles', 'edit_profiles'])) {
+            http_response_code(403);
+            $this->json(['error' => 'Forbidden']);
+            return;
+        }
+        $structures = Structure::byOwner($profileId);
+        $out = [];
+        foreach ($structures as $s) {
+            $out[] = [
+                'id' => $s->id,
+                'strid' => $s->strid,
+                'structure_tag' => $s->structure_tag,
+                'description' => $s->description,
+                'other_details' => $s->other_details,
+                'tagging_images' => $s->tagging_images,
+                'structure_images' => $s->structure_images,
+            ];
+        }
+        $this->json($out);
     }
 }

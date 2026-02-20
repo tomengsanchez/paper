@@ -37,6 +37,26 @@ class Structure extends Model
         return $prefix . str_pad($num + 1, 9, '0', STR_PAD_LEFT);
     }
 
+    public static function byOwner(int $profileId): array
+    {
+        $db = self::db();
+        $ownerAttrId = self::getAttributeId('owner_id');
+        if (!$ownerAttrId) return [];
+
+        $stmt = $db->prepare('SELECT v.entity_id FROM eav_values v
+            JOIN eav_entities e ON v.entity_id = e.id
+            WHERE v.attribute_id = ? AND v.value = ? AND e.entity_type = "structure"
+            ORDER BY e.id DESC');
+        $stmt->execute([$ownerAttrId, (string) $profileId]);
+        $ids = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $result = [];
+        foreach ($ids as $eid) {
+            $s = self::find((int) $eid);
+            if ($s) $result[] = $s;
+        }
+        return $result;
+    }
+
     public static function all(): array
     {
         $db = self::db();

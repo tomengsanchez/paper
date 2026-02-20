@@ -62,5 +62,13 @@ $router->get('/serve/structure', 'StructureController@serveImage');
 $router->get('/api/coordinators', 'ApiController@coordinators');
 $router->get('/api/projects', 'ApiController@projects');
 $router->get('/api/profiles', 'ApiController@profiles');
+$router->get('/api/profile/{id}/structures', 'ApiController@profileStructures');
+
+// Structure API (for Profile lightbox CRUD)
+$router->get('/api/structure/next-strid', 'StructureController@nextStridApi');
+$router->get('/api/structure/{id}', 'StructureController@getApi');
+$router->post('/api/structure/store', 'StructureController@storeApi');
+$router->post('/api/structure/update/{id}', 'StructureController@updateApi');
+$router->post('/api/structure/delete/{id}', 'StructureController@deleteApi');
 
 $router->dispatch();
