@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use Core\Controller;
 use App\Models\Structure;
+use App\ListConfig;
 
 class StructureController extends Controller
 {
@@ -25,11 +26,33 @@ class StructureController extends Controller
         $this->requireAuth();
     }
 
+    private const LIST_BASE = '/structure';
+    private const LIST_MODULE = 'structure';
+
     public function index(): void
     {
         $this->requireCapability('view_structure');
-        $structures = Structure::all();
-        $this->view('structure/index', ['structures' => $structures]);
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $_SESSION['list_columns'][self::LIST_MODULE] = $columns;
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+
+        $pagination = Structure::listPaginated($search, $columns, $sort, $order, $page, $perPage);
+
+        $this->view('structure/index', [
+            'structures' => $pagination['items'],
+            'listModule' => self::LIST_MODULE,
+            'listBaseUrl' => self::LIST_BASE,
+            'listSearch' => $search,
+            'listSort' => $sort,
+            'listOrder' => $order,
+            'listColumns' => $columns,
+            'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listPagination' => $pagination,
+        ]);
     }
 
     public function create(): void

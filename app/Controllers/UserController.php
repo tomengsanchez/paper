@@ -4,9 +4,14 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Auth;
 use Core\Database;
+use App\ListConfig;
+use App\ListHelper;
 
 class UserController extends Controller
 {
+    private const LIST_BASE = '/users';
+    private const LIST_MODULE = 'users';
+
     public function __construct()
     {
         $this->requireAuth();
@@ -15,11 +20,32 @@ class UserController extends Controller
     public function index(): void
     {
         $this->requireCapability('view_users');
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $_SESSION['list_columns'][self::LIST_MODULE] = $columns;
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? '';
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+
         $db = Database::getInstance();
-        $stmt = $db->query('SELECT u.*, r.name as role_name FROM users u 
-            LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.id');
-        $users = $stmt->fetchAll(\PDO::FETCH_OBJ);
-        $this->view('users/index', ['users' => $users]);
+        $stmt = $db->query('SELECT u.*, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.id');
+        $rows = $stmt->fetchAll(\PDO::FETCH_OBJ);
+        $rows = ListHelper::search($rows, $search, $columns, self::LIST_MODULE);
+        $rows = ListHelper::sort($rows, $sort ?: ($columns[0] ?? 'id'), $order, $columns, self::LIST_MODULE);
+        $pagination = ListHelper::paginate($rows, $page, $perPage);
+
+        $this->view('users/index', [
+            'users' => $pagination['items'],
+            'listModule' => self::LIST_MODULE,
+            'listBaseUrl' => self::LIST_BASE,
+            'listSearch' => $search,
+            'listSort' => $sort ?: ($columns[0] ?? ''),
+            'listOrder' => $order,
+            'listColumns' => $columns,
+            'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listPagination' => $pagination,
+        ]);
     }
 
     public function create(): void

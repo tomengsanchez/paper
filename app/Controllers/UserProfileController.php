@@ -5,9 +5,14 @@ use Core\Controller;
 use Core\Auth;
 use App\Models\UserProfile;
 use Core\Database;
+use App\ListConfig;
+use App\ListHelper;
 
 class UserProfileController extends Controller
 {
+    private const LIST_BASE = '/users/profiles';
+    private const LIST_MODULE = 'user_profiles';
+
     public function __construct()
     {
         $this->requireAuth();
@@ -16,8 +21,30 @@ class UserProfileController extends Controller
     public function index(): void
     {
         $this->requireCapability('view_user_profiles');
-        $profiles = UserProfile::all();
-        $this->view('user_profiles/index', ['profiles' => $profiles]);
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $_SESSION['list_columns'][self::LIST_MODULE] = $columns;
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? '';
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+
+        $rows = UserProfile::all();
+        $rows = ListHelper::search($rows, $search, $columns, self::LIST_MODULE);
+        $rows = ListHelper::sort($rows, $sort ?: ($columns[0] ?? 'id'), $order, $columns, self::LIST_MODULE);
+        $pagination = ListHelper::paginate($rows, $page, $perPage);
+
+        $this->view('user_profiles/index', [
+            'profiles' => $pagination['items'],
+            'listModule' => self::LIST_MODULE,
+            'listBaseUrl' => self::LIST_BASE,
+            'listSearch' => $search,
+            'listSort' => $sort ?: ($columns[0] ?? ''),
+            'listOrder' => $order,
+            'listColumns' => $columns,
+            'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listPagination' => $pagination,
+        ]);
     }
 
     public function create(): void

@@ -36,6 +36,116 @@ class Profile extends Model
         return $prefix . str_pad($num + 1, 10, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Paginated list with search and sort at DB level. Returns ['items' => [...], 'total' => N, 'page' => N, 'per_page' => N, 'total_pages' => N].
+     */
+    public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage): array
+    {
+        $db = self::db();
+        $aidPapsid = self::getAttributeId('papsid');
+        $aidControl = self::getAttributeId('control_number');
+        $aidFullName = self::getAttributeId('full_name');
+        $aidAge = self::getAttributeId('age');
+        $aidContact = self::getAttributeId('contact_number');
+        $aidProjectId = self::getAttributeId('project_id');
+        if (!$aidPapsid) return ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => $perPage, 'total_pages' => 0];
+
+        $projNameAttrId = $db->query("SELECT id FROM eav_attributes WHERE entity_type='project' AND name='name'")->fetchColumn();
+
+        $sortCol = match ($sortBy) {
+            'papsid' => 'p.papsid',
+            'control_number' => 'p.control_number',
+            'full_name' => 'p.full_name',
+            'age' => 'CAST(p.age AS UNSIGNED)',
+            'contact_number' => 'p.contact_number',
+            'project_name' => 'project_name',
+            default => 'p.id',
+        };
+        $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
+
+        $params = [];
+        $searchCond = '';
+        if ($search !== '') {
+            $term = '%' . $search . '%';
+            $conds = [];
+            if (in_array('papsid', $searchColumns)) { $conds[] = 'p.papsid LIKE ?'; $params[] = $term; }
+            if (in_array('control_number', $searchColumns)) { $conds[] = 'p.control_number LIKE ?'; $params[] = $term; }
+            if (in_array('full_name', $searchColumns)) { $conds[] = 'p.full_name LIKE ?'; $params[] = $term; }
+            if (in_array('age', $searchColumns)) { $conds[] = 'CAST(p.age AS CHAR) LIKE ?'; $params[] = $term; }
+            if (in_array('contact_number', $searchColumns)) { $conds[] = 'p.contact_number LIKE ?'; $params[] = $term; }
+            if (in_array('project_name', $searchColumns)) { $conds[] = 'COALESCE(proj.vname, \'\') LIKE ?'; $params[] = $term; }
+            if (!empty($conds)) {
+                $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
+            }
+        }
+
+        $offset = ($page - 1) * $perPage;
+        $limit = max(1, min(100, $perPage));
+
+        $sql = "SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id,
+            COALESCE(proj.vname, '') as project_name
+FROM (
+  SELECT e.id,
+    MAX(CASE WHEN v.attribute_id = $aidPapsid THEN v.value END) as papsid,
+    MAX(CASE WHEN v.attribute_id = $aidControl THEN v.value END) as control_number,
+    MAX(CASE WHEN v.attribute_id = $aidFullName THEN v.value END) as full_name,
+    MAX(CASE WHEN v.attribute_id = $aidAge THEN v.value END) as age,
+    MAX(CASE WHEN v.attribute_id = $aidContact THEN v.value END) as contact_number,
+    MAX(CASE WHEN v.attribute_id = $aidProjectId THEN v.value END) as project_id
+  FROM eav_entities e
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidPapsid,$aidControl,$aidFullName,$aidAge,$aidContact,$aidProjectId)
+  WHERE e.entity_type = 'profile'
+  GROUP BY e.id
+) p
+LEFT JOIN (
+  SELECT pe.id as pid, pv.value as vname
+  FROM eav_entities pe
+  LEFT JOIN eav_values pv ON pv.entity_id = pe.id AND pv.attribute_id = " . (int)$projNameAttrId . "
+  WHERE pe.entity_type = 'project'
+) proj ON proj.pid = p.project_id
+WHERE 1=1 $searchCond
+ORDER BY $sortCol $dir
+LIMIT $limit OFFSET $offset";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
+
+        $countSql = "SELECT COUNT(*) FROM (
+  SELECT e.id,
+    MAX(CASE WHEN v.attribute_id = $aidPapsid THEN v.value END) as papsid,
+    MAX(CASE WHEN v.attribute_id = $aidControl THEN v.value END) as control_number,
+    MAX(CASE WHEN v.attribute_id = $aidFullName THEN v.value END) as full_name,
+    MAX(CASE WHEN v.attribute_id = $aidAge THEN v.value END) as age,
+    MAX(CASE WHEN v.attribute_id = $aidContact THEN v.value END) as contact_number,
+    MAX(CASE WHEN v.attribute_id = $aidProjectId THEN v.value END) as project_id
+  FROM eav_entities e
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidPapsid,$aidControl,$aidFullName,$aidAge,$aidContact,$aidProjectId)
+  WHERE e.entity_type = 'profile'
+  GROUP BY e.id
+) p
+LEFT JOIN (
+  SELECT pe.id as pid, pv.value as vname
+  FROM eav_entities pe
+  LEFT JOIN eav_values pv ON pv.entity_id = pe.id AND pv.attribute_id = " . (int)$projNameAttrId . "
+  WHERE pe.entity_type = 'project'
+) proj ON proj.pid = p.project_id
+WHERE 1=1 $searchCond";
+
+        $stmtCount = $db->prepare($countSql);
+        $stmtCount->execute($params);
+        $total = (int) $stmtCount->fetchColumn();
+        $totalPages = (int) ceil($total / $limit);
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $limit,
+            'total_pages' => $totalPages,
+        ];
+    }
+
     public static function all(): array
     {
         $db = self::db();

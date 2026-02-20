@@ -5,9 +5,14 @@ use Core\Controller;
 use Core\Auth;
 use Core\Database;
 use App\Capabilities;
+use App\ListConfig;
+use App\ListHelper;
 
 class RoleController extends Controller
 {
+    private const LIST_BASE = '/users/roles';
+    private const LIST_MODULE = 'roles';
+
     public function __construct()
     {
         $this->requireAuth();
@@ -16,6 +21,14 @@ class RoleController extends Controller
     public function index(): void
     {
         $this->requireCapability('view_roles');
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $_SESSION['list_columns'][self::LIST_MODULE] = $columns;
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? '';
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+
         $db = Database::getInstance();
         $roles = $db->query('SELECT * FROM roles ORDER BY name')->fetchAll(\PDO::FETCH_OBJ);
         $capMap = [];
@@ -26,7 +39,22 @@ class RoleController extends Controller
         foreach ($roles as $r) {
             $r->capabilities = $capMap[$r->id] ?? [];
         }
-        $this->view('roles/index', ['roles' => $roles]);
+        $rows = $roles;
+        $rows = ListHelper::search($rows, $search, $columns, self::LIST_MODULE);
+        $rows = ListHelper::sort($rows, $sort ?: ($columns[0] ?? 'name'), $order, $columns, self::LIST_MODULE);
+        $pagination = ListHelper::paginate($rows, $page, $perPage);
+
+        $this->view('roles/index', [
+            'roles' => $pagination['items'],
+            'listModule' => self::LIST_MODULE,
+            'listBaseUrl' => self::LIST_BASE,
+            'listSearch' => $search,
+            'listSort' => $sort ?: ($columns[0] ?? ''),
+            'listOrder' => $order,
+            'listColumns' => $columns,
+            'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listPagination' => $pagination,
+        ]);
     }
 
     public function show(int $id): void

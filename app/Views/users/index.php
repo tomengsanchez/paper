@@ -1,4 +1,11 @@
-<?php ob_start(); ?>
+<?php
+$listColumns = $listColumns ?? [];
+$listSort = $listSort ?? ($listColumns[0] ?? '');
+$listOrder = $listOrder ?? 'asc';
+$listBaseUrl = $listBaseUrl ?? '/users';
+$baseQuery = '?q=' . urlencode($listSearch ?? '') . '&columns=' . urlencode(implode(',', $listColumns)) . '&per_page=' . (int)($listPagination['per_page'] ?? 15);
+ob_start();
+?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Users</h2>
     <?php if (\Core\Auth::can('add_users')): ?><a href="/users/create" class="btn btn-primary">Add User</a><?php endif; ?>
@@ -6,19 +13,29 @@
 <?php if (isset($_GET['error']) && $_GET['error'] === 'self'): ?>
 <div class="alert alert-warning">You cannot delete your own account.</div>
 <?php endif; ?>
+<?php require __DIR__ . '/../partials/list_toolbar.php'; ?>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
-                <tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Actions</th></tr>
+                <tr>
+                    <?php foreach ($listColumns as $key): $col = \App\ListConfig::getColumnByKey('users', $key); if (!$col) continue; ?>
+                    <th>
+                        <?php if (!empty($col['sortable'])): ?><a href="<?= htmlspecialchars($listBaseUrl . $baseQuery . '&sort=' . urlencode($key) . '&order=' . (($listSort === $key && $listOrder === 'asc') ? 'desc' : 'asc')) ?>" class="text-decoration-none"><?php endif; ?>
+                        <?= htmlspecialchars($col['label']) ?>
+                        <?php if ($listSort === $key): ?><span class="ms-1"><?= $listOrder === 'asc' ? '↑' : '↓' ?></span><?php endif; ?>
+                        <?php if (!empty($col['sortable'])): ?></a><?php endif; ?>
+                    </th>
+                    <?php endforeach; ?>
+                    <th>Actions</th>
+                </tr>
             </thead>
             <tbody>
                 <?php foreach ($users as $u): ?>
                 <tr>
-                    <td><?= (int)$u->id ?></td>
-                    <td><?= htmlspecialchars($u->username) ?></td>
-                    <td><?= htmlspecialchars($u->email ?? '-') ?></td>
-                    <td><?= htmlspecialchars($u->role_name ?? '') ?></td>
+                    <?php foreach ($listColumns as $key): ?>
+                    <td><?= htmlspecialchars(\App\ListHelper::getValue($u, $key) ?? '-') ?></td>
+                    <?php endforeach; ?>
                     <td>
                         <?php if (\Core\Auth::can('view_users')): ?><a href="/users/view/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_users')): ?><a href="/users/edit/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
@@ -28,10 +45,14 @@
                     </td>
                 </tr>
                 <?php endforeach; ?>
+                <?php if (empty($users)): ?>
+                <tr><td colspan="<?= count($listColumns) + 1 ?>" class="text-muted text-center py-4">No users yet.</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
 </div>
+<?php require __DIR__ . '/../partials/list_pagination.php'; ?>
 <?php
 $content = ob_get_clean();
 $pageTitle = 'Users';

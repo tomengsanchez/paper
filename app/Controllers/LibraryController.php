@@ -3,9 +3,13 @@ namespace App\Controllers;
 
 use Core\Controller;
 use App\Models\Project;
+use App\ListConfig;
 
 class LibraryController extends Controller
 {
+    private const LIST_BASE = '/library';
+    private const LIST_MODULE = 'library';
+
     public function __construct()
     {
         $this->requireAuth();
@@ -14,8 +18,27 @@ class LibraryController extends Controller
     public function index(): void
     {
         $this->requireCapability('view_projects');
-        $projects = Project::all();
-        $this->view('library/index', ['projects' => $projects]);
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $_SESSION['list_columns'][self::LIST_MODULE] = $columns;
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $page = max(1, (int) ($_GET['page'] ?? 1));
+        $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+
+        $pagination = Project::listPaginated($search, $columns, $sort, $order, $page, $perPage);
+
+        $this->view('library/index', [
+            'projects' => $pagination['items'],
+            'listModule' => self::LIST_MODULE,
+            'listBaseUrl' => self::LIST_BASE,
+            'listSearch' => $search,
+            'listSort' => $sort,
+            'listOrder' => $order,
+            'listColumns' => $columns,
+            'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listPagination' => $pagination,
+        ]);
     }
 
     public function create(): void

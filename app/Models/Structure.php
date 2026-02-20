@@ -57,6 +57,117 @@ class Structure extends Model
         return $result;
     }
 
+    /**
+     * Paginated list with search and sort at DB level. Returns ['items' => [...], 'total' => N, 'page' => N, 'per_page' => N, 'total_pages' => N].
+     */
+    public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage): array
+    {
+        $db = self::db();
+        $aidStrid = self::getAttributeId('strid');
+        $aidOwner = self::getAttributeId('owner_id');
+        $aidTag = self::getAttributeId('structure_tag');
+        $aidDesc = self::getAttributeId('description');
+        $aidTimg = self::getAttributeId('tagging_images');
+        $aidSimg = self::getAttributeId('structure_images');
+        $aidOther = self::getAttributeId('other_details');
+        if (!$aidStrid) return ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => $perPage, 'total_pages' => 0];
+
+        $aidFullName = $db->query("SELECT id FROM eav_attributes WHERE entity_type='profile' AND name='full_name'")->fetchColumn();
+        $aidPapsid = $db->query("SELECT id FROM eav_attributes WHERE entity_type='profile' AND name='papsid'")->fetchColumn();
+
+        $sortCol = match ($sortBy) {
+            'strid' => 's.strid',
+            'owner_name' => 'owner_name',
+            'structure_tag' => 's.structure_tag',
+            'description' => 's.description',
+            default => 's.id',
+        };
+        $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
+
+        $params = [];
+        $searchCond = '';
+        if ($search !== '') {
+            $term = '%' . $search . '%';
+            $conds = [];
+            if (in_array('strid', $searchColumns)) { $conds[] = 's.strid LIKE ?'; $params[] = $term; }
+            if (in_array('owner_name', $searchColumns)) { $conds[] = 'COALESCE(prof.fn_val, prof.pa_val, \'\') LIKE ?'; $params[] = $term; }
+            if (in_array('structure_tag', $searchColumns)) { $conds[] = 's.structure_tag LIKE ?'; $params[] = $term; }
+            if (in_array('description', $searchColumns)) { $conds[] = 's.description LIKE ?'; $params[] = $term; }
+            if (!empty($conds)) {
+                $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
+            }
+        }
+
+        $offset = ($page - 1) * $perPage;
+        $limit = max(1, min(100, $perPage));
+
+        $sql = "SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
+            COALESCE(prof.fn_val, prof.pa_val, '') as owner_name
+FROM (
+  SELECT e.id,
+    MAX(CASE WHEN v.attribute_id = $aidStrid THEN v.value END) as strid,
+    MAX(CASE WHEN v.attribute_id = $aidOwner THEN v.value END) as owner_id,
+    MAX(CASE WHEN v.attribute_id = $aidTag THEN v.value END) as structure_tag,
+    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description,
+    MAX(CASE WHEN v.attribute_id = $aidTimg THEN v.value END) as tagging_images,
+    MAX(CASE WHEN v.attribute_id = $aidSimg THEN v.value END) as structure_images,
+    MAX(CASE WHEN v.attribute_id = $aidOther THEN v.value END) as other_details
+  FROM eav_entities e
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc,$aidTimg,$aidSimg,$aidOther)
+  WHERE e.entity_type = 'structure'
+  GROUP BY e.id
+) s
+LEFT JOIN (
+  SELECT p.id as pid,
+    fn.value as fn_val,
+    pa.value as pa_val
+  FROM eav_entities p
+  LEFT JOIN eav_values fn ON fn.entity_id = p.id AND fn.attribute_id = " . (int)$aidFullName . "
+  LEFT JOIN eav_values pa ON pa.entity_id = p.id AND pa.attribute_id = " . (int)$aidPapsid . "
+  WHERE p.entity_type = 'profile'
+) prof ON prof.pid = s.owner_id
+WHERE 1=1 $searchCond
+ORDER BY $sortCol $dir
+LIMIT $limit OFFSET $offset";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
+
+        $countSql = "SELECT COUNT(*) FROM (
+  SELECT e.id,
+    MAX(CASE WHEN v.attribute_id = $aidStrid THEN v.value END) as strid,
+    MAX(CASE WHEN v.attribute_id = $aidOwner THEN v.value END) as owner_id,
+    MAX(CASE WHEN v.attribute_id = $aidTag THEN v.value END) as structure_tag,
+    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description
+  FROM eav_entities e
+  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidStrid,$aidOwner,$aidTag,$aidDesc,$aidTimg,$aidSimg,$aidOther)
+  WHERE e.entity_type = 'structure'
+  GROUP BY e.id
+) s
+LEFT JOIN (
+  SELECT p.id as pid, fn.value as fn_val, pa.value as pa_val
+  FROM eav_entities p
+  LEFT JOIN eav_values fn ON fn.entity_id = p.id AND fn.attribute_id = " . (int)$aidFullName . "
+  LEFT JOIN eav_values pa ON pa.entity_id = p.id AND pa.attribute_id = " . (int)$aidPapsid . "
+  WHERE p.entity_type = 'profile'
+) prof ON prof.pid = s.owner_id
+WHERE 1=1 $searchCond";
+
+        $stmtCount = $db->prepare($countSql);
+        $stmtCount->execute($params);
+        $total = (int) $stmtCount->fetchColumn();
+        $totalPages = (int) ceil($total / $limit);
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $limit,
+            'total_pages' => $totalPages,
+        ];
+    }
+
     public static function all(): array
     {
         $db = self::db();
