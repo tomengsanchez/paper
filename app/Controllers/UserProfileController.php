@@ -50,6 +50,17 @@ class UserProfileController extends Controller
         }
     }
 
+    public function show(int $id): void
+    {
+        $this->requireCapability('view_user_profiles');
+        $profile = UserProfile::find($id);
+        if (!$profile) {
+            $this->redirect('/users/profiles');
+            return;
+        }
+        $this->view('user_profiles/view', ['profile' => $profile]);
+    }
+
     public function edit(int $id): void
     {
         $this->requireCapability('edit_user_profiles');

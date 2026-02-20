@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use Core\Controller;
 use App\Models\Profile;
+use App\Models\Structure;
 
 class ProfileController extends Controller
 {
@@ -37,6 +38,18 @@ class ProfileController extends Controller
             'project_id' => (int) ($_POST['project_id'] ?? 0) ?: null,
         ]);
         $this->redirect('/profile');
+    }
+
+    public function show(int $id): void
+    {
+        $this->requireCapability('view_profiles');
+        $profile = Profile::find($id);
+        if (!$profile) {
+            $this->redirect('/profile');
+            return;
+        }
+        $structures = \Core\Auth::can('view_structure') ? Structure::byOwner($profile->id) : [];
+        $this->view('profile/view', ['profile' => $profile, 'structures' => $structures]);
     }
 
     public function edit(int $id): void

@@ -56,6 +56,17 @@ class StructureController extends Controller
         $this->redirect('/structure');
     }
 
+    public function show(int $id): void
+    {
+        $this->requireCapability('view_structure');
+        $structure = Structure::find($id);
+        if (!$structure) {
+            $this->redirect('/structure');
+            return;
+        }
+        $this->view('structure/view', ['structure' => $structure]);
+    }
+
     public function edit(int $id): void
     {
         $this->requireCapability('edit_structure');
@@ -173,6 +184,7 @@ class StructureController extends Controller
             'id' => $structure->id,
             'strid' => $structure->strid,
             'owner_id' => $structure->owner_id,
+            'owner_name' => $structure->owner_name ?? null,
             'structure_tag' => $structure->structure_tag,
             'description' => $structure->description,
             'other_details' => $structure->other_details,

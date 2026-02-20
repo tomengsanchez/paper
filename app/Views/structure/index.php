@@ -23,6 +23,7 @@
                     <td><?= htmlspecialchars($s->structure_tag ?? '') ?></td>
                     <td><?= htmlspecialchars(\mb_substr($s->description ?? '', 0, 60)) ?><?= \mb_strlen($s->description ?? '') > 60 ? '...' : '' ?></td>
                     <td>
+                        <?php if (\Core\Auth::can('view_structure')): ?><a href="/structure/view/<?= (int)$s->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_structure')): ?><a href="/structure/edit/<?= (int)$s->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                         <?php if (\Core\Auth::can('delete_structure')): ?><a href="/structure/delete/<?= (int)$s->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this structure?')">Delete</a><?php endif; ?>
                     </td>

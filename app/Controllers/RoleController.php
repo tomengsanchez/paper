@@ -29,6 +29,23 @@ class RoleController extends Controller
         $this->view('roles/index', ['roles' => $roles]);
     }
 
+    public function show(int $id): void
+    {
+        $this->requireCapability('view_roles');
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT * FROM roles WHERE id = ?');
+        $stmt->execute([$id]);
+        $role = $stmt->fetch(\PDO::FETCH_OBJ);
+        if (!$role) {
+            $this->redirect('/users/roles');
+            return;
+        }
+        $stmt = $db->prepare('SELECT capability FROM role_capabilities WHERE role_id = ? ORDER BY capability');
+        $stmt->execute([$id]);
+        $role->capabilities = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $this->view('roles/view', ['role' => $role]);
+    }
+
     public function edit(int $id): void
     {
         $this->requireCapability('edit_roles');

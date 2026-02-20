@@ -35,6 +35,17 @@ class LibraryController extends Controller
         $this->redirect('/library');
     }
 
+    public function show(int $id): void
+    {
+        $this->requireCapability('view_projects');
+        $project = Project::find($id);
+        if (!$project) {
+            $this->redirect('/library');
+            return;
+        }
+        $this->view('library/view', ['project' => $project]);
+    }
+
     public function edit(int $id): void
     {
         $this->requireCapability('edit_projects');

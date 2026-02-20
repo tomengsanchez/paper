@@ -24,6 +24,7 @@ ob_start(); ?>
                         <?php endif; ?>
                     </td>
                     <td>
+                        <?php if (\Core\Auth::can('view_roles')): ?><a href="/users/roles/view/<?= (int)$r->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_roles')): ?><a href="/users/roles/edit/<?= (int)$r->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                     </td>
                 </tr>

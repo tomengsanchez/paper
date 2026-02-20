@@ -20,6 +20,7 @@
                     <td><?= htmlspecialchars($u->email ?? '-') ?></td>
                     <td><?= htmlspecialchars($u->role_name ?? '') ?></td>
                     <td>
+                        <?php if (\Core\Auth::can('view_users')): ?><a href="/users/view/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_users')): ?><a href="/users/edit/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                         <?php if (\Core\Auth::can('delete_users') && $u->id != \Core\Auth::id()): ?>
                         <a href="/users/delete/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user?')">Delete</a>

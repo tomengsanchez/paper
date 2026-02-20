@@ -48,6 +48,20 @@ class UserController extends Controller
         $this->redirect('/users');
     }
 
+    public function show(int $id): void
+    {
+        $this->requireCapability('view_users');
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT u.*, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id WHERE u.id = ?');
+        $stmt->execute([$id]);
+        $user = $stmt->fetch(\PDO::FETCH_OBJ);
+        if (!$user) {
+            $this->redirect('/users');
+            return;
+        }
+        $this->view('users/view', ['user' => $user]);
+    }
+
     public function edit(int $id): void
     {
         $this->requireCapability('edit_users');

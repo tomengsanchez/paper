@@ -16,6 +16,7 @@
                     <td><?= htmlspecialchars($p->role_name ?? '-') ?></td>
                     <td><?= htmlspecialchars($p->username ?? '-') ?></td>
                     <td>
+                        <?php if (\Core\Auth::can('view_user_profiles')): ?><a href="/users/profiles/view/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_user_profiles')): ?><a href="/users/profiles/edit/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                         <?php if (\Core\Auth::can('delete_user_profiles')): ?><a href="/users/profiles/delete/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user profile?')">Delete</a><?php endif; ?>
                     </td>
