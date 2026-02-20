@@ -44,4 +44,9 @@ class Logger
     {
         self::log('app.log', $message, $context);
     }
+
+    public static function email(string $message, array $context = []): void
+    {
+        self::log('email.log', $message, $context);
+    }
 }

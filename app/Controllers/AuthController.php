@@ -5,6 +5,8 @@ use Core\Controller;
 use Core\Auth;
 use Core\Database;
 use Core\Logger;
+use Core\Mailer;
+use App\Models\AppSettings;
 
 class AuthController extends Controller
 {
@@ -34,7 +36,7 @@ class AuthController extends Controller
 
         try {
             $db = Database::getInstance();
-            $stmt = $db->prepare('SELECT id, username, password_hash FROM users WHERE username = ?');
+            $stmt = $db->prepare('SELECT id, username, password_hash, email FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch(\PDO::FETCH_OBJ);
 
@@ -62,6 +64,31 @@ class AuthController extends Controller
                 return;
             }
 
+            $security = AppSettings::getSecurityConfig();
+            if ($security->enable_email_2fa) {
+                $email = trim($user->email ?? '');
+                if (empty($email)) {
+                    Logger::auth('2FA required but user has no email', ['user_id' => $user->id]);
+                    $this->view('auth/login', ['error' => '2FA is enabled but your account has no email. Please contact administrator.']);
+                    return;
+                }
+                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $expires = time() + ($security->{'2fa_expiration_minutes'} * 60);
+                $_SESSION['pending_2fa_user_id'] = (int) $user->id;
+                $_SESSION['pending_2fa_code'] = $code;
+                $_SESSION['pending_2fa_expires'] = $expires;
+                $result = Mailer::send($email, 'PAPS Login Code', "Your verification code is: $code\n\nThis code expires in {$security->{'2fa_expiration_minutes'}} minutes.");
+                if (!$result['success']) {
+                    Logger::auth('2FA email send failed', ['user_id' => $user->id, 'error' => $result['error'] ?? '']);
+                    unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_code'], $_SESSION['pending_2fa_expires']);
+                    $this->view('auth/login', ['error' => 'Failed to send verification code. Please try again or contact administrator.']);
+                    return;
+                }
+                Logger::auth('2FA code sent', ['user_id' => $user->id]);
+                $this->redirect('/login/2fa');
+                return;
+            }
+
             Auth::login((int) $user->id);
             Logger::auth('Login success', ['username' => $username, 'user_id' => $user->id]);
             $this->redirect('/');
@@ -80,5 +107,48 @@ class AuthController extends Controller
     {
         Auth::logout();
         $this->redirect('/login');
+    }
+
+    public function twoFactorForm(): void
+    {
+        if (Auth::check()) {
+            $this->redirect('/');
+            return;
+        }
+        if (empty($_SESSION['pending_2fa_user_id']) || empty($_SESSION['pending_2fa_code'])) {
+            $this->redirect('/login');
+            return;
+        }
+        if (time() > ($_SESSION['pending_2fa_expires'] ?? 0)) {
+            unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_code'], $_SESSION['pending_2fa_expires']);
+            $this->redirect('/login?error=2fa_expired');
+            return;
+        }
+        $this->view('auth/2fa');
+    }
+
+    public function twoFactorVerify(): void
+    {
+        $code = trim($_POST['code'] ?? '');
+        $userId = $_SESSION['pending_2fa_user_id'] ?? null;
+        $storedCode = $_SESSION['pending_2fa_code'] ?? '';
+        $expires = $_SESSION['pending_2fa_expires'] ?? 0;
+
+        if (!$userId || time() > $expires) {
+            unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_code'], $_SESSION['pending_2fa_expires']);
+            $this->redirect('/login?error=2fa_expired');
+            return;
+        }
+
+        if ($code !== $storedCode) {
+            Logger::auth('2FA verification failed', ['user_id' => $userId]);
+            $this->view('auth/2fa', ['error' => 'Invalid or expired code.']);
+            return;
+        }
+
+        unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_code'], $_SESSION['pending_2fa_expires']);
+        Auth::login((int) $userId);
+        Logger::auth('2FA verification success', ['user_id' => $userId]);
+        $this->redirect('/');
     }
 }

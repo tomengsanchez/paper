@@ -10,13 +10,14 @@
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
-                <tr><th>ID</th><th>Username</th><th>Role</th><th>Actions</th></tr>
+                <tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <?php foreach ($users as $u): ?>
                 <tr>
                     <td><?= (int)$u->id ?></td>
                     <td><?= htmlspecialchars($u->username) ?></td>
+                    <td><?= htmlspecialchars($u->email ?? '-') ?></td>
                     <td><?= htmlspecialchars($u->role_name ?? '') ?></td>
                     <td>
                         <?php if (\Core\Auth::can('edit_users')): ?><a href="/users/edit/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
