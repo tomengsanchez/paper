@@ -3,38 +3,39 @@
     <h2><?= $profile ? 'Edit Profile' : 'Add Profile' ?></h2>
     <a href="/profile" class="btn btn-outline-secondary">Back</a>
 </div>
+<?php $prof = $profile ?? null; $fv = function($k,$d='') use($prof){ return $prof ? ($prof->$k ?? $d) : $d; }; $fva = function($k) use($prof){ return $prof ? \App\Models\Profile::parseAttachments($prof->$k ?? '[]') : []; }; ?>
 <div class="card">
     <div class="card-body">
-        <form method="post" action="<?= $profile ? "/profile/update/{$profile->id}" : '/profile/store' ?>">
-            <?php if (!empty($profile)): ?>
+        <form method="post" action="<?= $prof ? "/profile/update/{$prof->id}" : '/profile/store' ?>" enctype="multipart/form-data" id="profileForm">
+            <?php if (!empty($prof)): ?>
             <div class="mb-3">
                 <label class="form-label">PAPSID</label>
-                <input type="text" name="papsid" class="form-control" value="<?= htmlspecialchars($profile->papsid ?? '') ?>" readonly>
+                <input type="text" name="papsid" class="form-control" value="<?= htmlspecialchars($prof->papsid ?? '') ?>" readonly>
                 <small class="text-muted">Assigned when profile was created</small>
             </div>
             <?php endif; ?>
             <div class="mb-3">
                 <label class="form-label">Control Number</label>
-                <input type="text" name="control_number" class="form-control" value="<?= htmlspecialchars($profile->control_number ?? '') ?>">
+                <input type="text" name="control_number" class="form-control" value="<?= htmlspecialchars($prof->control_number ?? '') ?>">
             </div>
             <div class="mb-3">
                 <label class="form-label">Full Name</label>
-                <input type="text" name="full_name" class="form-control" value="<?= htmlspecialchars($profile->full_name ?? '') ?>">
+                <input type="text" name="full_name" class="form-control" value="<?= htmlspecialchars($prof->full_name ?? '') ?>">
             </div>
             <div class="mb-3">
                 <label class="form-label">Age</label>
-                <input type="number" name="age" class="form-control" value="<?= (int)($profile->age ?? 0) ?>" min="0">
+                <input type="number" name="age" class="form-control" value="<?= $prof && ($prof->age ?? '') !== '' ? (int)$prof->age : '' ?>" min="0">
             </div>
             <div class="mb-3">
                 <label class="form-label">Contact Number</label>
-                <input type="text" name="contact_number" class="form-control" value="<?= htmlspecialchars($profile->contact_number ?? '') ?>">
+                <input type="text" name="contact_number" class="form-control" value="<?= htmlspecialchars($prof->contact_number ?? '') ?>">
             </div>
             <div class="mb-3">
                 <label class="form-label">Project</label>
                 <select name="project_id" id="projectSelect" class="form-select" style="width:100%">
                     <option value="">-- Select Project --</option>
-                    <?php if (!empty($profile->project_id)): ?>
-                    <option value="<?= (int)$profile->project_id ?>" selected><?= htmlspecialchars($profile->project_name ?? '') ?></option>
+                    <?php if (!empty($prof->project_id)): ?>
+                    <option value="<?= (int)$prof->project_id ?>" selected><?= htmlspecialchars($prof->project_name ?? '') ?></option>
                     <?php endif; ?>
                 </select>
             </div>
@@ -43,8 +44,88 @@
     </div>
 </div>
 
-<?php if (!empty($profile) && \Core\Auth::canAny(['view_structure', 'add_structure', 'edit_structure'])): ?>
+<!-- Relevant Information -->
 <div class="card mt-4">
+    <div class="card-header"><h6 class="mb-0">Relevant Information</h6></div>
+    <div class="card-body">
+        <div class="mb-3 profile-checkbox-block" data-checkbox-id="residingInProject">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="residing_in_project_affected" id="residingInProject" form="profileForm" value="1" <?= !empty($fv('residing_in_project_affected')) ? 'checked' : '' ?>>
+                <label class="form-check-label" for="residingInProject">Residing in the Project Affected Structure?</label>
+            </div>
+            <textarea name="residing_in_project_affected_note" form="profileForm" class="form-control form-control-sm profile-note" rows="2" placeholder="Note"><?= htmlspecialchars($fv('residing_in_project_affected_note')) ?></textarea>
+            <div class="mt-1">
+                <input type="file" name="residing_in_project_affected_attachments[]" form="profileForm" class="form-control form-control-sm" multiple accept="image/*,.pdf">
+                <?php $residingAtt = $fva('residing_in_project_affected_attachments'); foreach ($residingAtt as $p): $u = \App\Controllers\ProfileController::attachmentUrl($p); ?>
+                <span class="profile-attach-item me-2 d-inline-block" data-path="<?= htmlspecialchars($p) ?>" data-field="residing_in_project_affected_attachments_remove"><a href="<?= htmlspecialchars($u) ?>" target="_blank" class="small"><?= htmlspecialchars(basename($p)) ?></a> <button type="button" class="btn btn-link btn-sm p-0 profile-attach-remove" data-path="<?= htmlspecialchars($p) ?>" data-field="residing_in_project_affected_attachments_remove">&times;</button></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <div class="mb-3 profile-checkbox-block" data-checkbox-id="structureOwners">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="structure_owners" id="structureOwners" form="profileForm" value="1" <?= !empty($fv('structure_owners')) ? 'checked' : '' ?>>
+                <label class="form-check-label" for="structureOwners">Structure owners?</label>
+            </div>
+            <textarea name="structure_owners_note" form="profileForm" class="form-control form-control-sm profile-note" rows="2" placeholder="Note"><?= htmlspecialchars($fv('structure_owners_note')) ?></textarea>
+            <div class="mt-1">
+                <input type="file" name="structure_owners_attachments[]" form="profileForm" class="form-control form-control-sm" multiple accept="image/*,.pdf">
+                <?php $ownersAtt = $fva('structure_owners_attachments'); foreach ($ownersAtt as $p): $u = \App\Controllers\ProfileController::attachmentUrl($p); ?>
+                <span class="profile-attach-item me-2 d-inline-block" data-path="<?= htmlspecialchars($p) ?>" data-field="structure_owners_attachments_remove"><a href="<?= htmlspecialchars($u) ?>" target="_blank" class="small"><?= htmlspecialchars(basename($p)) ?></a> <button type="button" class="btn btn-link btn-sm p-0 profile-attach-remove" data-path="<?= htmlspecialchars($p) ?>" data-field="structure_owners_attachments_remove">&times;</button></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <div class="mb-3" id="ifNotStructureOwnerBlock" data-inverted-checkbox="structureOwners">
+            <label class="form-label">If not Structure owner, what are they?</label>
+            <textarea name="if_not_structure_owner_what" form="profileForm" class="form-control form-control-sm profile-note" rows="2"><?= htmlspecialchars($fv('if_not_structure_owner_what')) ?></textarea>
+            <div class="mt-1">
+                <input type="file" name="if_not_structure_owner_attachments[]" form="profileForm" class="form-control form-control-sm" multiple accept="image/*,.pdf">
+                <?php $ifNotAtt = $fva('if_not_structure_owner_attachments'); foreach ($ifNotAtt as $p): $u = \App\Controllers\ProfileController::attachmentUrl($p); ?>
+                <span class="profile-attach-item me-2 d-inline-block" data-path="<?= htmlspecialchars($p) ?>" data-field="if_not_structure_owner_attachments_remove"><a href="<?= htmlspecialchars($u) ?>" target="_blank" class="small"><?= htmlspecialchars(basename($p)) ?></a> <button type="button" class="btn btn-link btn-sm p-0 profile-attach-remove" data-path="<?= htmlspecialchars($p) ?>" data-field="if_not_structure_owner_attachments_remove">&times;</button></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Information -->
+<div class="card mt-4">
+    <div class="card-header"><h6 class="mb-0">Additional Information</h6></div>
+    <div class="card-body">
+        <div class="mb-3 profile-checkbox-block" data-checkbox-id="ownPropertyElsewhere">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="own_property_elsewhere" id="ownPropertyElsewhere" form="profileForm" value="1" <?= !empty($fv('own_property_elsewhere')) ? 'checked' : '' ?>>
+                <label class="form-check-label" for="ownPropertyElsewhere">Do they own property somewhere else?</label>
+            </div>
+            <textarea name="own_property_elsewhere_note" form="profileForm" class="form-control form-control-sm profile-note" rows="2" placeholder="Note"><?= htmlspecialchars($fv('own_property_elsewhere_note')) ?></textarea>
+            <div class="mt-1">
+                <input type="file" name="own_property_elsewhere_attachments[]" form="profileForm" class="form-control form-control-sm" multiple accept="image/*,.pdf">
+                <?php $ownAtt = $fva('own_property_elsewhere_attachments'); foreach ($ownAtt as $p): $u = \App\Controllers\ProfileController::attachmentUrl($p); ?>
+                <span class="profile-attach-item me-2 d-inline-block" data-path="<?= htmlspecialchars($p) ?>" data-field="own_property_elsewhere_attachments_remove"><a href="<?= htmlspecialchars($u) ?>" target="_blank" class="small"><?= htmlspecialchars(basename($p)) ?></a> <button type="button" class="btn btn-link btn-sm p-0 profile-attach-remove" data-path="<?= htmlspecialchars($p) ?>" data-field="own_property_elsewhere_attachments_remove">&times;</button></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <div class="mb-3 profile-checkbox-block" data-checkbox-id="availedGovernmentHousing">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="availed_government_housing" id="availedGovernmentHousing" form="profileForm" value="1" <?= !empty($fv('availed_government_housing')) ? 'checked' : '' ?>>
+                <label class="form-check-label" for="availedGovernmentHousing">Have they availed previously of any government socialized housing program?</label>
+            </div>
+            <textarea name="availed_government_housing_note" form="profileForm" class="form-control form-control-sm profile-note" rows="2" placeholder="Note"><?= htmlspecialchars($fv('availed_government_housing_note')) ?></textarea>
+            <div class="mt-1">
+                <input type="file" name="availed_government_housing_attachments[]" form="profileForm" class="form-control form-control-sm" multiple accept="image/*,.pdf">
+                <?php $availAtt = $fva('availed_government_housing_attachments'); foreach ($availAtt as $p): $u = \App\Controllers\ProfileController::attachmentUrl($p); ?>
+                <span class="profile-attach-item me-2 d-inline-block" data-path="<?= htmlspecialchars($p) ?>" data-field="availed_government_housing_attachments_remove"><a href="<?= htmlspecialchars($u) ?>" target="_blank" class="small"><?= htmlspecialchars(basename($p)) ?></a> <button type="button" class="btn btn-link btn-sm p-0 profile-attach-remove" data-path="<?= htmlspecialchars($p) ?>" data-field="availed_government_housing_attachments_remove">&times;</button></span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">HH Income</label>
+            <input type="number" name="hh_income" form="profileForm" class="form-control" value="<?= $prof && isset($prof->hh_income) && $prof->hh_income !== '' && $prof->hh_income !== null ? htmlspecialchars($prof->hh_income) : '' ?>" step="0.01" min="0" placeholder="Numbers only" inputmode="decimal">
+        </div>
+    </div>
+</div>
+
+<?php if (!empty($prof) && \Core\Auth::canAny(['view_structure', 'add_structure', 'edit_structure'])): ?>
+<div class="card mt-4" id="profileStructuresCard">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0">Structures</h6>
         <button type="button" class="btn btn-sm btn-primary" id="btnAddStructure">+ Add Structure</button>
@@ -150,6 +231,49 @@ $(function(){
         });
     }
     loadStructures();
+    function toggleStructureOwnerDeps() {
+        var checked = $('#structureOwners').is(':checked');
+        $('#ifNotStructureOwnerBlock').toggle(!checked);
+        var card = $('#profileStructuresCard');
+        card.toggle(checked);
+        $('#btnAddStructure').prop('disabled', !checked);
+        toggleCheckboxBlockDeps();
+    }
+    function toggleCheckboxBlockDeps() {
+        $('.profile-checkbox-block').each(function() {
+            var bid = $(this).data('checkbox-id');
+            var chk = $('#' + bid);
+            if (!chk.length) return;
+            var enabled = chk.is(':checked');
+            var block = $(this);
+            block.find('textarea.profile-note, input[type=file]').prop('disabled', !enabled);
+            block.find('.profile-attach-remove').prop('disabled', !enabled);
+        });
+        $('#ifNotStructureOwnerBlock').each(function() {
+            var invertedId = $(this).data('inverted-checkbox');
+            var enabled = !$('#' + invertedId).is(':checked');
+            $(this).find('textarea.profile-note, input[type=file]').prop('disabled', !enabled);
+            $(this).find('.profile-attach-remove').prop('disabled', !enabled);
+        });
+    }
+    $('.profile-checkbox-block input[type=checkbox]').on('change', toggleCheckboxBlockDeps);
+    $('#structureOwners').on('change', toggleStructureOwnerDeps);
+    toggleStructureOwnerDeps();
+    toggleCheckboxBlockDeps();
+    $(document).on('click', '.profile-attach-remove', function(e) {
+        e.preventDefault();
+        var path = $(this).data('path');
+        var field = $(this).data('field');
+        var form = document.getElementById('profileForm');
+        if (form && path && field) {
+            var inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = field + '[]';
+            inp.value = path;
+            form.appendChild(inp);
+        }
+        $(this).closest('.profile-attach-item').remove();
+    });
     $('#btnAddStructure').on('click', function() {
         $('#structureFormLightbox')[0].reset();
         $('input[name=owner_id]').val(profileId);

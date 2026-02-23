@@ -63,6 +63,8 @@ $router->post('/users/roles/update/{id}', 'RoleController@update');
 
 // Serve structure upload images (works when doc root is not public/)
 $router->get('/serve/structure', 'StructureController@serveImage');
+// Serve profile attachments (images + PDF)
+$router->get('/serve/profile', 'ProfileController@serveProfileFile');
 
 // API for dropdown search (AJAX)
 $router->get('/api/coordinators', 'ApiController@coordinators');

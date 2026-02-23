@@ -18,7 +18,7 @@ $structures = $structures ?? [];
             <dt class="col-sm-3">Full Name</dt>
             <dd class="col-sm-9"><?= htmlspecialchars($profile->full_name ?? '-') ?></dd>
             <dt class="col-sm-3">Age</dt>
-            <dd class="col-sm-9"><?= (int)($profile->age ?? 0) ?: '-' ?></dd>
+            <dd class="col-sm-9"><?= isset($profile->age) && $profile->age !== '' && $profile->age !== null ? (int)$profile->age : '-' ?></dd>
             <dt class="col-sm-3">Contact Number</dt>
             <dd class="col-sm-9"><?= htmlspecialchars($profile->contact_number ?? '-') ?></dd>
             <dt class="col-sm-3">Project</dt>
@@ -27,7 +27,73 @@ $structures = $structures ?? [];
     </div>
 </div>
 
-<?php if (\Core\Auth::can('view_structure')): ?>
+<!-- Relevant Information -->
+<div class="card mt-4">
+    <div class="card-header"><h6 class="mb-0">Relevant Information</h6></div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Residing in the Project Affected Structure?</dt>
+            <dd class="col-sm-8"><?= !empty($profile->residing_in_project_affected) ? 'Yes' : 'No' ?></dd>
+            <?php if (!empty($profile->residing_in_project_affected_note)): ?>
+            <dt class="col-sm-4">Note</dt>
+            <dd class="col-sm-8"><?= nl2br(htmlspecialchars($profile->residing_in_project_affected_note)) ?></dd>
+            <?php endif; ?>
+            <?php $residingAtt = \App\Models\Profile::parseAttachments($profile->residing_in_project_affected_attachments ?? '[]'); if (!empty($residingAtt)): ?>
+            <dt class="col-sm-4">Attachments</dt>
+            <dd class="col-sm-8"><?php foreach ($residingAtt as $p): ?><a href="<?= htmlspecialchars(\App\Controllers\ProfileController::attachmentUrl($p)) ?>" target="_blank" class="me-2"><?= htmlspecialchars(basename($p)) ?></a><?php endforeach; ?></dd>
+            <?php endif; ?>
+            <dt class="col-sm-4">Structure owners?</dt>
+            <dd class="col-sm-8"><?= !empty($profile->structure_owners) ? 'Yes' : 'No' ?></dd>
+            <?php if (!empty($profile->structure_owners_note)): ?>
+            <dt class="col-sm-4">Note</dt>
+            <dd class="col-sm-8"><?= nl2br(htmlspecialchars($profile->structure_owners_note)) ?></dd>
+            <?php endif; ?>
+            <?php $ownersAtt = \App\Models\Profile::parseAttachments($profile->structure_owners_attachments ?? '[]'); if (!empty($ownersAtt)): ?>
+            <dt class="col-sm-4">Attachments</dt>
+            <dd class="col-sm-8"><?php foreach ($ownersAtt as $p): ?><a href="<?= htmlspecialchars(\App\Controllers\ProfileController::attachmentUrl($p)) ?>" target="_blank" class="me-2"><?= htmlspecialchars(basename($p)) ?></a><?php endforeach; ?></dd>
+            <?php endif; ?>
+            <?php if (empty($profile->structure_owners) && (trim($profile->if_not_structure_owner_what ?? '') !== '' || !empty(\App\Models\Profile::parseAttachments($profile->if_not_structure_owner_attachments ?? '[]')))): ?>
+            <dt class="col-sm-4">If not Structure owner, what are they?</dt>
+            <dd class="col-sm-8"><?= nl2br(htmlspecialchars($profile->if_not_structure_owner_what ?? '')) ?>
+                <?php $ifNotAtt = \App\Models\Profile::parseAttachments($profile->if_not_structure_owner_attachments ?? '[]'); foreach ($ifNotAtt as $p): ?><a href="<?= htmlspecialchars(\App\Controllers\ProfileController::attachmentUrl($p)) ?>" target="_blank" class="me-2 d-block"><?= htmlspecialchars(basename($p)) ?></a><?php endforeach; ?>
+            </dd>
+            <?php endif; ?>
+        </dl>
+    </div>
+</div>
+
+<!-- Additional Information -->
+<div class="card mt-4">
+    <div class="card-header"><h6 class="mb-0">Additional Information</h6></div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Do they own property somewhere else?</dt>
+            <dd class="col-sm-8"><?= !empty($profile->own_property_elsewhere) ? 'Yes' : 'No' ?></dd>
+            <?php if (!empty($profile->own_property_elsewhere_note)): ?>
+            <dt class="col-sm-4">Note</dt>
+            <dd class="col-sm-8"><?= nl2br(htmlspecialchars($profile->own_property_elsewhere_note)) ?></dd>
+            <?php endif; ?>
+            <?php $ownAtt = \App\Models\Profile::parseAttachments($profile->own_property_elsewhere_attachments ?? '[]'); if (!empty($ownAtt)): ?>
+            <dt class="col-sm-4">Attachments</dt>
+            <dd class="col-sm-8"><?php foreach ($ownAtt as $p): ?><a href="<?= htmlspecialchars(\App\Controllers\ProfileController::attachmentUrl($p)) ?>" target="_blank" class="me-2"><?= htmlspecialchars(basename($p)) ?></a><?php endforeach; ?></dd>
+            <?php endif; ?>
+            <dt class="col-sm-4">Have they availed previously of any government socialized housing program?</dt>
+            <dd class="col-sm-8"><?= !empty($profile->availed_government_housing) ? 'Yes' : 'No' ?></dd>
+            <?php if (!empty($profile->availed_government_housing_note)): ?>
+            <dt class="col-sm-4">Note</dt>
+            <dd class="col-sm-8"><?= nl2br(htmlspecialchars($profile->availed_government_housing_note)) ?></dd>
+            <?php endif; ?>
+            <?php $availAtt = \App\Models\Profile::parseAttachments($profile->availed_government_housing_attachments ?? '[]'); if (!empty($availAtt)): ?>
+            <dt class="col-sm-4">Attachments</dt>
+            <dd class="col-sm-8"><?php foreach ($availAtt as $p): ?><a href="<?= htmlspecialchars(\App\Controllers\ProfileController::attachmentUrl($p)) ?>" target="_blank" class="me-2"><?= htmlspecialchars(basename($p)) ?></a><?php endforeach; ?></dd>
+            <?php endif; ?>
+            <dt class="col-sm-4">HH Income</dt>
+            <dd class="col-sm-8"><?= isset($profile->hh_income) && $profile->hh_income !== '' && $profile->hh_income !== null ? htmlspecialchars($profile->hh_income) : '-' ?></dd>
+        </dl>
+    </div>
+</div>
+
+<?php if (\Core\Auth::can('view_structure') && !empty($profile->structure_owners)): ?>
 <div class="card mt-4">
     <div class="card-header"><h6 class="mb-0">Structures</h6></div>
     <div class="card-body">

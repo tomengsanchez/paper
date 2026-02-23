@@ -22,7 +22,7 @@ class LibraryController extends Controller
         $_SESSION['list_columns'][self::LIST_MODULE] = $columns;
         $search = trim($_GET['q'] ?? '');
         $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
-        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'desc';
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
 
