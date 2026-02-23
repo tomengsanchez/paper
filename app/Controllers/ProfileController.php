@@ -26,8 +26,10 @@ class ProfileController extends Controller
         $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'asc';
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+        $afterId = !empty($_GET['after_id']) ? (int) $_GET['after_id'] : null;
+        $beforeId = !empty($_GET['before_id']) ? (int) $_GET['before_id'] : null;
 
-        $pagination = Profile::listPaginated($search, $columns, $sort, $order, $page, $perPage);
+        $pagination = Profile::listPaginated($search, $columns, $sort, $order, $page, $perPage, $afterId, $beforeId);
 
         $this->view('profile/index', [
             'profiles' => $pagination['items'],
