@@ -1,3 +1,10 @@
 apache_error.log
-
 php_error.log
+
+# Application logs
+logs/*.log
+
+config/database.php
+config/app.php
+
+public/uploads/*
