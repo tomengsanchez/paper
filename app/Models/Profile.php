@@ -92,7 +92,11 @@ class Profile
 
         $sql = "SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id,
             COALESCE(proj.name, '') as project_name,
-            COALESCE(p.structure_count, 0) as structure_count
+            COALESCE(p.structure_count, 0) as structure_count,
+            p.residing_in_project_affected, p.residing_in_project_affected_note,
+            p.structure_owners, p.structure_owners_note, p.if_not_structure_owner_what,
+            p.own_property_elsewhere, p.own_property_elsewhere_note,
+            p.availed_government_housing, p.availed_government_housing_note, p.hh_income
             FROM profiles p
             LEFT JOIN projects proj ON proj.id = p.project_id
             WHERE 1=1 $searchCond $cursorCond
@@ -135,24 +139,39 @@ class Profile
         return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
+    public static function parseAttachments(?string $json): array
+    {
+        if (empty(trim($json ?? ''))) return [];
+        $d = json_decode($json, true);
+        return is_array($d) ? $d : [];
+    }
+
     public static function find(int $id): ?object
     {
         $stmt = self::db()->prepare('
-            SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id, proj.name as project_name
+            SELECT p.*, proj.name as project_name
             FROM profiles p
             LEFT JOIN projects proj ON proj.id = p.project_id
             WHERE p.id = ?
         ');
         $stmt->execute([$id]);
-        $row = $stmt->fetch(\PDO::FETCH_OBJ);
-        return $row ?: null;
+        return $stmt->fetch(\PDO::FETCH_OBJ) ?: null;
     }
 
     public static function create(array $data): int
     {
         $papsid = self::generatePAPSID();
         $age = ($data['age'] ?? '') !== '' ? (int) $data['age'] : null;
-        $stmt = self::db()->prepare('INSERT INTO profiles (papsid, control_number, full_name, age, contact_number, project_id) VALUES (?, ?, ?, ?, ?, ?)');
+        $hhIncome = isset($data['hh_income']) && $data['hh_income'] !== '' ? (float) $data['hh_income'] : null;
+        $stmt = self::db()->prepare('INSERT INTO profiles (
+            papsid, control_number, full_name, age, contact_number, project_id,
+            residing_in_project_affected, residing_in_project_affected_note, residing_in_project_affected_attachments,
+            structure_owners, structure_owners_note, structure_owners_attachments,
+            if_not_structure_owner_what, if_not_structure_owner_attachments,
+            own_property_elsewhere, own_property_elsewhere_note, own_property_elsewhere_attachments,
+            availed_government_housing, availed_government_housing_note, availed_government_housing_attachments,
+            hh_income
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $papsid,
             trim($data['control_number'] ?? ''),
@@ -160,6 +179,21 @@ class Profile
             $age,
             trim($data['contact_number'] ?? ''),
             ($pid = (int) ($data['project_id'] ?? 0)) ? $pid : null,
+            !empty($data['residing_in_project_affected']) ? 1 : 0,
+            trim($data['residing_in_project_affected_note'] ?? ''),
+            $data['residing_in_project_affected_attachments'] ?? '[]',
+            !empty($data['structure_owners']) ? 1 : 0,
+            trim($data['structure_owners_note'] ?? ''),
+            $data['structure_owners_attachments'] ?? '[]',
+            trim($data['if_not_structure_owner_what'] ?? ''),
+            $data['if_not_structure_owner_attachments'] ?? '[]',
+            !empty($data['own_property_elsewhere']) ? 1 : 0,
+            trim($data['own_property_elsewhere_note'] ?? ''),
+            $data['own_property_elsewhere_attachments'] ?? '[]',
+            !empty($data['availed_government_housing']) ? 1 : 0,
+            trim($data['availed_government_housing_note'] ?? ''),
+            $data['availed_government_housing_attachments'] ?? '[]',
+            $hhIncome,
         ]);
         return (int) self::db()->lastInsertId();
     }
@@ -169,8 +203,17 @@ class Profile
         $current = self::find($id);
         if (!$current) return false;
         $age = isset($data['age']) && $data['age'] !== '' ? (int) $data['age'] : null;
-        $papsid = isset($data['papsid']) ? $data['papsid'] : $current->papsid;
-        $stmt = self::db()->prepare('UPDATE profiles SET papsid = ?, control_number = ?, full_name = ?, age = ?, contact_number = ?, project_id = ? WHERE id = ?');
+        $papsid = $data['papsid'] ?? $current->papsid ?? '';
+        $hhIncome = isset($data['hh_income']) && $data['hh_income'] !== '' ? (float) $data['hh_income'] : null;
+        $stmt = self::db()->prepare('UPDATE profiles SET
+            papsid = ?, control_number = ?, full_name = ?, age = ?, contact_number = ?, project_id = ?,
+            residing_in_project_affected = ?, residing_in_project_affected_note = ?, residing_in_project_affected_attachments = ?,
+            structure_owners = ?, structure_owners_note = ?, structure_owners_attachments = ?,
+            if_not_structure_owner_what = ?, if_not_structure_owner_attachments = ?,
+            own_property_elsewhere = ?, own_property_elsewhere_note = ?, own_property_elsewhere_attachments = ?,
+            availed_government_housing = ?, availed_government_housing_note = ?, availed_government_housing_attachments = ?,
+            hh_income = ?
+            WHERE id = ?');
         $stmt->execute([
             $papsid,
             trim($data['control_number'] ?? ''),
@@ -178,6 +221,21 @@ class Profile
             $age,
             trim($data['contact_number'] ?? ''),
             ($pid = (int) ($data['project_id'] ?? 0)) ? $pid : null,
+            !empty($data['residing_in_project_affected']) ? 1 : 0,
+            trim($data['residing_in_project_affected_note'] ?? ''),
+            $data['residing_in_project_affected_attachments'] ?? '[]',
+            !empty($data['structure_owners']) ? 1 : 0,
+            trim($data['structure_owners_note'] ?? ''),
+            $data['structure_owners_attachments'] ?? '[]',
+            trim($data['if_not_structure_owner_what'] ?? ''),
+            $data['if_not_structure_owner_attachments'] ?? '[]',
+            !empty($data['own_property_elsewhere']) ? 1 : 0,
+            trim($data['own_property_elsewhere_note'] ?? ''),
+            $data['own_property_elsewhere_attachments'] ?? '[]',
+            !empty($data['availed_government_housing']) ? 1 : 0,
+            trim($data['availed_government_housing_note'] ?? ''),
+            $data['availed_government_housing_attachments'] ?? '[]',
+            $hhIncome,
             $id,
         ]);
         return true;
@@ -212,7 +270,16 @@ class Profile
     public static function createWithPapsid(string $papsid, array $data): int
     {
         $age = ($data['age'] ?? '') !== '' ? (int) $data['age'] : null;
-        $stmt = self::db()->prepare('INSERT INTO profiles (papsid, control_number, full_name, age, contact_number, project_id) VALUES (?, ?, ?, ?, ?, ?)');
+        $hhIncome = isset($data['hh_income']) && $data['hh_income'] !== '' && $data['hh_income'] !== null ? (float) $data['hh_income'] : null;
+        $stmt = self::db()->prepare('INSERT INTO profiles (
+            papsid, control_number, full_name, age, contact_number, project_id,
+            residing_in_project_affected, residing_in_project_affected_note, residing_in_project_affected_attachments,
+            structure_owners, structure_owners_note, structure_owners_attachments,
+            if_not_structure_owner_what, if_not_structure_owner_attachments,
+            own_property_elsewhere, own_property_elsewhere_note, own_property_elsewhere_attachments,
+            availed_government_housing, availed_government_housing_note, availed_government_housing_attachments,
+            hh_income
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $papsid,
             trim($data['control_number'] ?? ''),
@@ -220,6 +287,21 @@ class Profile
             $age,
             trim($data['contact_number'] ?? ''),
             ($pid = (int) ($data['project_id'] ?? 0)) ? $pid : null,
+            !empty($data['residing_in_project_affected']) ? 1 : 0,
+            trim($data['residing_in_project_affected_note'] ?? ''),
+            $data['residing_in_project_affected_attachments'] ?? '[]',
+            !empty($data['structure_owners']) ? 1 : 0,
+            trim($data['structure_owners_note'] ?? ''),
+            $data['structure_owners_attachments'] ?? '[]',
+            trim($data['if_not_structure_owner_what'] ?? ''),
+            $data['if_not_structure_owner_attachments'] ?? '[]',
+            !empty($data['own_property_elsewhere']) ? 1 : 0,
+            trim($data['own_property_elsewhere_note'] ?? ''),
+            $data['own_property_elsewhere_attachments'] ?? '[]',
+            !empty($data['availed_government_housing']) ? 1 : 0,
+            trim($data['availed_government_housing_note'] ?? ''),
+            $data['availed_government_housing_attachments'] ?? '[]',
+            $hhIncome,
         ]);
         return (int) self::db()->lastInsertId();
     }

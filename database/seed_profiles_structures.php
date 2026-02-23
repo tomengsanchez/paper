@@ -17,7 +17,7 @@ use Core\Database;
 
 // ============== SEED CONFIG ==============
 const SEED_PROFILE_COUNT = 100000;
-const SEED_STRUCTURES_MIN = 5;
+const SEED_STRUCTURES_MIN = 0;  // 0 = structure owners may have 0 structures when structure_owners is no
 const SEED_STRUCTURES_MAX = 20;
 const SEED_PROJECT_COUNT = 50;
 const SEED_BATCH_SIZE = 50;
@@ -153,6 +153,30 @@ const DESCRIPTIONS = [
     'TUPAD work site - emergency employment project area',
 ];
 
+// Profile new fields - notes and alternatives (for seeding)
+const RESIDING_NOTES = [
+    'Residing in on-site structure per RROW.', 'Currently occupying unit. Relocation pending.',
+    'Tenant under verbal agreement.', 'Squatter since 2015. No formal occupancy.',
+    'Family compound. Multiple households.', 'Shared occupancy with relatives.',
+];
+const STRUCTURE_OWNER_NOTES = [
+    'Ownership per tax declaration.', 'Land title under name. Structure self-built.',
+    'Inherited from parents. No formal transfer yet.', 'Co-owned with siblings.',
+];
+const IF_NOT_OWNER_WHAT = [
+    'Tenant - monthly rent.', 'Caregiver/guardian - caretaker arrangement.',
+    'Informal settler - no written agreement.', 'Relative - staying with family.',
+    'Squatter - no formal arrangement.', 'Lessee - lease expired, holdover.',
+];
+const OWN_PROPERTY_ELSEWHERE_NOTES = [
+    'Owns lot in province. No structure.', 'Has house in another barangay.',
+    'Property in spouse name. Separated.', 'Inherited land in Mindanao.',
+];
+const AVAILED_HOUSING_NOTES = [
+    '4Ps beneficiary. Housing component.', 'NHA off-city resettlement 2019.',
+    'Pag-IBIG developmental housing. Paying amortization.', 'Core Shelter Assistance 2018.',
+];
+
 // Other details - wider variety
 const OTHER_DETAILS = [
     'Beneficiary under Philippine Government social housing program.',
@@ -236,6 +260,13 @@ function randomElement(array $arr) { return $arr[array_rand($arr)]; }
 
 function randomPhone(): string { return '09' . str_pad((string) random_int(100000000, 999999999), 9, '0'); }
 
+/** Random float for HH income (thousands PHP) */
+function randomHhIncome(): ?float
+{
+    if (random_int(0, 10) <= 1) return null; // ~10% missing
+    return round(random_int(5000, 80000) / 1000, 2); // 5k to 80k range
+}
+
 function randomStructureTag(int $seq): string
 {
     return randomElement(STRUCTURE_TAG_PREFIXES) . '-' . randomElement(STRUCTURE_TAG_SUFFIXES) . '-' . str_pad((string) $seq, 4, '0');
@@ -243,9 +274,10 @@ function randomStructureTag(int $seq): string
 
 // --- Main ---
 $structRange = SEED_STRUCTURES_MIN . '-' . SEED_STRUCTURES_MAX;
+$ownerStructRange = (SEED_STRUCTURES_MIN > 0 ? SEED_STRUCTURES_MIN : 1) . '-' . SEED_STRUCTURES_MAX;
 echo "Philippine Government Projects Seeder\n";
 echo "=====================================\n";
-echo "Profiles: " . number_format(SEED_PROFILE_COUNT) . " | Structures/profile: $structRange (random) | Projects: " . SEED_PROJECT_COUNT . "\n";
+echo "Profiles: " . number_format(SEED_PROFILE_COUNT) . " | Structure owners: 50% random | Structures (owners only): $ownerStructRange | Projects: " . SEED_PROJECT_COUNT . "\n";
 echo "Images/structure: " . SEED_TAGGING_IMAGES . " tagging + " . SEED_STRUCTURE_IMAGES . " structure\n\n";
 
 $db = Database::getInstance();
@@ -294,16 +326,33 @@ for ($batch = 0; $batch < $totalBatches; $batch++) {
         $fullName = $firstName . ' ' . $surname;
         $projectId = randomElement($projectIds);
 
-        $profileId = Profile::createWithPapsid($papsids[$i] ?? Profile::generatePAPSID(), [
+        $residing = (bool) random_int(0, 1);
+        $structureOwners = (bool) random_int(0, 1);
+        $ownElsewhere = (bool) random_int(0, 1);
+        $availedHousing = (bool) random_int(0, 1);
+
+        $profileData = [
             'control_number' => 'CTRL-' . ($ctrlNumStart + $idx),
             'full_name' => $fullName,
             'age' => random_int(18, 75),
             'contact_number' => randomPhone(),
             'project_id' => $projectId,
-        ]);
+            'residing_in_project_affected' => $residing,
+            'residing_in_project_affected_note' => $residing ? randomElement(RESIDING_NOTES) : '',
+            'structure_owners' => $structureOwners,
+            'structure_owners_note' => $structureOwners ? randomElement(STRUCTURE_OWNER_NOTES) : '',
+            'if_not_structure_owner_what' => !$structureOwners ? randomElement(IF_NOT_OWNER_WHAT) : '',
+            'own_property_elsewhere' => $ownElsewhere,
+            'own_property_elsewhere_note' => $ownElsewhere ? randomElement(OWN_PROPERTY_ELSEWHERE_NOTES) : '',
+            'availed_government_housing' => $availedHousing,
+            'availed_government_housing_note' => $availedHousing ? randomElement(AVAILED_HOUSING_NOTES) : '',
+            'hh_income' => randomHhIncome(),
+        ];
+
+        $profileId = Profile::createWithPapsid($papsids[$i] ?? Profile::generatePAPSID(), $profileData);
         $createdProfiles++;
 
-        $structCount = random_int(SEED_STRUCTURES_MIN, SEED_STRUCTURES_MAX);
+        $structCount = $structureOwners ? random_int(max(SEED_STRUCTURES_MIN, 1), SEED_STRUCTURES_MAX) : 0;
         for ($s = 0; $s < $structCount; $s++) {
             $imgs = generateStructureImages($tagPool, $structPool);
             $strid = $stridPool[$stridIdx] ?? Structure::generateSTRID();

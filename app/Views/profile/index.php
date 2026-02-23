@@ -33,8 +33,33 @@ ob_start();
                     <?php foreach ($listColumns as $key): ?>
                     <td><?php
                         if ($key === 'other_details') {
-                            $cnt = (int)($p->structure_count ?? 0);
-                            echo htmlspecialchars('Number of Structure: ' . $cnt);
+                            $val = function($v) { return '<strong>' . htmlspecialchars($v) . '</strong>'; };
+                            $lines = [];
+                            $lines[] = 'Structures: ' . $val((string)(int)($p->structure_count ?? 0));
+                            $lines[] = 'Residing in project affected: ' . $val(!empty($p->residing_in_project_affected) ? 'Yes' : 'No');
+                            $lines[] = 'Structure owner: ' . $val(!empty($p->structure_owners) ? 'Yes' : 'No');
+                            if (empty($p->structure_owners) && !empty(trim($p->if_not_structure_owner_what ?? ''))) {
+                                $lines[] = 'If not owner: ' . $val(\mb_substr($p->if_not_structure_owner_what, 0, 50) . (\mb_strlen($p->if_not_structure_owner_what) > 50 ? '…' : ''));
+                            }
+                            $lines[] = 'Own property elsewhere: ' . $val(!empty($p->own_property_elsewhere) ? 'Yes' : 'No');
+                            $lines[] = 'Availed gov\'t housing: ' . $val(!empty($p->availed_government_housing) ? 'Yes' : 'No');
+                            $lines[] = 'HH Income: ' . $val(isset($p->hh_income) && $p->hh_income !== '' && $p->hh_income !== null ? number_format((float)$p->hh_income, 2) : '-');
+                            $fullHtmlLines = $lines;
+                            $valNote = function($v) { return '<strong>' . nl2br(htmlspecialchars(trim($v))) . '</strong>'; };
+                            if (!empty(trim($p->residing_in_project_affected_note ?? ''))) $fullHtmlLines[] = 'Residing note: ' . $valNote($p->residing_in_project_affected_note);
+                            if (!empty(trim($p->structure_owners_note ?? ''))) $fullHtmlLines[] = 'Owner note: ' . $valNote($p->structure_owners_note);
+                            if (!empty(trim($p->own_property_elsewhere_note ?? ''))) $fullHtmlLines[] = 'Property elsewhere note: ' . $valNote($p->own_property_elsewhere_note);
+                            if (!empty(trim($p->availed_government_housing_note ?? ''))) $fullHtmlLines[] = 'Availed housing note: ' . $valNote($p->availed_government_housing_note);
+                            $shortText = implode(' | ', array_slice(array_map('strip_tags', $lines), 0, 3));
+                            $fullHtml = implode('<br>', $fullHtmlLines);
+                            $expandId = 'profile-detail-' . (int)$p->id;
+                            ?><div class="profile-other-details" data-expand-id="<?= $expandId ?>" title="Click to expand/collapse" style="cursor:pointer;">
+                                <div class="profile-other-summary small text-secondary"><?= htmlspecialchars($shortText) ?></div>
+                                <div id="<?= $expandId ?>" class="profile-other-expanded small d-none"><?= $fullHtml ?></div>
+                            </div><?php
+                        } elseif ($key === 'full_name' && \Core\Auth::can('view_profiles')) {
+                            $v = \App\ListHelper::getValue($p, $key);
+                            echo '<a href="/profile/view/' . (int)$p->id . '" class="text-decoration-none">' . htmlspecialchars($v ?? '-') . '</a>';
                         } else {
                             $v = \App\ListHelper::getValue($p, $key);
                             if ($key === 'age') echo (int)$v;
@@ -61,5 +86,15 @@ ob_start();
 $content = ob_get_clean();
 $pageTitle = 'Profile';
 $currentPage = 'profile';
+$scripts = '<script>
+$(function(){
+    $(document).on("click", ".profile-other-details", function(e){
+        e.preventDefault();
+        var wrap = $(this);
+        wrap.find(".profile-other-expanded").toggleClass("d-none");
+        wrap.find(".profile-other-summary").toggleClass("d-none");
+    });
+});
+</script>';
 require __DIR__ . '/../layout/main.php';
 ?>
