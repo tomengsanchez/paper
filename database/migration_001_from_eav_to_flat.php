@@ -26,7 +26,7 @@ return [
                 INDEX idx_coordinator (coordinator_id),
                 INDEX idx_created (created_at),
                 CONSTRAINT fk_projects_coordinator FOREIGN KEY (coordinator_id) REFERENCES users(id) ON DELETE SET NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         // 2. Create flat profiles table
@@ -46,7 +46,7 @@ return [
                 INDEX idx_full_name (full_name),
                 INDEX idx_created (created_at),
                 CONSTRAINT fk_profiles_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         // 3. Create flat structures table
@@ -67,7 +67,7 @@ return [
                 INDEX idx_structure_tag (structure_tag),
                 INDEX idx_created (created_at),
                 CONSTRAINT fk_structures_owner FOREIGN KEY (owner_id) REFERENCES profiles(id) ON DELETE SET NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         // 4. Create flat user_profiles table
@@ -84,7 +84,7 @@ return [
                 INDEX idx_created (created_at),
                 CONSTRAINT fk_user_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
                 CONSTRAINT fk_user_profiles_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         // 5. Migrate data from EAV - need attribute IDs from eav_attributes
