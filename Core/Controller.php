@@ -6,7 +6,7 @@ abstract class Controller
     protected function view(string $view, array $data = []): void
     {
         extract($data);
-        $viewPath = dirname(__DIR__) . "/app/Views/{$view}.php";
+        $viewPath = dirname(__DIR__) . "/App/Views/{$view}.php";
         if (file_exists($viewPath)) {
             require $viewPath;
         } else {
