@@ -12,7 +12,7 @@ return [
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(50) NOT NULL UNIQUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
         $db->exec("
             CREATE TABLE IF NOT EXISTS users (
@@ -24,14 +24,14 @@ return [
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (role_id) REFERENCES roles(id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
         $db->exec("
             CREATE TABLE IF NOT EXISTS app_settings (
                 setting_key VARCHAR(100) PRIMARY KEY,
                 setting_value TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
         $db->exec("
             CREATE TABLE IF NOT EXISTS role_capabilities (
@@ -40,7 +40,7 @@ return [
                 capability VARCHAR(100) NOT NULL,
                 FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
                 UNIQUE KEY uk_role_cap (role_id, capability)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         ");
 
         $db->exec("INSERT IGNORE INTO roles (name) VALUES ('Administrator'), ('Standard User'), ('Coordinator')");
