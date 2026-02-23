@@ -282,6 +282,11 @@ for ($batch = 0; $batch < $totalBatches; $batch++) {
     $batchStart = $batch * SEED_BATCH_SIZE;
     $batchCount = min(SEED_BATCH_SIZE, SEED_PROFILE_COUNT - $batchStart);
 
+    $papsids = Profile::generatePAPSIDBatch($batchCount);
+    $stridPoolSize = $batchCount * SEED_STRUCTURES_MAX;
+    $stridPool = Structure::generateSTRIDBatch($stridPoolSize);
+    $stridIdx = 0;
+
     for ($i = 0; $i < $batchCount; $i++) {
         $idx = $batchStart + $i;
         $firstName = randomElement(FIRST_NAMES);
@@ -289,7 +294,7 @@ for ($batch = 0; $batch < $totalBatches; $batch++) {
         $fullName = $firstName . ' ' . $surname;
         $projectId = randomElement($projectIds);
 
-        $profileId = Profile::create([
+        $profileId = Profile::createWithPapsid($papsids[$i] ?? Profile::generatePAPSID(), [
             'control_number' => 'CTRL-' . ($ctrlNumStart + $idx),
             'full_name' => $fullName,
             'age' => random_int(18, 75),
@@ -301,7 +306,9 @@ for ($batch = 0; $batch < $totalBatches; $batch++) {
         $structCount = random_int(SEED_STRUCTURES_MIN, SEED_STRUCTURES_MAX);
         for ($s = 0; $s < $structCount; $s++) {
             $imgs = generateStructureImages($tagPool, $structPool);
-            Structure::create([
+            $strid = $stridPool[$stridIdx] ?? Structure::generateSTRID();
+            $stridIdx++;
+            Structure::createWithStrid($strid, [
                 'owner_id' => $profileId,
                 'structure_tag' => randomStructureTag($s + 1),
                 'description' => randomElement(DESCRIPTIONS),
