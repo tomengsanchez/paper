@@ -5,10 +5,12 @@
 <form id="<?= htmlspecialchars($formId ?? 'structureFormEmbed') ?>" enctype="multipart/form-data">
     <input type="hidden" name="owner_id" value="<?= (int)($fixedOwnerId ?? 0) ?>">
     <input type="hidden" name="structure_id" value="<?= !empty($structure) ? (int)$structure->id : '' ?>">
+    <?php if (!empty($structure)): ?>
     <div class="mb-2">
         <label class="form-label">Structure ID</label>
-        <input type="text" name="strid" class="form-control form-control-sm" value="<?= htmlspecialchars(!empty($structure) ? $structure->strid : ($strid ?? '')) ?>" placeholder="auto-generated" readonly>
+        <input type="text" name="strid" class="form-control form-control-sm" value="<?= htmlspecialchars($structure->strid ?? '') ?>" readonly>
     </div>
+    <?php endif; ?>
     <div class="mb-2">
         <label class="form-label">Structure Tag #</label>
         <input type="text" name="structure_tag" class="form-control form-control-sm" value="<?= htmlspecialchars($structure->structure_tag ?? '') ?>">

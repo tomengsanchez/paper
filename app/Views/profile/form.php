@@ -6,11 +6,13 @@
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $profile ? "/profile/update/{$profile->id}" : '/profile/store' ?>">
+            <?php if (!empty($profile)): ?>
             <div class="mb-3">
                 <label class="form-label">PAPSID</label>
-                <input type="text" name="papsid" class="form-control" value="<?= htmlspecialchars(!empty($profile) ? $profile->papsid : ($papsid ?? '')) ?>" required readonly>
-                <small class="text-muted">Auto-generated (PAPS-YEARMONTH0000000001)</small>
+                <input type="text" name="papsid" class="form-control" value="<?= htmlspecialchars($profile->papsid ?? '') ?>" readonly>
+                <small class="text-muted">Assigned when profile was created</small>
             </div>
+            <?php endif; ?>
             <div class="mb-3">
                 <label class="form-label">Control Number</label>
                 <input type="text" name="control_number" class="form-control" value="<?= htmlspecialchars($profile->control_number ?? '') ?>">
@@ -152,12 +154,10 @@ $(function(){
         $('#structureFormLightbox')[0].reset();
         $('input[name=owner_id]').val(profileId);
         $('input[name=structure_id]').val('');
-        $('input[name=strid]').val('').attr('placeholder', 'auto-generated');
         $('#embedTaggingImages').empty();
         $('#embedStructureImages').empty();
         removedTagging = []; removedStructure = [];
         $('#structuresModalTitle').text('Add Structure');
-        $.get('/api/structure/next-strid', function(r) { $('input[name=strid]').val(r.strid || ''); });
         new bootstrap.Modal(document.getElementById('structuresModal')).show();
     });
     function renderImgThumbs(paths, type) {

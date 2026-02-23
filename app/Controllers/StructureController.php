@@ -58,8 +58,7 @@ class StructureController extends Controller
     public function create(): void
     {
         $this->requireCapability('add_structure');
-        $strid = Structure::generateSTRID();
-        $this->view('structure/form', ['structure' => null, 'strid' => $strid]);
+        $this->view('structure/form', ['structure' => null]);
     }
 
     public function store(): void
@@ -68,7 +67,6 @@ class StructureController extends Controller
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
         $id = Structure::create([
-            'strid' => trim($_POST['strid'] ?? Structure::generateSTRID()),
             'owner_id' => (int) ($_POST['owner_id'] ?? 0) ?: null,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
@@ -147,9 +145,7 @@ class StructureController extends Controller
         }
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
-        $strid = trim($_POST['strid'] ?? '');
         $id = Structure::create([
-            'strid' => $strid ?: Structure::generateSTRID(),
             'owner_id' => $ownerId,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),

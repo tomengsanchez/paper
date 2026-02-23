@@ -45,15 +45,13 @@ class ProfileController extends Controller
     public function create(): void
     {
         $this->requireCapability('add_profiles');
-        $papsid = Profile::generatePAPSID();
-        $this->view('profile/form', ['profile' => null, 'papsid' => $papsid]);
+        $this->view('profile/form', ['profile' => null]);
     }
 
     public function store(): void
     {
         $this->requireCapability('add_profiles');
         $id = Profile::create([
-            'papsid' => trim($_POST['papsid'] ?? Profile::generatePAPSID()),
             'control_number' => trim($_POST['control_number'] ?? ''),
             'full_name' => trim($_POST['full_name'] ?? ''),
             'age' => (int) ($_POST['age'] ?? 0),

@@ -12,16 +12,26 @@ class Structure
         return Database::getInstance();
     }
 
+    /**
+     * Generate next STRID atomically to avoid duplicates under concurrent create.
+     */
     public static function generateSTRID(): string
     {
-        $yearMonth = date('Ym');
-        $prefix = "STRID-{$yearMonth}";
-        $stmt = self::db()->prepare('SELECT strid FROM structures WHERE strid LIKE ? ORDER BY strid DESC LIMIT 1');
-        $stmt->execute([$prefix . '%']);
-        $last = $stmt->fetchColumn();
-        if (!$last) return $prefix . '000000001';
-        $num = (int) substr($last, strlen($prefix));
-        return $prefix . str_pad($num + 1, 9, '0', STR_PAD_LEFT);
+        $db = self::db();
+        $lockName = 'strid_generate';
+        $db->query("SELECT GET_LOCK('$lockName', 10)")->fetchAll();
+        try {
+            $yearMonth = date('Ym');
+            $prefix = "STRID-{$yearMonth}";
+            $stmt = $db->prepare('SELECT strid FROM structures WHERE strid LIKE ? ORDER BY strid DESC LIMIT 1');
+            $stmt->execute([$prefix . '%']);
+            $last = $stmt->fetchColumn();
+            if (!$last) return $prefix . '000000001';
+            $num = (int) substr($last, strlen($prefix));
+            return $prefix . str_pad($num + 1, 9, '0', STR_PAD_LEFT);
+        } finally {
+            $db->query("SELECT RELEASE_LOCK('$lockName')")->fetchAll();
+        }
     }
 
     public static function byOwner(int $profileId): array
@@ -128,7 +138,7 @@ class Structure
 
     public static function create(array $data): int
     {
-        $strid = $data['strid'] ?? self::generateSTRID();
+        $strid = self::generateSTRID();
         $stmt = self::db()->prepare('INSERT INTO structures (strid, owner_id, structure_tag, description, tagging_images, structure_images, other_details) VALUES (?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $strid,
