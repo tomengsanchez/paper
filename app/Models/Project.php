@@ -1,33 +1,24 @@
 <?php
 namespace App\Models;
 
-use Core\Model;
 use Core\Database;
 
-class Project extends Model
+class Project
 {
-    protected static string $entityType = 'project';
-    protected static array $attributes = [
-        'name' => 'string',
-        'description' => 'text',
-        'coordinator_id' => 'int',
-    ];
+    protected static string $table = 'projects';
 
-    /**
-     * Paginated list with search and sort at DB level. Returns ['items' => [...], 'total' => N, 'page' => N, 'per_page' => N, 'total_pages' => N].
-     */
+    protected static function db(): \PDO
+    {
+        return Database::getInstance();
+    }
+
     public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage): array
     {
         $db = self::db();
-        $aidName = self::getAttributeId('name');
-        $aidDesc = self::getAttributeId('description');
-        $aidCoord = self::getAttributeId('coordinator_id');
-        if (!$aidName) return ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => $perPage, 'total_pages' => 0];
-
         $sortCol = match ($sortBy) {
             'name' => 'pr.name',
             'description' => 'pr.description',
-            'coordinator_name' => 'coordinator_name',
+            'coordinator_name' => 'u.username',
             default => 'pr.id',
         };
         $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
@@ -48,40 +39,19 @@ class Project extends Model
         $offset = ($page - 1) * $perPage;
         $limit = max(1, min(100, $perPage));
 
-        $sql = "SELECT pr.id, pr.name, pr.description, pr.coordinator_id,
-            COALESCE(u.username, '') as coordinator_name
-FROM (
-  SELECT e.id,
-    MAX(CASE WHEN v.attribute_id = $aidName THEN v.value END) as name,
-    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description,
-    MAX(CASE WHEN v.attribute_id = $aidCoord THEN v.value END) as coordinator_id
-  FROM eav_entities e
-  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidName,$aidDesc,$aidCoord)
-  WHERE e.entity_type = 'project'
-  GROUP BY e.id
-) pr
-LEFT JOIN users u ON u.id = pr.coordinator_id
-WHERE 1=1 $searchCond
-ORDER BY $sortCol $dir
-LIMIT $limit OFFSET $offset";
-
+        $sql = "SELECT pr.id, pr.name, pr.description, pr.coordinator_id, COALESCE(u.username, '') as coordinator_name
+            FROM projects pr
+            LEFT JOIN users u ON u.id = pr.coordinator_id
+            WHERE 1=1 $searchCond
+            ORDER BY $sortCol $dir
+            LIMIT $limit OFFSET $offset";
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        $countSql = "SELECT COUNT(*) FROM (
-  SELECT e.id,
-    MAX(CASE WHEN v.attribute_id = $aidName THEN v.value END) as name,
-    MAX(CASE WHEN v.attribute_id = $aidDesc THEN v.value END) as description,
-    MAX(CASE WHEN v.attribute_id = $aidCoord THEN v.value END) as coordinator_id
-  FROM eav_entities e
-  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidName,$aidDesc,$aidCoord)
-  WHERE e.entity_type = 'project'
-  GROUP BY e.id
-) pr
-LEFT JOIN users u ON u.id = pr.coordinator_id
-WHERE 1=1 $searchCond";
-
+        $countSql = "SELECT COUNT(*) FROM projects pr
+            LEFT JOIN users u ON u.id = pr.coordinator_id
+            WHERE 1=1 $searchCond";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($params);
         $total = (int) $stmtCount->fetchColumn();
@@ -98,84 +68,55 @@ WHERE 1=1 $searchCond";
 
     public static function all(): array
     {
-        $db = self::db();
-        $nameId = self::getAttributeId('name');
-        $descId = self::getAttributeId('description');
-        $coordId = self::getAttributeId('coordinator_id');
-        if (!$nameId) return [];
-
-        $stmt = $db->query('SELECT id FROM eav_entities WHERE entity_type = "project" ORDER BY id DESC');
-        $entities = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-        $result = [];
-
-        foreach ($entities as $eid) {
-            $name = self::getValue($eid, 'name');
-            $desc = self::getValue($eid, 'description');
-            $coordIdVal = self::getValue($eid, 'coordinator_id');
-            $coordName = null;
-            if ($coordIdVal) {
-                $u = $db->prepare('SELECT username FROM users WHERE id = ?');
-                $u->execute([$coordIdVal]);
-                $coordName = $u->fetchColumn();
-            }
-            $result[] = (object) [
-                'id' => $eid,
-                'name' => $name,
-                'description' => $desc,
-                'coordinator_id' => $coordIdVal,
-                'coordinator_name' => $coordName,
-            ];
-        }
-        return $result;
+        $stmt = self::db()->query('
+            SELECT pr.id, pr.name, pr.description, pr.coordinator_id, u.username as coordinator_name
+            FROM projects pr
+            LEFT JOIN users u ON u.id = pr.coordinator_id
+            ORDER BY pr.id DESC
+        ');
+        return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
     public static function find(int $id): ?object
     {
-        $db = self::db();
-        $stmt = $db->prepare('SELECT id FROM eav_entities WHERE id = ? AND entity_type = "project"');
+        $stmt = self::db()->prepare('
+            SELECT pr.id, pr.name, pr.description, pr.coordinator_id, u.username as coordinator_name
+            FROM projects pr
+            LEFT JOIN users u ON u.id = pr.coordinator_id
+            WHERE pr.id = ?
+        ');
         $stmt->execute([$id]);
-        if (!$stmt->fetch()) return null;
-
-        $coordIdVal = self::getValue($id, 'coordinator_id');
-        $coordName = null;
-        if ($coordIdVal) {
-            $u = $db->prepare('SELECT username FROM users WHERE id = ?');
-            $u->execute([$coordIdVal]);
-            $coordName = $u->fetchColumn();
-        }
-
-        return (object) [
-            'id' => $id,
-            'name' => self::getValue($id, 'name'),
-            'description' => self::getValue($id, 'description'),
-            'coordinator_id' => $coordIdVal,
-            'coordinator_name' => $coordName,
-        ];
+        $row = $stmt->fetch(\PDO::FETCH_OBJ);
+        return $row ?: null;
     }
 
     public static function create(array $data): int
     {
-        $db = self::db();
-        $db->prepare('INSERT INTO eav_entities (entity_type) VALUES ("project")')->execute();
-        $id = (int) $db->lastInsertId();
-        self::setValue($id, 'name', $data['name'] ?? '');
-        self::setValue($id, 'description', $data['description'] ?? '');
-        self::setValue($id, 'coordinator_id', $data['coordinator_id'] ?? '');
-        return $id;
+        $stmt = self::db()->prepare('INSERT INTO projects (name, description, coordinator_id) VALUES (?, ?, ?)');
+        $stmt->execute([
+            trim($data['name'] ?? ''),
+            trim($data['description'] ?? ''),
+            ($id = (int) ($data['coordinator_id'] ?? 0)) ? $id : null,
+        ]);
+        return (int) self::db()->lastInsertId();
     }
 
     public static function update(int $id, array $data): bool
     {
         if (!self::find($id)) return false;
-        self::setValue($id, 'name', $data['name'] ?? '');
-        self::setValue($id, 'description', $data['description'] ?? '');
-        self::setValue($id, 'coordinator_id', $data['coordinator_id'] ?? '');
+        $stmt = self::db()->prepare('UPDATE projects SET name = ?, description = ?, coordinator_id = ? WHERE id = ?');
+        $stmt->execute([
+            trim($data['name'] ?? ''),
+            trim($data['description'] ?? ''),
+            ($cid = (int) ($data['coordinator_id'] ?? 0)) ? $cid : null,
+            $id,
+        ]);
         return true;
     }
 
     public static function delete(int $id): bool
     {
-        $stmt = self::db()->prepare('DELETE FROM eav_entities WHERE id = ? AND entity_type = "project"');
+        $stmt = self::db()->prepare('DELETE FROM projects WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->rowCount() > 0;
     }

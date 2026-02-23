@@ -1,67 +1,40 @@
 <?php
 namespace App\Models;
 
-use Core\Model;
 use Core\Database;
 
-class Profile extends Model
+class Profile
 {
-    protected static string $entityType = 'profile';
-    protected static array $attributes = [
-        'papsid' => 'string',
-        'control_number' => 'string',
-        'full_name' => 'string',
-        'age' => 'int',
-        'contact_number' => 'string',
-        'project_id' => 'int',
-    ];
+    protected static string $table = 'profiles';
+
+    protected static function db(): \PDO
+    {
+        return Database::getInstance();
+    }
 
     public static function generatePAPSID(): string
     {
         $yearMonth = date('Ym');
         $prefix = "PAPS-{$yearMonth}";
-        $db = self::db();
-        $attrId = self::getAttributeId('papsid');
-        if (!$attrId) return $prefix . '0000000001';
-
-        $stmt = $db->prepare('SELECT value FROM eav_values v 
-            JOIN eav_entities e ON v.entity_id = e.id 
-            WHERE v.attribute_id = ? AND e.entity_type = "profile" AND value LIKE ?
-            ORDER BY value DESC LIMIT 1');
-        $stmt->execute([$attrId, $prefix . '%']);
+        $stmt = self::db()->prepare('SELECT papsid FROM profiles WHERE papsid LIKE ? ORDER BY papsid DESC LIMIT 1');
+        $stmt->execute([$prefix . '%']);
         $last = $stmt->fetchColumn();
         if (!$last) return $prefix . '0000000001';
-
         $num = (int) substr($last, strlen($prefix));
         return $prefix . str_pad($num + 1, 10, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Paginated list with search and sort at DB level. Returns ['items' => [...], 'total' => N, 'page' => N, 'per_page' => N, 'total_pages' => N].
-     */
     public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage): array
     {
         $db = self::db();
-        $aidPapsid = self::getAttributeId('papsid');
-        $aidControl = self::getAttributeId('control_number');
-        $aidFullName = self::getAttributeId('full_name');
-        $aidAge = self::getAttributeId('age');
-        $aidContact = self::getAttributeId('contact_number');
-        $aidProjectId = self::getAttributeId('project_id');
-        if (!$aidPapsid) return ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => $perPage, 'total_pages' => 0];
-
-        $projNameAttrId = $db->query("SELECT id FROM eav_attributes WHERE entity_type='project' AND name='name'")->fetchColumn();
-        $structOwnerAttrId = $db->query("SELECT id FROM eav_attributes WHERE entity_type='structure' AND name='owner_id'")->fetchColumn();
-        $structOwnerAttrId = $structOwnerAttrId ? (int) $structOwnerAttrId : 0;
-
         $sortCol = match ($sortBy) {
             'papsid' => 'p.papsid',
             'control_number' => 'p.control_number',
             'full_name' => 'p.full_name',
-            'age' => 'CAST(p.age AS UNSIGNED)',
+            'age' => 'p.age',
             'contact_number' => 'p.contact_number',
-            'project_name' => 'project_name',
-            'other_details' => 'structure_count',
+            'project_name' => 'proj.name',
+            'other_details' => 'struct_cnt.cnt',
             default => 'p.id',
         };
         $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
@@ -76,7 +49,7 @@ class Profile extends Model
             if (in_array('full_name', $searchColumns)) { $conds[] = 'p.full_name LIKE ?'; $params[] = $term; }
             if (in_array('age', $searchColumns)) { $conds[] = 'CAST(p.age AS CHAR) LIKE ?'; $params[] = $term; }
             if (in_array('contact_number', $searchColumns)) { $conds[] = 'p.contact_number LIKE ?'; $params[] = $term; }
-            if (in_array('project_name', $searchColumns)) { $conds[] = 'COALESCE(proj.vname, \'\') LIKE ?'; $params[] = $term; }
+            if (in_array('project_name', $searchColumns)) { $conds[] = 'COALESCE(proj.name, \'\') LIKE ?'; $params[] = $term; }
             if (in_array('other_details', $searchColumns)) { $conds[] = 'CAST(COALESCE(struct_cnt.cnt, 0) AS CHAR) LIKE ?'; $params[] = $term; }
             if (!empty($conds)) {
                 $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
@@ -87,70 +60,22 @@ class Profile extends Model
         $limit = max(1, min(100, $perPage));
 
         $sql = "SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id,
-            COALESCE(proj.vname, '') as project_name,
+            COALESCE(proj.name, '') as project_name,
             COALESCE(struct_cnt.cnt, 0) as structure_count
-FROM (
-  SELECT e.id,
-    MAX(CASE WHEN v.attribute_id = $aidPapsid THEN v.value END) as papsid,
-    MAX(CASE WHEN v.attribute_id = $aidControl THEN v.value END) as control_number,
-    MAX(CASE WHEN v.attribute_id = $aidFullName THEN v.value END) as full_name,
-    MAX(CASE WHEN v.attribute_id = $aidAge THEN v.value END) as age,
-    MAX(CASE WHEN v.attribute_id = $aidContact THEN v.value END) as contact_number,
-    MAX(CASE WHEN v.attribute_id = $aidProjectId THEN v.value END) as project_id
-  FROM eav_entities e
-  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidPapsid,$aidControl,$aidFullName,$aidAge,$aidContact,$aidProjectId)
-  WHERE e.entity_type = 'profile'
-  GROUP BY e.id
-) p
-LEFT JOIN (
-  SELECT pe.id as pid, pv.value as vname
-  FROM eav_entities pe
-  LEFT JOIN eav_values pv ON pv.entity_id = pe.id AND pv.attribute_id = " . (int)$projNameAttrId . "
-  WHERE pe.entity_type = 'project'
-) proj ON proj.pid = p.project_id
-LEFT JOIN (
-  SELECT CAST(ov.value AS UNSIGNED) as profile_id, COUNT(*) as cnt
-  FROM eav_values ov
-  JOIN eav_entities se ON ov.entity_id = se.id
-  WHERE ov.attribute_id = $structOwnerAttrId AND se.entity_type = 'structure'
-  GROUP BY ov.value
-) struct_cnt ON struct_cnt.profile_id = p.id
-WHERE 1=1 $searchCond
-ORDER BY $sortCol $dir
-LIMIT $limit OFFSET $offset";
-
+            FROM profiles p
+            LEFT JOIN projects proj ON proj.id = p.project_id
+            LEFT JOIN (SELECT owner_id, COUNT(*) as cnt FROM structures GROUP BY owner_id) struct_cnt ON struct_cnt.owner_id = p.id
+            WHERE 1=1 $searchCond
+            ORDER BY $sortCol $dir
+            LIMIT $limit OFFSET $offset";
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        $countSql = "SELECT COUNT(*) FROM (
-  SELECT e.id,
-    MAX(CASE WHEN v.attribute_id = $aidPapsid THEN v.value END) as papsid,
-    MAX(CASE WHEN v.attribute_id = $aidControl THEN v.value END) as control_number,
-    MAX(CASE WHEN v.attribute_id = $aidFullName THEN v.value END) as full_name,
-    MAX(CASE WHEN v.attribute_id = $aidAge THEN v.value END) as age,
-    MAX(CASE WHEN v.attribute_id = $aidContact THEN v.value END) as contact_number,
-    MAX(CASE WHEN v.attribute_id = $aidProjectId THEN v.value END) as project_id
-  FROM eav_entities e
-  LEFT JOIN eav_values v ON v.entity_id = e.id AND v.attribute_id IN ($aidPapsid,$aidControl,$aidFullName,$aidAge,$aidContact,$aidProjectId)
-  WHERE e.entity_type = 'profile'
-  GROUP BY e.id
-) p
-LEFT JOIN (
-  SELECT pe.id as pid, pv.value as vname
-  FROM eav_entities pe
-  LEFT JOIN eav_values pv ON pv.entity_id = pe.id AND pv.attribute_id = " . (int)$projNameAttrId . "
-  WHERE pe.entity_type = 'project'
-) proj ON proj.pid = p.project_id
-LEFT JOIN (
-  SELECT CAST(ov.value AS UNSIGNED) as profile_id, COUNT(*) as cnt
-  FROM eav_values ov
-  JOIN eav_entities se ON ov.entity_id = se.id
-  WHERE ov.attribute_id = $structOwnerAttrId AND se.entity_type = 'structure'
-  GROUP BY ov.value
-) struct_cnt ON struct_cnt.profile_id = p.id
-WHERE 1=1 $searchCond";
-
+        $countSql = "SELECT COUNT(*) FROM profiles p
+            LEFT JOIN projects proj ON proj.id = p.project_id
+            LEFT JOIN (SELECT owner_id, COUNT(*) as cnt FROM structures GROUP BY owner_id) struct_cnt ON struct_cnt.owner_id = p.id
+            WHERE 1=1 $searchCond";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($params);
         $total = (int) $stmtCount->fetchColumn();
@@ -167,98 +92,66 @@ WHERE 1=1 $searchCond";
 
     public static function all(): array
     {
-        $db = self::db();
-        $papsId = self::getAttributeId('papsid');
-        if (!$papsId) return [];
-
-        $stmt = $db->query('SELECT id FROM eav_entities WHERE entity_type = "profile" ORDER BY id DESC');
-        $entities = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-        $result = [];
-
-        foreach ($entities as $eid) {
-            $projectId = self::getValue($eid, 'project_id');
-            $projectName = null;
-            if ($projectId) {
-                $ev = $db->prepare('SELECT v.value FROM eav_values v 
-                    JOIN eav_attributes a ON v.attribute_id = a.id 
-                    WHERE v.entity_id = ? AND a.entity_type = "project" AND a.name = "name"');
-                $ev->execute([$projectId]);
-                $projectName = $ev->fetchColumn();
-            }
-
-            $result[] = (object) [
-                'id' => $eid,
-                'papsid' => self::getValue($eid, 'papsid'),
-                'control_number' => self::getValue($eid, 'control_number'),
-                'full_name' => self::getValue($eid, 'full_name'),
-                'age' => self::getValue($eid, 'age'),
-                'contact_number' => self::getValue($eid, 'contact_number'),
-                'project_id' => $projectId,
-                'project_name' => $projectName,
-            ];
-        }
-        return $result;
+        $stmt = self::db()->query('
+            SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id, proj.name as project_name
+            FROM profiles p
+            LEFT JOIN projects proj ON proj.id = p.project_id
+            ORDER BY p.id DESC
+        ');
+        return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
     public static function find(int $id): ?object
     {
-        $db = self::db();
-        $stmt = $db->prepare('SELECT id FROM eav_entities WHERE id = ? AND entity_type = "profile"');
+        $stmt = self::db()->prepare('
+            SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id, proj.name as project_name
+            FROM profiles p
+            LEFT JOIN projects proj ON proj.id = p.project_id
+            WHERE p.id = ?
+        ');
         $stmt->execute([$id]);
-        if (!$stmt->fetch()) return null;
-
-        $projectId = self::getValue($id, 'project_id');
-        $projectName = null;
-        if ($projectId) {
-            $ev = $db->prepare('SELECT v.value FROM eav_values v 
-                JOIN eav_attributes a ON v.attribute_id = a.id 
-                WHERE v.entity_id = ? AND a.entity_type = "project" AND a.name = "name"');
-            $ev->execute([$projectId]);
-            $projectName = $ev->fetchColumn();
-        }
-
-        return (object) [
-            'id' => $id,
-            'papsid' => self::getValue($id, 'papsid'),
-            'control_number' => self::getValue($id, 'control_number'),
-            'full_name' => self::getValue($id, 'full_name'),
-            'age' => self::getValue($id, 'age'),
-            'contact_number' => self::getValue($id, 'contact_number'),
-            'project_id' => $projectId,
-            'project_name' => $projectName,
-        ];
+        $row = $stmt->fetch(\PDO::FETCH_OBJ);
+        return $row ?: null;
     }
 
     public static function create(array $data): int
     {
-        $db = self::db();
         $papsid = $data['papsid'] ?? self::generatePAPSID();
-        $db->prepare('INSERT INTO eav_entities (entity_type) VALUES ("profile")')->execute();
-        $id = (int) $db->lastInsertId();
-        self::setValue($id, 'papsid', $papsid);
-        self::setValue($id, 'control_number', $data['control_number'] ?? '');
-        self::setValue($id, 'full_name', $data['full_name'] ?? '');
-        self::setValue($id, 'age', $data['age'] ?? '');
-        self::setValue($id, 'contact_number', $data['contact_number'] ?? '');
-        self::setValue($id, 'project_id', $data['project_id'] ?? '');
-        return $id;
+        $age = ($data['age'] ?? '') !== '' ? (int) $data['age'] : null;
+        $stmt = self::db()->prepare('INSERT INTO profiles (papsid, control_number, full_name, age, contact_number, project_id) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([
+            $papsid,
+            trim($data['control_number'] ?? ''),
+            trim($data['full_name'] ?? ''),
+            $age,
+            trim($data['contact_number'] ?? ''),
+            ($pid = (int) ($data['project_id'] ?? 0)) ? $pid : null,
+        ]);
+        return (int) self::db()->lastInsertId();
     }
 
     public static function update(int $id, array $data): bool
     {
-        if (!self::find($id)) return false;
-        if (isset($data['papsid'])) self::setValue($id, 'papsid', $data['papsid']);
-        self::setValue($id, 'control_number', $data['control_number'] ?? '');
-        self::setValue($id, 'full_name', $data['full_name'] ?? '');
-        self::setValue($id, 'age', $data['age'] ?? '');
-        self::setValue($id, 'contact_number', $data['contact_number'] ?? '');
-        self::setValue($id, 'project_id', $data['project_id'] ?? '');
+        $current = self::find($id);
+        if (!$current) return false;
+        $age = isset($data['age']) && $data['age'] !== '' ? (int) $data['age'] : null;
+        $papsid = isset($data['papsid']) ? $data['papsid'] : $current->papsid;
+        $stmt = self::db()->prepare('UPDATE profiles SET papsid = ?, control_number = ?, full_name = ?, age = ?, contact_number = ?, project_id = ? WHERE id = ?');
+        $stmt->execute([
+            $papsid,
+            trim($data['control_number'] ?? ''),
+            trim($data['full_name'] ?? ''),
+            $age,
+            trim($data['contact_number'] ?? ''),
+            ($pid = (int) ($data['project_id'] ?? 0)) ? $pid : null,
+            $id,
+        ]);
         return true;
     }
 
     public static function delete(int $id): bool
     {
-        $stmt = self::db()->prepare('DELETE FROM eav_entities WHERE id = ? AND entity_type = "profile"');
+        $stmt = self::db()->prepare('DELETE FROM profiles WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->rowCount() > 0;
     }
