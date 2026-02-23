@@ -1,10 +1,25 @@
 # PAPS - Custom PHP MVC Framework
 
-A lightweight PHP MVC framework with flat database tables, jQuery, and MySQL.
+A lightweight PHP MVC framework with flat database tables, jQuery, and MySQL. Version 1.
+
+**Requirements:** PHP 8.0+, MySQL 5.7+ (or MariaDB 10.2+), Apache with mod_rewrite (or nginx equivalent).
 
 ## Setup
 
-### 1. Database
+### 1. Configuration
+
+Copy the sample config and edit with your MySQL credentials:
+
+```bash
+cp config/database-sample.php config/database.php
+```
+
+Edit `config/database.php`:
+- host, dbname, username, password
+
+Optional (for subfolder installs): `cp config/app-sample.php config/app.php` and set `base_url` (e.g. `/paper`).
+
+### 2. Database
 
 Create a MySQL database:
 
@@ -12,7 +27,9 @@ Create a MySQL database:
 CREATE DATABASE paper_db2;
 ```
 
-### 2. Run Migrations
+(Use the same name as in `config/database.php`.)
+
+### 3. Run Migrations
 
 From the project root:
 
@@ -20,12 +37,7 @@ From the project root:
 php cli/migrate.php
 ```
 
-This creates all tables (roles, users, app_settings, role_capabilities, projects, profiles, structures, user_profiles). Use `php cli/migrate.php --status` to see migration status.
-
-### 3. Configuration
-
-Edit `config/database.php` with your MySQL credentials:
-- host, dbname, username, password
+This creates all tables (roles, users, app_settings, role_capabilities, projects, profiles, structures, user_profiles) and runs migration_003 for profile fields. Use `php cli/migrate.php --status` to see migration status.
 
 ### 4. Web Server
 
@@ -61,10 +73,12 @@ paper/
 ## Features
 
 - **Roles:** Administrator, Standard User, Coordinator
-- **5 Menu Links:** Profile, Structure, Grievance, Library, Settings
-- **User Management:** Admin-only CRUD
-- **Library CRUD:** Projects with Coordinator dropdown (searchable via jQuery Select2)
-- **Profile CRUD:** PAPSID (auto: PAPS-YEARMONTH0000000001), Control Number, Age, Contact Number, Project (searchable)
+- **Menu Links:** Profile, Structure, Grievance, Library, Settings
+- **Profile:** PAPSID, Control Number, Full Name, Age, Contact Number, Project; Relevant Information (residing in project affected, structure owners); Additional Information (own property elsewhere, availed gov't housing, HH Income); attachments (images + PDF)
+- **Structure:** CRUD with tagging/structure images, linked to profiles
+- **Library:** Projects with Coordinator dropdown (searchable)
+- **Settings:** Email (SMTP), Security (2FA, session timeout)
+- **User Management:** Admin-only CRUD for users, roles, user profiles
 
 
 Database refactor: EAV → flat tables
