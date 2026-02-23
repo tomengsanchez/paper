@@ -15,11 +15,13 @@ $imgIdx = 0;
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $structure ? "/structure/update/{$structure->id}" : '/structure/store' ?>" enctype="multipart/form-data">
+            <?php if (!empty($structure)): ?>
             <div class="mb-3">
                 <label class="form-label">Structure ID</label>
-                <input type="text" name="strid" class="form-control" value="<?= htmlspecialchars(!empty($structure) ? $structure->strid : ($strid ?? '')) ?>" required readonly>
-                <small class="text-muted">Auto-generated (STRID-YEARMonth000000001)</small>
+                <input type="text" name="strid" class="form-control" value="<?= htmlspecialchars($structure->strid ?? '') ?>" readonly>
+                <small class="text-muted">Assigned when structure was created</small>
             </div>
+            <?php endif; ?>
             <div class="mb-3">
                 <label class="form-label">Paps/Owner</label>
                 <select name="owner_id" id="ownerSelect" class="form-select" style="width:100%">

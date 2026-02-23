@@ -12,16 +12,26 @@ class Profile
         return Database::getInstance();
     }
 
+    /**
+     * Generate next PAPSID atomically to avoid duplicates under concurrent create.
+     */
     public static function generatePAPSID(): string
     {
-        $yearMonth = date('Ym');
-        $prefix = "PAPS-{$yearMonth}";
-        $stmt = self::db()->prepare('SELECT papsid FROM profiles WHERE papsid LIKE ? ORDER BY papsid DESC LIMIT 1');
-        $stmt->execute([$prefix . '%']);
-        $last = $stmt->fetchColumn();
-        if (!$last) return $prefix . '0000000001';
-        $num = (int) substr($last, strlen($prefix));
-        return $prefix . str_pad($num + 1, 10, '0', STR_PAD_LEFT);
+        $db = self::db();
+        $lockName = 'papsid_generate';
+        $db->query("SELECT GET_LOCK('$lockName', 10)")->fetchAll();
+        try {
+            $yearMonth = date('Ym');
+            $prefix = "PAPS-{$yearMonth}";
+            $stmt = $db->prepare('SELECT papsid FROM profiles WHERE papsid LIKE ? ORDER BY papsid DESC LIMIT 1');
+            $stmt->execute([$prefix . '%']);
+            $last = $stmt->fetchColumn();
+            if (!$last) return $prefix . '0000000001';
+            $num = (int) substr($last, strlen($prefix));
+            return $prefix . str_pad($num + 1, 10, '0', STR_PAD_LEFT);
+        } finally {
+            $db->query("SELECT RELEASE_LOCK('$lockName')")->fetchAll();
+        }
     }
 
     public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage): array
@@ -116,7 +126,7 @@ class Profile
 
     public static function create(array $data): int
     {
-        $papsid = $data['papsid'] ?? self::generatePAPSID();
+        $papsid = self::generatePAPSID();
         $age = ($data['age'] ?? '') !== '' ? (int) $data['age'] : null;
         $stmt = self::db()->prepare('INSERT INTO profiles (papsid, control_number, full_name, age, contact_number, project_id) VALUES (?, ?, ?, ?, ?, ?)');
         $stmt->execute([
