@@ -15,6 +15,11 @@
                 <input type="number" name="sort_order" class="form-control" value="<?= (int)($item->sort_order ?? 0) ?>" min="0">
             </div>
             <div class="mb-3">
+                <label class="form-label">Days to Address</label>
+                <input type="number" name="days_to_address" class="form-control" value="<?= isset($item->days_to_address) ? (int)$item->days_to_address : '' ?>" min="0" required>
+                <div class="form-text">Number of calendar days expected to address grievances at this stage.</div>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Description</label>
                 <textarea name="description" class="form-control" rows="3"><?= htmlspecialchars($item->description ?? '') ?></textarea>
             </div>

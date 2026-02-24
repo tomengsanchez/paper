@@ -270,6 +270,7 @@ class GrievanceOptionsController extends Controller
             'name' => $_POST['name'] ?? '',
             'description' => $_POST['description'] ?? '',
             'sort_order' => $_POST['sort_order'] ?? 0,
+            'days_to_address' => $_POST['days_to_address'] ?? null,
         ]);
         $this->redirect('/grievance/options/progress-levels');
     }
@@ -287,6 +288,7 @@ class GrievanceOptionsController extends Controller
             'name' => $_POST['name'] ?? '',
             'description' => $_POST['description'] ?? '',
             'sort_order' => $_POST['sort_order'] ?? 0,
+            'days_to_address' => $_POST['days_to_address'] ?? null,
         ]);
         $this->redirect('/grievance/options/progress-levels');
     }
