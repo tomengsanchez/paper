@@ -1,5 +1,5 @@
 <?php
-// Expects: $listModule, $listBaseUrl, $listSearch, $listSort, $listOrder, $listColumns, $listAllColumns, $listPagination
+// Expects: $listModule, $listBaseUrl, $listSearch, $listSort, $listOrder, $listColumns, $listAllColumns, $listPagination, $listHasCustomColumns
 $listModule = $listModule ?? '';
 $listBaseUrl = $listBaseUrl ?? '';
 $listSearch = $listSearch ?? '';
@@ -8,6 +8,7 @@ $listOrder = $listOrder ?? 'asc';
 $listColumns = $listColumns ?? [];
 $listAllColumns = $listAllColumns ?? [];
 $listPagination = $listPagination ?? ['total' => 0, 'page' => 1, 'per_page' => 15, 'total_pages' => 0];
+$listHasCustomColumns = $listHasCustomColumns ?? false;
 $p = $listPagination;
 $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
 ?>
@@ -31,7 +32,7 @@ $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
                 ?><li><a class="dropdown-item" href="<?= htmlspecialchars($url) ?>"><?= $n ?></a></li><?php endforeach; ?>
             </ul>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#<?= $modalId ?>" title="Customize columns">Columns</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary position-relative" data-bs-toggle="modal" data-bs-target="#<?= $modalId ?>" title="Customize columns">Columns<?php if ($listHasCustomColumns): ?><span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size:0.5rem" title="Custom columns saved">●</span><?php endif; ?></button>
     </div>
 </div>
 
