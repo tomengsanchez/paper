@@ -1,5 +1,6 @@
 <?php
 // Expects: $listModule, $listBaseUrl, $listSearch, $listSort, $listOrder, $listColumns, $listAllColumns, $listPagination, $listHasCustomColumns
+// Optional: $listExtraParams (associative array of extra query params to preserve across actions)
 $listModule = $listModule ?? '';
 $listBaseUrl = $listBaseUrl ?? '';
 $listSearch = $listSearch ?? '';
@@ -9,8 +10,15 @@ $listColumns = $listColumns ?? [];
 $listAllColumns = $listAllColumns ?? [];
 $listPagination = $listPagination ?? ['total' => 0, 'page' => 1, 'per_page' => 15, 'total_pages' => 0];
 $listHasCustomColumns = $listHasCustomColumns ?? false;
+$listExtraParams = $listExtraParams ?? [];
 $p = $listPagination;
 $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
+
+$extraQuery = '';
+foreach ($listExtraParams as $k => $v) {
+    if ($v === '' || $v === null) continue;
+    $extraQuery .= '&' . urlencode($k) . '=' . urlencode((string)$v);
+}
 ?>
 <div class="list-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
     <form method="get" action="<?= htmlspecialchars($listBaseUrl) ?>" class="d-flex gap-2 flex-grow-1">
@@ -18,6 +26,9 @@ $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
         <input type="hidden" name="sort" value="<?= htmlspecialchars($listSort) ?>">
         <input type="hidden" name="order" value="<?= htmlspecialchars($listOrder) ?>">
         <input type="hidden" name="per_page" value="<?= (int)($p['per_page'] ?? 15) ?>">
+        <?php foreach ($listExtraParams as $k => $v): if ($v === '' || $v === null) continue; ?>
+        <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars((string)$v) ?>">
+        <?php endforeach; ?>
         <input type="search" name="q" class="form-control form-control-sm" placeholder="Search in visible columns..." value="<?= htmlspecialchars($listSearch) ?>" style="max-width:280px;">
         <button type="submit" class="btn btn-sm btn-outline-secondary">Search</button>
         <?php if ($listSearch): ?><a href="<?= htmlspecialchars($listBaseUrl) ?>?columns=<?= htmlspecialchars(implode(',', $listColumns)) ?>&sort=<?= htmlspecialchars($listSort) ?>&order=<?= htmlspecialchars($listOrder) ?>&per_page=<?= (int)($p['per_page'] ?? 15) ?>" class="btn btn-sm btn-outline-secondary">Clear</a><?php endif; ?>
@@ -28,7 +39,7 @@ $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"><?= (int)($p['per_page'] ?? 15) ?> / page</button>
             <ul class="dropdown-menu">
                 <?php foreach ([10, 15, 25, 50, 100] as $n): 
-                    $url = $listBaseUrl . '?q=' . urlencode($listSearch) . '&columns=' . urlencode(implode(',', $listColumns)) . '&sort=' . urlencode($listSort) . '&order=' . urlencode($listOrder) . '&per_page=' . $n;
+                    $url = $listBaseUrl . '?q=' . urlencode($listSearch) . '&columns=' . urlencode(implode(',', $listColumns)) . '&sort=' . urlencode($listSort) . '&order=' . urlencode($listOrder) . $extraQuery . '&per_page=' . $n;
                 ?><li><a class="dropdown-item" href="<?= htmlspecialchars($url) ?>"><?= $n ?></a></li><?php endforeach; ?>
             </ul>
         </div>
