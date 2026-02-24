@@ -1,8 +1,12 @@
 <?php
 namespace App;
 
+use Core\Auth;
+use Core\Database;
+
 /**
  * Column configuration for list tables. All configured columns are searchable.
+ * Selected columns are persisted per logged-in user.
  */
 class ListConfig
 {
@@ -78,7 +82,7 @@ class ListConfig
         return $defaults;
     }
 
-    /** Resolve columns from GET (columns param or col[] array) */
+    /** Resolve columns from GET (columns param or col[] array). When from GET, saves to user prefs. */
     public static function resolveFromRequest(string $module, ?array $get = null, ?array $session = null): array
     {
         $get = $get ?? $_GET ?? [];
@@ -86,6 +90,47 @@ class ListConfig
         if (empty($param) && !empty($get['col']) && is_array($get['col'])) {
             $param = implode(',', array_map('trim', $get['col']));
         }
-        return self::resolveSelectedKeys($module, $param, $session);
+
+        $userPrefs = self::getUserColumns($module);
+        $resolved = self::resolveSelectedKeys($module, $param, $session ?? $userPrefs);
+
+        if (!empty($param) && Auth::id()) {
+            self::saveUserColumns(Auth::id(), $module, $resolved);
+        }
+
+        return $resolved;
+    }
+
+    /** Load saved column keys for the current user and module */
+    public static function getUserColumns(string $module): ?array
+    {
+        $userId = Auth::id();
+        if (!$userId) return null;
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT column_keys FROM user_list_columns WHERE user_id = ? AND module = ?');
+        $stmt->execute([$userId, $module]);
+        $row = $stmt->fetch(\PDO::FETCH_OBJ);
+        if (!$row || $row->column_keys === '') return null;
+
+        return array_values(array_filter(array_map('trim', explode(',', $row->column_keys))));
+    }
+
+    /** Save column keys for a user and module */
+    public static function saveUserColumns(int $userId, string $module, array $columnKeys): void
+    {
+        $columnKeys = array_values(array_filter($columnKeys));
+        $keysStr = implode(',', $columnKeys);
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare('INSERT INTO user_list_columns (user_id, module, column_keys) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE column_keys = VALUES(column_keys)');
+        $stmt->execute([$userId, $module, $keysStr]);
+    }
+
+    /** Returns true if the current user has custom column preferences saved for this module */
+    public static function hasCustomColumns(string $module): bool
+    {
+        return Auth::id() && self::getUserColumns($module) !== null;
     }
 }

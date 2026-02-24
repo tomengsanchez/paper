@@ -123,6 +123,7 @@ class ProfileController extends Controller
             'listColumns' => $columns,
             'listAllColumns' => ListConfig::getColumns(self::MODULE),
             'listPagination' => $pagination,
+            'listHasCustomColumns' => ListConfig::hasCustomColumns(self::MODULE),
         ]);
     }
 

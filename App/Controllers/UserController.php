@@ -45,6 +45,7 @@ class UserController extends Controller
             'listColumns' => $columns,
             'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
             'listPagination' => $pagination,
+            'listHasCustomColumns' => ListConfig::hasCustomColumns(self::LIST_MODULE),
         ]);
     }
 
