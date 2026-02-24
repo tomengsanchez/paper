@@ -46,6 +46,14 @@ class ListConfig
             ['key' => 'name', 'label' => 'Role', 'sortable' => true],
             ['key' => 'capabilities', 'label' => 'Capabilities', 'sortable' => false],
         ],
+        'grievance' => [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'date_recorded', 'label' => 'Date Recorded', 'sortable' => true],
+            ['key' => 'grievance_case_number', 'label' => 'Case Number', 'sortable' => true],
+            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+            ['key' => 'respondent_name', 'label' => 'Respondent', 'sortable' => true],
+            ['key' => 'profile_name', 'label' => 'Profile (PAPS)', 'sortable' => true],
+        ],
     ];
 
     public static function getColumns(string $module): array

@@ -19,6 +19,8 @@
         .sidebar .nav-sub { display: none; background: #0f172a; }
         .sidebar .nav-parent.open + .nav-sub { display: block; }
         .sidebar .nav-sub a { padding: 0.6rem 1.25rem 0.6rem 2.5rem; font-size: 0.9em; }
+        .sidebar .nav-sub .sidebar-nav-label { display: block; padding: 0.5rem 1.25rem 0.25rem 2.5rem; font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .sidebar .nav-sub .nav-sub a { padding-left: 3.5rem; font-size: 0.85em; }
         .main-wrap { margin-left: var(--sidebar-width); min-height: 100vh; }
         .header { height: var(--header-height); background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; }
         .content { padding: 1.5rem; }
@@ -36,8 +38,24 @@
             <?php if (\Core\Auth::can('view_structure')): ?>
             <a href="/structure" class="<?= ($currentPage ?? '') === 'structure' ? 'active' : '' ?>">Structure</a>
             <?php endif; ?>
-            <?php if (\Core\Auth::can('view_grievance')): ?>
-            <a href="/grievance" class="<?= ($currentPage ?? '') === 'grievance' ? 'active' : '' ?>">Grievance</a>
+            <?php if (\Core\Auth::can('view_grievance') || \Core\Auth::can('manage_grievance_options')): ?>
+            <?php $grievanceActive = in_array($currentPage ?? '', ['grievance', 'grievance-dashboard', 'grievance-list', 'grievance-vulnerabilities', 'grievance-respondent-types', 'grievance-grm-channels', 'grievance-preferred-languages', 'grievance-types', 'grievance-categories']); ?>
+            <div class="nav-parent <?= $grievanceActive ? 'open' : '' ?>">Grievance</div>
+            <div class="nav-sub">
+                <?php if (\Core\Auth::can('view_grievance')): ?>
+                <a href="/grievance" class="<?= ($currentPage ?? '') === 'grievance-dashboard' ? 'active' : '' ?>">Dashboard</a>
+                <a href="/grievance/list" class="<?= ($currentPage ?? '') === 'grievance-list' ? 'active' : '' ?>">Grievances</a>
+                <?php endif; ?>
+                <?php if (\Core\Auth::can('manage_grievance_options')): ?>
+                <span class="sidebar-nav-label">Options Library</span>
+                <a href="/grievance/options/vulnerabilities" class="<?= ($currentPage ?? '') === 'grievance-vulnerabilities' ? 'active' : '' ?>">Vulnerabilities</a>
+                <a href="/grievance/options/respondent-types" class="<?= ($currentPage ?? '') === 'grievance-respondent-types' ? 'active' : '' ?>">Respondent Type</a>
+                <a href="/grievance/options/grm-channels" class="<?= ($currentPage ?? '') === 'grievance-grm-channels' ? 'active' : '' ?>">GRM Channel</a>
+                <a href="/grievance/options/preferred-languages" class="<?= ($currentPage ?? '') === 'grievance-preferred-languages' ? 'active' : '' ?>">Preferred Language</a>
+                <a href="/grievance/options/types" class="<?= ($currentPage ?? '') === 'grievance-types' ? 'active' : '' ?>">Type of Grievances</a>
+                <a href="/grievance/options/categories" class="<?= ($currentPage ?? '') === 'grievance-categories' ? 'active' : '' ?>">Category of Grievance</a>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_projects')): ?>
             <div class="nav-parent <?= ($currentPage ?? '') === 'library' ? 'open' : '' ?>">Library</div>
