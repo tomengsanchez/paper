@@ -37,6 +37,7 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
     <div class="card-header"><h6 class="mb-0">Respondent's Profile</h6></div>
     <div class="card-body">
         <dl class="row mb-0">
+            <dt class="col-sm-3">Project</dt><dd class="col-sm-9"><?= htmlspecialchars($g->project_name ?? '-') ?></dd>
             <dt class="col-sm-3">Is PAPS</dt><dd class="col-sm-9"><?= !empty($g->is_paps) ? 'Yes' : 'No' ?></dd>
             <?php if (!empty($g->is_paps)): ?>
             <dt class="col-sm-3">Profile</dt><dd class="col-sm-9"><a href="/profile/view/<?= (int)$g->profile_id ?>"><?= htmlspecialchars($g->profile_name ?? $g->papsid ?? '') ?></a></dd>

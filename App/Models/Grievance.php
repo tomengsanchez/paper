@@ -22,9 +22,10 @@ class Grievance
     public static function find(int $id): ?object
     {
         $stmt = self::db()->prepare('
-            SELECT g.*, p.full_name as profile_name, p.papsid
+            SELECT g.*, p.full_name as profile_name, p.papsid, proj.name as project_name
             FROM grievances g
             LEFT JOIN profiles p ON p.id = g.profile_id
+            LEFT JOIN projects proj ON proj.id = g.project_id
             WHERE g.id = ?
         ');
         $stmt->execute([$id]);
@@ -71,11 +72,13 @@ class Grievance
         $offset = ($afterId === null && $beforeId === null) ? ($page - 1) * $limit : 0;
         $limitClause = $cursorCond !== '' ? "LIMIT $limit" : "LIMIT $limit OFFSET $offset";
 
-        $sql = "SELECT g.id, g.date_recorded, g.grievance_case_number, g.status, g.progress_level, g.profile_id, g.respondent_full_name,
+        $sql = "SELECT g.id, g.date_recorded, g.grievance_case_number, g.project_id, g.status, g.progress_level, g.profile_id, g.respondent_full_name,
             COALESCE(p.full_name, g.respondent_full_name) as respondent_name,
-            p.full_name as profile_name
+            p.full_name as profile_name,
+            proj.name as project_name
             FROM grievances g
             LEFT JOIN profiles p ON p.id = g.profile_id
+            LEFT JOIN projects proj ON proj.id = g.project_id
             WHERE 1=1 $searchCond $cursorCond
             ORDER BY $sortCol $dir
             $limitClause";
@@ -84,7 +87,7 @@ class Grievance
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
         $countParams = $cursorCond !== '' ? array_slice($params, 0, -1) : $params;
-        $countSql = "SELECT COUNT(*) FROM grievances g LEFT JOIN profiles p ON p.id = g.profile_id WHERE 1=1 $searchCond";
+        $countSql = "SELECT COUNT(*) FROM grievances g LEFT JOIN profiles p ON p.id = g.profile_id LEFT JOIN projects proj ON proj.id = g.project_id WHERE 1=1 $searchCond";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($countParams);
         $total = (int) $stmtCount->fetchColumn();
@@ -107,14 +110,14 @@ class Grievance
     {
         $db = self::db();
         $stmt = $db->prepare('INSERT INTO grievances (
-            date_recorded, grievance_case_number, is_paps, profile_id, respondent_full_name,
+            date_recorded, grievance_case_number, project_id, is_paps, profile_id, respondent_full_name,
             gender, gender_specify, valid_id_philippines, id_number, vulnerability_ids, respondent_type_ids, respondent_type_other_specify,
             home_business_address, mobile_number, email, contact_others_specify,
             grm_channel_ids, preferred_language_ids, preferred_language_other_specify, grievance_type_ids, grievance_category_ids,
             location_same_as_address, location_specify,
             incident_one_time, incident_date, incident_multiple, incident_dates, incident_ongoing,
             description_complaint, desired_resolution, status, progress_level
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             self::parseDatetime($data['date_recorded'] ?? null),
             trim($data['grievance_case_number'] ?? ''),
@@ -155,7 +158,7 @@ class Grievance
     public static function update(int $id, array $data): bool
     {
         $stmt = self::db()->prepare('UPDATE grievances SET
-            date_recorded = ?, grievance_case_number = ?, is_paps = ?, profile_id = ?, respondent_full_name = ?,
+            date_recorded = ?, grievance_case_number = ?, project_id = ?, is_paps = ?, profile_id = ?, respondent_full_name = ?,
             gender = ?, gender_specify = ?, valid_id_philippines = ?, id_number = ?, vulnerability_ids = ?, respondent_type_ids = ?, respondent_type_other_specify = ?,
             home_business_address = ?, mobile_number = ?, email = ?, contact_others_specify = ?,
             grm_channel_ids = ?, preferred_language_ids = ?, preferred_language_other_specify = ?, grievance_type_ids = ?, grievance_category_ids = ?,
@@ -166,6 +169,7 @@ class Grievance
         $stmt->execute([
             self::parseDatetime($data['date_recorded'] ?? null),
             trim($data['grievance_case_number'] ?? ''),
+            (int) ($data['project_id'] ?? 0) ?: null,
             !empty($data['is_paps']) ? 1 : 0,
             (int) ($data['profile_id'] ?? 0) ?: null,
             trim($data['respondent_full_name'] ?? ''),

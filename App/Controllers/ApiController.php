@@ -32,7 +32,7 @@ class ApiController extends Controller
 
     public function projects(): void
     {
-        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects', 'view_profiles', 'add_profiles', 'edit_profiles'])) {
+        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects', 'view_profiles', 'add_profiles', 'edit_profiles', 'view_grievance', 'add_grievance', 'edit_grievance'])) {
             $this->json([]);
             return;
         }
@@ -54,10 +54,12 @@ class ApiController extends Controller
         $db = Database::getInstance();
         $search = '%' . $q . '%';
         $stmt = $db->prepare('
-            SELECT id, COALESCE(NULLIF(full_name,""), papsid, "") as name
-            FROM profiles
-            WHERE ? = "" OR full_name LIKE ? OR papsid LIKE ?
-            ORDER BY COALESCE(NULLIF(full_name,""), papsid)
+            SELECT p.id, COALESCE(NULLIF(p.full_name,""), p.papsid, "") as name,
+                   p.project_id, proj.name as project_name
+            FROM profiles p
+            LEFT JOIN projects proj ON proj.id = p.project_id
+            WHERE ? = "" OR p.full_name LIKE ? OR p.papsid LIKE ?
+            ORDER BY COALESCE(NULLIF(p.full_name,""), p.papsid)
             LIMIT 20');
         $stmt->execute([$q, $search, $search]);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);

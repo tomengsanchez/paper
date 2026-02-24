@@ -166,6 +166,7 @@ class GrievanceController extends Controller
         return [
             'date_recorded' => $_POST['date_recorded'] ?? null,
             'grievance_case_number' => trim($_POST['grievance_case_number'] ?? ''),
+            'project_id' => (int) ($_POST['project_id'] ?? 0) ?: null,
             'is_paps' => !empty($_POST['is_paps']),
             'profile_id' => (int) ($_POST['profile_id'] ?? 0) ?: null,
             'respondent_full_name' => trim($_POST['respondent_full_name'] ?? ''),

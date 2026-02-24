@@ -52,6 +52,13 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
                 <input type="text" name="respondent_full_name" class="form-control" value="<?= htmlspecialchars($fv('respondent_full_name')) ?>">
             </div>
             <div class="mb-3">
+                <label class="form-label">Project</label>
+                <select name="project_id" id="projectSelect" class="form-select" style="width:100%">
+                    <option value="">-- Search Project --</option>
+                    <?php if (!empty($g->project_id)): ?><option value="<?= (int)$g->project_id ?>" selected><?= htmlspecialchars($g->project_name ?? '') ?></option><?php endif; ?>
+                </select>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Gender</label>
                 <div>
                     <?php foreach (['Male','Female','Others','Prefer not to say'] as $opt): ?>
@@ -273,7 +280,10 @@ $(function(){
         var checked = $(this).is(':checked');
         $('#papsProfileBlock').toggle(checked);
         $('#fullNameBlock').toggle(!checked);
-        if (!checked) $('#profileSelect').val('');
+        if (!checked) {
+            $('#profileSelect').val(null).trigger('change');
+            $('#projectSelect').empty().append(new Option('-- Search Project --', '', true, true)).trigger('change');
+        }
     });
     // Gender Others specify
     $('input[name=gender]').on('change', function(){
@@ -300,14 +310,33 @@ $(function(){
         $('#incidentOneDateBlock').toggle($('#incidentOne').is(':checked'));
         $('#incidentMultipleBlock').toggle($('#incidentMultiple').is(':checked'));
     });
-    // Profile search (Select2)
+    // Project search (Select2)
+    $('#projectSelect').select2({
+        theme: 'bootstrap-5',
+        ajax: { url: '/api/projects', dataType: 'json', delay: 250, data: function(p){ return { q: p.term }; },
+            processResults: function(d){ return { results: d.map(function(r){ return { id: r.id, text: r.name }; }) }; } },
+        minimumInputLength: 0,
+        placeholder: 'Search project...',
+        allowClear: true
+    });
+    // Profile search (Select2) - when PAPS profile selected, auto-fill project from profile
     $('#profileSelect').select2({
         theme: 'bootstrap-5',
         ajax: { url: '/api/profiles', dataType: 'json', delay: 250, data: function(p){ return { q: p.term }; },
-            processResults: function(d){ return { results: d.map(function(r){ return { id: r.id, text: r.name || r.papsid || 'ID '+r.id }; }) }; } },
+            processResults: function(d){ return { results: d.map(function(r){ return { id: r.id, text: r.name || r.papsid || 'ID '+r.id, project_id: r.project_id, project_name: r.project_name }; }) }; } },
         minimumInputLength: 0,
         placeholder: 'Search profile (PAPSID or name)...',
         allowClear: true
+    });
+    $('#profileSelect').on('select2:select', function(e){
+        var d = e.params.data;
+        if (d.project_id && d.project_name) {
+            $('#projectSelect').empty().append(new Option('-- Search Project --', '', false, false))
+                .append(new Option(d.project_name, d.project_id, true, true)).trigger('change');
+        }
+    });
+    $('#profileSelect').on('select2:clear', function(){
+        $('#projectSelect').empty().append(new Option('-- Search Project --', '', true, true)).trigger('change');
     });
 });
 </script>";
