@@ -26,6 +26,12 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
     </div>
 </div>
 
+<?php if (!empty($g->escalation_message)): ?>
+<div class="alert alert-danger mb-3">
+    <?= htmlspecialchars($g->escalation_message) ?>
+</div>
+<?php endif; ?>
+
 <div class="card mb-3">
     <div class="card-header"><h6 class="mb-0">Grievance Registration</h6></div>
     <div class="card-body">
