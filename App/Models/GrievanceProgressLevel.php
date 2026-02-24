@@ -28,22 +28,24 @@ class GrievanceProgressLevel
     public static function create(array $data): int
     {
         $db = self::db();
-        $stmt = $db->prepare('INSERT INTO grievance_progress_levels (name, description, sort_order) VALUES (?, ?, ?)');
+        $stmt = $db->prepare('INSERT INTO grievance_progress_levels (name, description, sort_order, days_to_address) VALUES (?, ?, ?, ?)');
         $stmt->execute([
             trim($data['name'] ?? ''),
             trim($data['description'] ?? ''),
             (int) ($data['sort_order'] ?? 0),
+            isset($data['days_to_address']) && $data['days_to_address'] !== '' ? (int) $data['days_to_address'] : null,
         ]);
         return (int) $db->lastInsertId();
     }
 
     public static function update(int $id, array $data): bool
     {
-        $stmt = self::db()->prepare('UPDATE grievance_progress_levels SET name = ?, description = ?, sort_order = ? WHERE id = ?');
+        $stmt = self::db()->prepare('UPDATE grievance_progress_levels SET name = ?, description = ?, sort_order = ?, days_to_address = ? WHERE id = ?');
         $stmt->execute([
             trim($data['name'] ?? ''),
             trim($data['description'] ?? ''),
             (int) ($data['sort_order'] ?? 0),
+            isset($data['days_to_address']) && $data['days_to_address'] !== '' ? (int) $data['days_to_address'] : null,
             $id,
         ]);
         return $stmt->rowCount() > 0;
