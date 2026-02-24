@@ -49,11 +49,12 @@ class Grievance
         $searchCond = '';
         if ($search !== '') {
             $term = '%' . $search . '%';
+            $coll = ' COLLATE utf8mb4_unicode_ci';
             $conds = [];
-            if (in_array('grievance_case_number', $searchColumns, true)) { $conds[] = 'g.grievance_case_number LIKE ?'; $params[] = $term; }
-            if (in_array('status', $searchColumns, true)) { $conds[] = 'g.status LIKE ?'; $params[] = $term; }
-            if (in_array('respondent_name', $searchColumns, true)) { $conds[] = '(COALESCE(p.full_name, g.respondent_full_name) LIKE ?)'; $params[] = $term; }
-            if (in_array('profile_name', $searchColumns, true)) { $conds[] = 'p.full_name LIKE ?'; $params[] = $term; }
+            if (in_array('grievance_case_number', $searchColumns, true)) { $conds[] = 'g.grievance_case_number' . $coll . ' LIKE ?'; $params[] = $term; }
+            if (in_array('status', $searchColumns, true)) { $conds[] = 'g.status' . $coll . ' LIKE ?'; $params[] = $term; }
+            if (in_array('respondent_name', $searchColumns, true)) { $conds[] = '(COALESCE(p.full_name, g.respondent_full_name)' . $coll . ' LIKE ?)'; $params[] = $term; }
+            if (in_array('profile_name', $searchColumns, true)) { $conds[] = 'p.full_name' . $coll . ' LIKE ?'; $params[] = $term; }
             if (!empty($conds)) {
                 $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
             }
