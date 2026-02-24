@@ -28,6 +28,7 @@ $router->post('/structure/update/{id}', 'StructureController@update');
 $router->get('/structure/delete/{id}', 'StructureController@delete');
 // Grievance module
 $router->get('/grievance', 'GrievanceController@dashboard');
+$router->post('/grievance/dashboard-config', 'GrievanceController@dashboardSaveConfig');
 $router->get('/grievance/list', 'GrievanceController@index');
 $router->get('/grievance/create', 'GrievanceController@create');
 $router->post('/grievance/store', 'GrievanceController@store');

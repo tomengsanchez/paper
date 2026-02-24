@@ -12,6 +12,7 @@ use App\Models\GrievanceCategory;
 use App\Models\GrievanceProgressLevel;
 use App\Models\GrievanceStatusLog;
 use App\ListConfig;
+use App\DashboardConfig;
 
 class GrievanceController extends Controller
 {
@@ -30,12 +31,75 @@ class GrievanceController extends Controller
     {
         $this->requireCapability('view_grievance');
         $db = \Core\Database::getInstance();
+
         $total = (int) $db->query('SELECT COUNT(*) FROM grievances')->fetchColumn();
-        $recent = $db->query('SELECT id, grievance_case_number, date_recorded FROM grievances ORDER BY id DESC LIMIT 5')->fetchAll(\PDO::FETCH_OBJ);
+        $recent = $db->query('SELECT g.id, g.grievance_case_number, g.date_recorded, g.status, g.progress_level,
+            COALESCE(p.full_name, g.respondent_full_name) as respondent_name
+            FROM grievances g
+            LEFT JOIN profiles p ON p.id = g.profile_id
+            ORDER BY g.id DESC LIMIT 10')->fetchAll(\PDO::FETCH_OBJ);
+
+        $statusBreakdown = $db->query("SELECT status, COUNT(*) as cnt FROM grievances GROUP BY status")->fetchAll(\PDO::FETCH_OBJ);
+        $thisMonthStart = date('Y-m-01 00:00:00');
+        $lastMonthStart = date('Y-m-01 00:00:00', strtotime('first day of last month'));
+        $stmt = $db->prepare('SELECT COUNT(*) FROM grievances WHERE date_recorded >= ?');
+        $stmt->execute([$thisMonthStart]);
+        $thisMonth = (int) $stmt->fetchColumn();
+        $stmt = $db->prepare('SELECT COUNT(*) FROM grievances WHERE date_recorded >= ? AND date_recorded < ?');
+        $stmt->execute([$lastMonthStart, $thisMonthStart]);
+        $lastMonth = (int) $stmt->fetchColumn();
+
+        $byProject = $db->query('
+            SELECT proj.name as project_name, COUNT(*) as cnt
+            FROM grievances g
+            LEFT JOIN projects proj ON proj.id = g.project_id
+            GROUP BY g.project_id, proj.name
+            ORDER BY cnt DESC
+            LIMIT 8
+        ')->fetchAll(\PDO::FETCH_OBJ);
+
+        $inProgressLevels = $db->query("
+            SELECT COALESCE(pl.name, CONCAT('Level ', g.progress_level)) as level_name, COUNT(*) as cnt
+            FROM grievances g
+            LEFT JOIN grievance_progress_levels pl ON pl.id = g.progress_level
+            WHERE g.status = 'in_progress'
+            GROUP BY g.progress_level, pl.name
+            ORDER BY g.progress_level
+        ")->fetchAll(\PDO::FETCH_OBJ);
+
+        $dashboardWidgets = DashboardConfig::GRIEVANCE_WIDGETS_DEFAULT;
+        $visibleWidgets = DashboardConfig::visibleWidgets(DashboardConfig::MODULE_GRIEVANCE);
+        $progressLevels = GrievanceProgressLevel::all();
+
         $this->view('grievance/dashboard', [
-            'totalGrievances' => $total,
-            'recentGrievances' => $recent,
+            'totalGrievances'    => $total,
+            'recentGrievances'   => $recent,
+            'statusBreakdown'   => $statusBreakdown,
+            'thisMonth'         => $thisMonth,
+            'lastMonth'         => $lastMonth,
+            'byProject'         => $byProject,
+            'inProgressLevels'  => $inProgressLevels,
+            'dashboardWidgets'  => $dashboardWidgets,
+            'visibleWidgets'   => $visibleWidgets,
+            'progressLevels'   => $progressLevels,
         ]);
+    }
+
+    public function dashboardSaveConfig(): void
+    {
+        $this->requireCapability('view_grievance');
+        $widgets = $_POST['widgets'] ?? [];
+        $widgets = is_array($widgets) ? array_values(array_filter(array_map('trim', $widgets))) : [];
+        $allowed = DashboardConfig::GRIEVANCE_WIDGETS_DEFAULT;
+        $widgets = array_values(array_intersect($widgets, $allowed));
+        if (empty($widgets)) {
+            $widgets = $allowed;
+        }
+        DashboardConfig::save(DashboardConfig::MODULE_GRIEVANCE, [
+            'widgets' => $widgets,
+            'order'   => $widgets,
+        ]);
+        $this->redirect('/grievance');
     }
 
     public function index(): void
