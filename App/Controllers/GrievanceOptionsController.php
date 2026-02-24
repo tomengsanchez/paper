@@ -8,6 +8,7 @@ use App\Models\GrievanceGrmChannel;
 use App\Models\GrievancePreferredLanguage;
 use App\Models\GrievanceType;
 use App\Models\GrievanceCategory;
+use App\Models\GrievanceProgressLevel;
 
 class GrievanceOptionsController extends Controller
 {
@@ -249,5 +250,50 @@ class GrievanceOptionsController extends Controller
     {
         GrievanceCategory::delete($id);
         $this->redirect('/grievance/options/categories');
+    }
+
+    // Progress Levels (In Progress stages)
+    public function progressLevels(): void
+    {
+        $items = GrievanceProgressLevel::all();
+        $this->view('grievance/options/progress_levels', ['items' => $items]);
+    }
+
+    public function progressLevelCreate(): void
+    {
+        $this->view('grievance/options/progress_level_form', ['item' => null]);
+    }
+
+    public function progressLevelStore(): void
+    {
+        GrievanceProgressLevel::create([
+            'name' => $_POST['name'] ?? '',
+            'description' => $_POST['description'] ?? '',
+            'sort_order' => $_POST['sort_order'] ?? 0,
+        ]);
+        $this->redirect('/grievance/options/progress-levels');
+    }
+
+    public function progressLevelEdit(int $id): void
+    {
+        $item = GrievanceProgressLevel::find($id);
+        if (!$item) { $this->redirect('/grievance/options/progress-levels'); return; }
+        $this->view('grievance/options/progress_level_form', ['item' => $item]);
+    }
+
+    public function progressLevelUpdate(int $id): void
+    {
+        GrievanceProgressLevel::update($id, [
+            'name' => $_POST['name'] ?? '',
+            'description' => $_POST['description'] ?? '',
+            'sort_order' => $_POST['sort_order'] ?? 0,
+        ]);
+        $this->redirect('/grievance/options/progress-levels');
+    }
+
+    public function progressLevelDelete(int $id): void
+    {
+        GrievanceProgressLevel::delete($id);
+        $this->redirect('/grievance/options/progress-levels');
     }
 }

@@ -1,5 +1,7 @@
 <?php
 $listColumns = $listColumns ?? [];
+$levelNameById = [];
+foreach ($progressLevels ?? [] as $pl) { $levelNameById[(int)$pl->id] = $pl->name; }
 $listSort = $listSort ?? ($listColumns[0] ?? '');
 $listOrder = $listOrder ?? 'asc';
 $listBaseUrl = $listBaseUrl ?? '/grievance/list';
@@ -36,7 +38,9 @@ ob_start();
                         if ($key === 'date_recorded' && $v) $v = date('M j, Y H:i', strtotime($v));
                         if ($key === 'status') {
                             $s = $g->status ?? 'open';
-                            $v = $s === 'open' ? 'Open' : ($s === 'closed' ? 'Closed' : 'In Progress' . (($g->progress_level ?? 0) ? ' L' . (int)$g->progress_level : ''));
+                            $pl = $g->progress_level ?? 0;
+                            $levelLabel = $pl && isset($levelNameById[(int)$pl]) ? ' ' . $levelNameById[(int)$pl] : ($pl ? ' L' . (int)$pl : '');
+                            $v = $s === 'open' ? 'Open' : ($s === 'closed' ? 'Closed' : 'In Progress' . $levelLabel);
                         }
                         if ($key === 'respondent_name' && \Core\Auth::can('view_grievance')) {
                             echo '<a href="/grievance/view/' . (int)$g->id . '" class="text-decoration-none">' . htmlspecialchars($v ?? '-') . '</a>';

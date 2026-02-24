@@ -39,7 +39,7 @@
             <a href="/structure" class="<?= ($currentPage ?? '') === 'structure' ? 'active' : '' ?>">Structure</a>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_grievance') || \Core\Auth::can('manage_grievance_options')): ?>
-            <?php $grievanceActive = in_array($currentPage ?? '', ['grievance', 'grievance-dashboard', 'grievance-list', 'grievance-vulnerabilities', 'grievance-respondent-types', 'grievance-grm-channels', 'grievance-preferred-languages', 'grievance-types', 'grievance-categories']); ?>
+            <?php $grievanceActive = in_array($currentPage ?? '', ['grievance', 'grievance-dashboard', 'grievance-list', 'grievance-vulnerabilities', 'grievance-respondent-types', 'grievance-grm-channels', 'grievance-preferred-languages', 'grievance-types', 'grievance-categories', 'grievance-progress-levels']); ?>
             <div class="nav-parent <?= $grievanceActive ? 'open' : '' ?>">Grievance</div>
             <div class="nav-sub">
                 <?php if (\Core\Auth::can('view_grievance')): ?>
@@ -54,6 +54,7 @@
                 <a href="/grievance/options/preferred-languages" class="<?= ($currentPage ?? '') === 'grievance-preferred-languages' ? 'active' : '' ?>">Preferred Language</a>
                 <a href="/grievance/options/types" class="<?= ($currentPage ?? '') === 'grievance-types' ? 'active' : '' ?>">Type of Grievances</a>
                 <a href="/grievance/options/categories" class="<?= ($currentPage ?? '') === 'grievance-categories' ? 'active' : '' ?>">Category of Grievance</a>
+                <a href="/grievance/options/progress-levels" class="<?= ($currentPage ?? '') === 'grievance-progress-levels' ? 'active' : '' ?>">In Progress Stages</a>
                 <?php endif; ?>
             </div>
             <?php endif; ?>

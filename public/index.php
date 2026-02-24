@@ -73,6 +73,12 @@ $router->post('/grievance/options/categories/store', 'GrievanceOptionsController
 $router->get('/grievance/options/categories/edit/{id}', 'GrievanceOptionsController@grievanceCategoryEdit');
 $router->post('/grievance/options/categories/update/{id}', 'GrievanceOptionsController@grievanceCategoryUpdate');
 $router->get('/grievance/options/categories/delete/{id}', 'GrievanceOptionsController@grievanceCategoryDelete');
+$router->get('/grievance/options/progress-levels', 'GrievanceOptionsController@progressLevels');
+$router->get('/grievance/options/progress-levels/create', 'GrievanceOptionsController@progressLevelCreate');
+$router->post('/grievance/options/progress-levels/store', 'GrievanceOptionsController@progressLevelStore');
+$router->get('/grievance/options/progress-levels/edit/{id}', 'GrievanceOptionsController@progressLevelEdit');
+$router->post('/grievance/options/progress-levels/update/{id}', 'GrievanceOptionsController@progressLevelUpdate');
+$router->get('/grievance/options/progress-levels/delete/{id}', 'GrievanceOptionsController@progressLevelDelete');
 $router->get('/library', 'LibraryController@index');
 $router->get('/library/view/{id}', 'LibraryController@show');
 $router->get('/library/create', 'LibraryController@create');

@@ -121,6 +121,7 @@ class Grievance
         $stmt->execute([
             self::parseDatetime($data['date_recorded'] ?? null),
             trim($data['grievance_case_number'] ?? ''),
+            (int) ($data['project_id'] ?? 0) ?: null,
             !empty($data['is_paps']) ? 1 : 0,
             (int) ($data['profile_id'] ?? 0) ?: null,
             trim($data['respondent_full_name'] ?? ''),

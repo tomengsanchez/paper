@@ -2,6 +2,9 @@
 $g = $grievance;
 $curStatus = $g->status ?? 'open';
 $curLevel = $g->progress_level ?? null;
+$progressLevels = $progressLevels ?? [];
+$levelNameById = [];
+foreach ($progressLevels as $pl) { $levelNameById[(int)$pl->id] = $pl->name; }
 $vulnIds = \App\Models\Grievance::parseJson($g->vulnerability_ids ?? '');
 $respIds = \App\Models\Grievance::parseJson($g->respondent_type_ids ?? '');
 $grmIds = \App\Models\Grievance::parseJson($g->grm_channel_ids ?? '');
@@ -119,7 +122,7 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
         <div class="row align-items-end">
             <div class="col-auto mb-2">
                 <span class="badge fs-6 <?= $curStatus === 'closed' ? 'bg-secondary' : ($curStatus === 'in_progress' ? 'bg-primary' : 'bg-success') ?>">
-                    <?= $curStatus === 'open' ? 'Open' : ($curStatus === 'closed' ? 'Closed' : 'In Progress' . ($curLevel ? ' Level ' . $curLevel : '')) ?>
+                    <?= $curStatus === 'open' ? 'Open' : ($curStatus === 'closed' ? 'Closed' : 'In Progress' . ($curLevel && isset($levelNameById[(int)$curLevel]) ? ' ' . htmlspecialchars($levelNameById[(int)$curLevel]) : ($curLevel ? ' L' . (int)$curLevel : ''))) ?>
                 </span>
             </div>
         </div>
@@ -138,9 +141,9 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
                     <label class="form-label small">Level</label>
                     <select name="progress_level" class="form-select form-select-sm">
                         <option value="">-- Select --</option>
-                        <option value="1" <?= $curLevel == 1 ? 'selected' : '' ?>>Level 1</option>
-                        <option value="2" <?= $curLevel == 2 ? 'selected' : '' ?>>Level 2</option>
-                        <option value="3" <?= $curLevel == 3 ? 'selected' : '' ?>>Level 3</option>
+                        <?php foreach ($progressLevels as $pl): ?>
+                        <option value="<?= (int)$pl->id ?>" <?= $curLevel == $pl->id ? 'selected' : '' ?>><?= htmlspecialchars($pl->name) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>
@@ -166,7 +169,7 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
         <div class="status-log">
             <?php foreach ($statusLog as $entry): ?>
             <div class="border-start border-2 ps-2 mb-2 small">
-                <strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $entry->status))) ?><?= $entry->progress_level ? ' Level ' . (int)$entry->progress_level : '' ?></strong>
+                <strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $entry->status))) ?><?= $entry->progress_level && isset($levelNameById[(int)$entry->progress_level]) ? ' ' . htmlspecialchars($levelNameById[(int)$entry->progress_level]) : ($entry->progress_level ? ' L' . (int)$entry->progress_level : '') ?></strong>
                 <span class="text-muted"><?= date('M j, Y H:i', strtotime($entry->created_at)) ?> <?= $entry->created_by_name ? 'by ' . htmlspecialchars($entry->created_by_name) : '' ?></span>
                 <?php if (!empty(trim($entry->note ?? ''))): ?><p class="mb-1 mt-1"><?= nl2br(htmlspecialchars($entry->note)) ?></p><?php endif; ?>
                 <?php $atts = \App\Models\GrievanceStatusLog::parseAttachments($entry->attachments ?? ''); if (!empty($atts)): ?>

@@ -9,6 +9,7 @@ use App\Models\GrievanceGrmChannel;
 use App\Models\GrievancePreferredLanguage;
 use App\Models\GrievanceType;
 use App\Models\GrievanceCategory;
+use App\Models\GrievanceProgressLevel;
 use App\Models\GrievanceStatusLog;
 use App\ListConfig;
 
@@ -52,8 +53,10 @@ class GrievanceController extends Controller
 
         $pagination = Grievance::listPaginated($search, $columns, $sort, $order, $page, $perPage, $afterId, $beforeId);
 
+        $progressLevels = GrievanceProgressLevel::all();
         $this->view('grievance/index', [
             'grievances' => $pagination['items'],
+            'progressLevels' => $progressLevels,
             'listModule' => self::LIST_MODULE,
             'listBaseUrl' => self::LIST_BASE,
             'listSearch' => $search,
@@ -107,7 +110,8 @@ class GrievanceController extends Controller
         $grievanceTypes = GrievanceType::all();
         $grievanceCategories = GrievanceCategory::all();
         $statusLog = GrievanceStatusLog::byGrievance($id);
-        $this->view('grievance/view', compact('grievance', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog'));
+        $progressLevels = GrievanceProgressLevel::all();
+        $this->view('grievance/view', compact('grievance', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels'));
     }
 
     public function edit(int $id): void
@@ -212,7 +216,7 @@ class GrievanceController extends Controller
         $progressLevel = null;
         if ($status === 'in_progress') {
             $pl = (int) ($_POST['progress_level'] ?? 0);
-            if (in_array($pl, [1, 2, 3], true)) $progressLevel = $pl;
+            if ($pl > 0 && GrievanceProgressLevel::find($pl)) $progressLevel = $pl;
         }
         $note = trim($_POST['status_note'] ?? '');
         $attachments = $this->handleStatusUpload();
