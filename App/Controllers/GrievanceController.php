@@ -67,6 +67,34 @@ class GrievanceController extends Controller
             ORDER BY g.progress_level
         ")->fetchAll(\PDO::FETCH_OBJ);
 
+        // Count grievances that have exceeded days_to_address based on when they
+        // entered the current in-progress level (not the original date_recorded).
+        $needsEscalationRaw = $db->query("
+            SELECT g.progress_level, COUNT(*) as cnt
+            FROM grievances g
+            JOIN grievance_progress_levels pl ON pl.id = g.progress_level
+            JOIN (
+                SELECT grievance_id, progress_level, MAX(created_at) AS level_started_at
+                FROM grievance_status_log
+                WHERE status = 'in_progress' AND progress_level IS NOT NULL
+                GROUP BY grievance_id, progress_level
+            ) l ON l.grievance_id = g.id AND l.progress_level = g.progress_level
+            WHERE g.status = 'in_progress'
+              AND pl.days_to_address IS NOT NULL
+              AND pl.days_to_address > 0
+              AND DATEDIFF(CURDATE(), DATE(l.level_started_at)) > pl.days_to_address
+            GROUP BY g.progress_level
+        ")->fetchAll(\PDO::FETCH_OBJ);
+
+        $needsEscalationByLevel = [];
+        foreach ($needsEscalationRaw as $row) {
+            $levelId = (int) ($row->progress_level ?? 0);
+            if ($levelId <= 0) {
+                continue;
+            }
+            $needsEscalationByLevel[$levelId] = (int) ($row->cnt ?? 0);
+        }
+
         $dashboardWidgets = DashboardConfig::GRIEVANCE_WIDGETS_DEFAULT;
         $visibleWidgets = DashboardConfig::visibleWidgets(DashboardConfig::MODULE_GRIEVANCE);
         $progressLevels = GrievanceProgressLevel::all();
@@ -82,6 +110,7 @@ class GrievanceController extends Controller
             'dashboardWidgets'  => $dashboardWidgets,
             'visibleWidgets'   => $visibleWidgets,
             'progressLevels'   => $progressLevels,
+            'needsEscalationByLevel' => $needsEscalationByLevel,
         ]);
     }
 
@@ -118,6 +147,47 @@ class GrievanceController extends Controller
         $pagination = Grievance::listPaginated($search, $columns, $sort, $order, $page, $perPage, $afterId, $beforeId);
 
         $progressLevels = GrievanceProgressLevel::all();
+        $progressLevelMap = $this->buildProgressLevelMap($progressLevels);
+
+        // Determine when each grievance entered its current in-progress level.
+        $levelStartedAt = [];
+        $items = $pagination['items'] ?? [];
+        $ids = array_map(fn($it) => (int) ($it->id ?? 0), $items);
+        $ids = array_values(array_filter($ids));
+        if (!empty($ids)) {
+            $db = \Core\Database::getInstance();
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $sql = "
+                SELECT grievance_id, progress_level, MAX(created_at) AS level_started_at
+                FROM grievance_status_log
+                WHERE grievance_id IN ($placeholders)
+                  AND status = 'in_progress'
+                  AND progress_level IS NOT NULL
+                GROUP BY grievance_id, progress_level
+            ";
+            $stmt = $db->prepare($sql);
+            $stmt->execute($ids);
+            $rows = $stmt->fetchAll(\PDO::FETCH_OBJ);
+            foreach ($rows as $row) {
+                $gId = (int) ($row->grievance_id ?? 0);
+                $plId = (int) ($row->progress_level ?? 0);
+                if ($gId <= 0 || $plId <= 0 || empty($row->level_started_at)) {
+                    continue;
+                }
+                $levelStartedAt[$gId . '_' . $plId] = $row->level_started_at;
+            }
+        }
+
+        foreach ($pagination['items'] as $item) {
+            if (!is_object($item)) {
+                continue;
+            }
+            $gId = (int) ($item->id ?? 0);
+            $plId = (int) ($item->progress_level ?? 0);
+            $startedAt = $gId && $plId ? ($levelStartedAt[$gId . '_' . $plId] ?? null) : null;
+            $item->escalation_message = $this->computeEscalationMessageForGrievance($item, $progressLevelMap, $startedAt);
+        }
+
         $this->view('grievance/index', [
             'grievances' => $pagination['items'],
             'progressLevels' => $progressLevels,
@@ -181,6 +251,26 @@ class GrievanceController extends Controller
         $grievanceCategories = GrievanceCategory::all();
         $statusLog = GrievanceStatusLog::byGrievance($id);
         $progressLevels = GrievanceProgressLevel::all();
+
+        $progressLevelMap = $this->buildProgressLevelMap($progressLevels);
+
+        // Determine when the grievance entered its current in-progress level.
+        $levelStartedAt = null;
+        if (($grievance->status ?? 'open') === 'in_progress' && !empty($grievance->progress_level)) {
+            $db = \Core\Database::getInstance();
+            $stmt = $db->prepare("
+                SELECT MAX(created_at) AS level_started_at
+                FROM grievance_status_log
+                WHERE grievance_id = ?
+                  AND status = 'in_progress'
+                  AND progress_level = ?
+            ");
+            $stmt->execute([$id, (int) $grievance->progress_level]);
+            $levelStartedAt = $stmt->fetchColumn() ?: null;
+        }
+
+        $grievance->escalation_message = $this->computeEscalationMessageForGrievance($grievance, $progressLevelMap, $levelStartedAt);
+
         $this->view('grievance/view', compact('grievance', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels'));
     }
 
@@ -399,5 +489,99 @@ class GrievanceController extends Controller
             return $prefix . '/serve/grievance?file=' . urlencode($m[1]);
         }
         return $prefix . ($path[0] === '/' ? $path : '/' . $path);
+    }
+
+    /**
+     * Build helper maps for progress levels: by id, next level by id, and last level id.
+     *
+     * @param array<int,object> $progressLevels
+     * @return array{byId: array<int,object>, nextById: array<int,?object>, lastId: int|null}
+     */
+    private function buildProgressLevelMap(array $progressLevels): array
+    {
+        $ordered = $progressLevels;
+        usort($ordered, function ($a, $b) {
+            $sa = (int) ($a->sort_order ?? 0);
+            $sb = (int) ($b->sort_order ?? 0);
+            if ($sa === $sb) {
+                return (int) ($a->id ?? 0) <=> (int) ($b->id ?? 0);
+            }
+            return $sa <=> $sb;
+        });
+
+        $byId = [];
+        $nextById = [];
+        $lastId = null;
+        $count = count($ordered);
+
+        for ($i = 0; $i < $count; $i++) {
+            $pl = $ordered[$i];
+            $id = (int) ($pl->id ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $byId[$id] = $pl;
+            $nextById[$id] = $ordered[$i + 1] ?? null;
+        }
+
+        if ($count > 0) {
+            $last = $ordered[$count - 1];
+            $lastId = (int) ($last->id ?? 0) ?: null;
+        }
+
+        return [
+            'byId' => $byId,
+            'nextById' => $nextById,
+            'lastId' => $lastId,
+        ];
+    }
+
+    /**
+     * Determine if a grievance should be escalated or closed based on days_to_address.
+     *
+     * @param array{byId: array<int,object>, nextById: array<int,?object>, lastId: int|null} $progressLevelMap
+     */
+    private function computeEscalationMessageForGrievance(object $g, array $progressLevelMap, ?string $levelStartedAt): ?string
+    {
+        $status = $g->status ?? 'open';
+        if ($status !== 'in_progress') {
+            return null;
+        }
+
+        $levelId = (int) ($g->progress_level ?? 0);
+        if ($levelId <= 0 || empty($progressLevelMap['byId'][$levelId])) {
+            return null;
+        }
+
+        $level = $progressLevelMap['byId'][$levelId];
+        $daysTarget = isset($level->days_to_address) ? (int) $level->days_to_address : 0;
+        if ($daysTarget <= 0) {
+            return null;
+        }
+
+        if ($levelStartedAt === null || $levelStartedAt === '') {
+            return null;
+        }
+
+        try {
+            $started = new \DateTimeImmutable($levelStartedAt);
+        } catch (\Exception $e) {
+            return null;
+        }
+
+        $now = new \DateTimeImmutable('now');
+        $daysOpen = (int) $started->diff($now)->format('%a');
+        if ($daysOpen <= $daysTarget) {
+            return null;
+        }
+
+        $lastId = $progressLevelMap['lastId'] ?? null;
+        if ($lastId !== null && $levelId === $lastId) {
+            return 'Should be closed';
+        }
+
+        $next = $progressLevelMap['nextById'][$levelId] ?? null;
+        $nextName = $next && !empty($next->name) ? $next->name : 'next level';
+        return 'Should be escalated to ' . $nextName;
     }
 }

@@ -26,6 +26,7 @@ ob_start();
                         <?php if (!empty($col['sortable'])): ?></a><?php endif; ?>
                     </th>
                     <?php endforeach; ?>
+                    <th>Escalation</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -50,6 +51,13 @@ ob_start();
                     ?></td>
                     <?php endforeach; ?>
                     <td>
+                        <?php if (!empty($g->escalation_message)): ?>
+                            <span class="badge bg-danger"><?= htmlspecialchars($g->escalation_message) ?></span>
+                        <?php else: ?>
+                            <span class="text-muted small">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
                         <?php if (\Core\Auth::can('view_grievance')): ?><a href="/grievance/view/<?= (int)$g->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_grievance')): ?><a href="/grievance/edit/<?= (int)$g->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                         <?php if (\Core\Auth::can('delete_grievance')): ?><a href="/grievance/delete/<?= (int)$g->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this grievance?')">Delete</a><?php endif; ?>
@@ -57,7 +65,7 @@ ob_start();
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($grievances)): ?>
-                <tr><td colspan="<?= count($listColumns) + 1 ?>" class="text-muted text-center py-4">No grievances yet.</td></tr>
+                <tr><td colspan="<?= count($listColumns) + 2 ?>" class="text-muted text-center py-4">No grievances yet.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

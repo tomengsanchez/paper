@@ -7,6 +7,24 @@ $inProgressLevels = $inProgressLevels ?? [];
 $statusLabels = ['open' => 'Open', 'in_progress' => 'In Progress', 'closed' => 'Closed'];
 $levelNameById = [];
 foreach ($progressLevels ?? [] as $pl) { $levelNameById[(int)$pl->id] = $pl->name; }
+$needsEscalationByLevel = $needsEscalationByLevel ?? [];
+
+$lastProgressLevelId = null;
+if (!empty($progressLevels)) {
+    $orderedLevels = $progressLevels;
+    usort($orderedLevels, function ($a, $b) {
+        $sa = (int)($a->sort_order ?? 0);
+        $sb = (int)($b->sort_order ?? 0);
+        if ($sa === $sb) {
+            return (int)($a->id ?? 0) <=> (int)($b->id ?? 0);
+        }
+        return $sa <=> $sb;
+    });
+    $last = end($orderedLevels);
+    if ($last && isset($last->id)) {
+        $lastProgressLevelId = (int)$last->id;
+    }
+}
 ob_start();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -119,6 +137,32 @@ ob_start();
                     </li>
                     <?php endforeach; ?>
                 </ul>
+                <?php
+                $hasEscalations = false;
+                foreach ($needsEscalationByLevel as $cnt) {
+                    if ((int)$cnt > 0) { $hasEscalations = true; break; }
+                }
+                ?>
+                <?php if ($hasEscalations): ?>
+                <hr class="my-3">
+                <h6 class="text-muted text-uppercase small mb-2">Needs escalation / closure</h6>
+                <ul class="list-unstyled mb-0">
+                    <?php foreach ($progressLevels as $pl):
+                        $id = (int)$pl->id;
+                        $cnt = (int)($needsEscalationByLevel[$id] ?? 0);
+                        if ($cnt <= 0) continue;
+                        $isLast = $lastProgressLevelId !== null && $id === $lastProgressLevelId;
+                        $label = $isLast
+                            ? sprintf('%s grievances need to close', $pl->name)
+                            : sprintf('%s grievances need escalation', $pl->name);
+                    ?>
+                    <li class="d-flex justify-content-between align-items-center py-1">
+                        <span><?= htmlspecialchars($label) ?></span>
+                        <span class="badge bg-danger"><?= number_format($cnt) ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
                 <?php else: ?>
                 <p class="text-muted small mb-0">No grievances in progress.</p>
                 <?php endif; ?>
