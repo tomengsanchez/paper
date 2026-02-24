@@ -5,13 +5,81 @@ foreach ($progressLevels ?? [] as $pl) { $levelNameById[(int)$pl->id] = $pl->nam
 $listSort = $listSort ?? ($listColumns[0] ?? '');
 $listOrder = $listOrder ?? 'asc';
 $listBaseUrl = $listBaseUrl ?? '/grievance/list';
-$baseQuery = '?q=' . urlencode($listSearch ?? '') . '&columns=' . urlencode(implode(',', $listColumns)) . '&per_page=' . (int)($listPagination['per_page'] ?? 15);
+$filterStatus = $filterStatus ?? '';
+$filterProjectId = $filterProjectId ?? 0;
+$filterStageId = $filterStageId ?? 0;
+$filterNeedsEscalation = $filterNeedsEscalation ?? '';
+$projects = $projects ?? [];
+
+// Base query for sort links, including active filters
+$baseQuery = '?q=' . urlencode($listSearch ?? '')
+    . '&columns=' . urlencode(implode(',', $listColumns))
+    . '&per_page=' . (int)($listPagination['per_page'] ?? 15)
+    . '&status=' . urlencode($filterStatus)
+    . '&project_id=' . (int)$filterProjectId
+    . '&progress_level=' . (int)$filterStageId
+    . '&needs_escalation=' . urlencode($filterNeedsEscalation);
+
+// Extra params for shared toolbar/pagination partials
+$listExtraParams = [
+    'status' => $filterStatus,
+    'project_id' => $filterProjectId ?: '',
+    'progress_level' => $filterStageId ?: '',
+    'needs_escalation' => $filterNeedsEscalation,
+];
 ob_start();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Grievances</h2>
     <?php if (\Core\Auth::can('add_grievance')): ?><a href="/grievance/create" class="btn btn-primary">Add Grievance</a><?php endif; ?>
 </div>
+
+<form method="get" action="<?= htmlspecialchars($listBaseUrl) ?>" class="row g-2 align-items-end mb-3">
+    <input type="hidden" name="columns" value="<?= htmlspecialchars(implode(',', $listColumns)) ?>">
+    <input type="hidden" name="sort" value="<?= htmlspecialchars($listSort) ?>">
+    <input type="hidden" name="order" value="<?= htmlspecialchars($listOrder) ?>">
+    <input type="hidden" name="per_page" value="<?= (int)($listPagination['per_page'] ?? 15) ?>">
+    <input type="hidden" name="q" value="<?= htmlspecialchars($listSearch ?? '') ?>">
+    <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1 small">Status</label>
+        <select name="status" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="open" <?= $filterStatus === 'open' ? 'selected' : '' ?>>Open</option>
+            <option value="in_progress" <?= $filterStatus === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
+            <option value="closed" <?= $filterStatus === 'closed' ? 'selected' : '' ?>>Closed</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1 small">Project</label>
+        <select name="project_id" class="form-select form-select-sm">
+            <option value="0">All projects</option>
+            <?php foreach ($projects as $proj): ?>
+            <option value="<?= (int)$proj->id ?>" <?= (int)$filterProjectId === (int)$proj->id ? 'selected' : '' ?>><?= htmlspecialchars($proj->name ?? ('#' . $proj->id)) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1 small">Stage</label>
+        <select name="progress_level" class="form-select form-select-sm">
+            <option value="0">All stages</option>
+            <?php foreach ($progressLevels ?? [] as $pl): ?>
+            <option value="<?= (int)$pl->id ?>" <?= (int)$filterStageId === (int)$pl->id ? 'selected' : '' ?>><?= htmlspecialchars($pl->name) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1 small">Needs escalation</label>
+        <select name="needs_escalation" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="1" <?= $filterNeedsEscalation === '1' ? 'selected' : '' ?>>Needs escalation / close</option>
+        </select>
+    </div>
+    <div class="col-12 d-flex gap-2 mt-1">
+        <button type="submit" class="btn btn-sm btn-primary">Apply filters</button>
+        <a href="<?= htmlspecialchars($listBaseUrl) ?>?columns=<?= htmlspecialchars(implode(',', $listColumns)) ?>&sort=<?= htmlspecialchars($listSort) ?>&order=<?= htmlspecialchars($listOrder) ?>&per_page=<?= (int)($listPagination['per_page'] ?? 15) ?>" class="btn btn-sm btn-outline-secondary">Clear</a>
+    </div>
+</form>
+
 <?php require __DIR__ . '/../partials/list_toolbar.php'; ?>
 <div class="card">
     <div class="table-responsive">
@@ -52,8 +120,13 @@ ob_start();
                     <?php endforeach; ?>
                     <td>
                         <?php if (!empty($g->escalation_message)): ?>
-                            <span class="badge bg-danger"><?= htmlspecialchars($g->escalation_message) ?></span>
-                        <?php else: ?>
+                            <div><span class="badge bg-danger"><?= htmlspecialchars($g->escalation_message) ?></span></div>
+                        <?php endif; ?>
+                        <?php if (!empty($g->level_started_at)): ?>
+                            <div class="small text-muted mt-1">
+                                <?= 'Last change: ' . date('M j, Y H:i', strtotime($g->level_started_at)) ?>
+                            </div>
+                        <?php elseif (empty($g->escalation_message)): ?>
                             <span class="text-muted small">—</span>
                         <?php endif; ?>
                     </td>

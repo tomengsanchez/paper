@@ -32,7 +32,7 @@ class Grievance
         return $stmt->fetch(\PDO::FETCH_OBJ) ?: null;
     }
 
-    public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage, ?int $afterId = null, ?int $beforeId = null): array
+    public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage, ?int $afterId = null, ?int $beforeId = null, array $filters = []): array
     {
         $db = self::db();
         $sortCol = match ($sortBy) {
@@ -46,7 +46,9 @@ class Grievance
         $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
 
         $params = [];
-        $searchCond = '';
+        $whereCond = '';
+
+        // Text search on selected columns
         if ($search !== '') {
             $term = '%' . $search . '%';
             $coll = ' COLLATE utf8mb4_unicode_ci';
@@ -56,8 +58,49 @@ class Grievance
             if (in_array('respondent_name', $searchColumns, true)) { $conds[] = '(COALESCE(p.full_name, g.respondent_full_name)' . $coll . ' LIKE ?)'; $params[] = $term; }
             if (in_array('profile_name', $searchColumns, true)) { $conds[] = 'p.full_name' . $coll . ' LIKE ?'; $params[] = $term; }
             if (!empty($conds)) {
-                $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
+                $whereCond .= ' AND (' . implode(' OR ', $conds) . ')';
             }
+        }
+
+        // Structured filters
+        $statusFilter = $filters['status'] ?? null;
+        if ($statusFilter && in_array($statusFilter, ['open', 'in_progress', 'closed'], true)) {
+            $whereCond .= ' AND g.status = ?';
+            $params[] = $statusFilter;
+        }
+
+        $projectIdFilter = isset($filters['project_id']) ? (int) $filters['project_id'] : 0;
+        if ($projectIdFilter > 0) {
+            $whereCond .= ' AND g.project_id = ?';
+            $params[] = $projectIdFilter;
+        }
+
+        $progressLevelFilter = isset($filters['progress_level']) ? (int) $filters['progress_level'] : 0;
+        if ($progressLevelFilter > 0) {
+            $whereCond .= ' AND g.progress_level = ?';
+            $params[] = $progressLevelFilter;
+        }
+
+        $needsEscalationFilter = $filters['needs_escalation'] ?? null;
+        if ($needsEscalationFilter === '1') {
+            // Only grievances that currently need escalation/closure based on days_to_address
+            $whereCond .= "
+                AND g.status = 'in_progress'
+                AND EXISTS (
+                    SELECT 1
+                    FROM grievance_progress_levels pl
+                    JOIN (
+                        SELECT grievance_id, progress_level, MAX(created_at) AS level_started_at
+                        FROM grievance_status_log
+                        WHERE status = 'in_progress' AND progress_level IS NOT NULL
+                        GROUP BY grievance_id, progress_level
+                    ) l ON l.grievance_id = g.id AND l.progress_level = g.progress_level
+                    WHERE pl.id = g.progress_level
+                      AND pl.days_to_address IS NOT NULL
+                      AND pl.days_to_address > 0
+                      AND DATEDIFF(CURDATE(), DATE(l.level_started_at)) > pl.days_to_address
+                )
+            ";
         }
 
         $limit = max(1, min(100, $perPage));
@@ -80,7 +123,7 @@ class Grievance
             FROM grievances g
             LEFT JOIN profiles p ON p.id = g.profile_id
             LEFT JOIN projects proj ON proj.id = g.project_id
-            WHERE 1=1 $searchCond $cursorCond
+            WHERE 1=1 $whereCond $cursorCond
             ORDER BY $sortCol $dir
             $limitClause";
         $stmt = $db->prepare($sql);
@@ -88,7 +131,7 @@ class Grievance
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
         $countParams = $cursorCond !== '' ? array_slice($params, 0, -1) : $params;
-        $countSql = "SELECT COUNT(*) FROM grievances g LEFT JOIN profiles p ON p.id = g.profile_id LEFT JOIN projects proj ON proj.id = g.project_id WHERE 1=1 $searchCond";
+        $countSql = "SELECT COUNT(*) FROM grievances g LEFT JOIN profiles p ON p.id = g.profile_id LEFT JOIN projects proj ON proj.id = g.project_id WHERE 1=1 $whereCond";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($countParams);
         $total = (int) $stmtCount->fetchColumn();

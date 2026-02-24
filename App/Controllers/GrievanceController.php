@@ -144,9 +144,30 @@ class GrievanceController extends Controller
         $afterId = !empty($_GET['after_id']) ? (int) $_GET['after_id'] : null;
         $beforeId = !empty($_GET['before_id']) ? (int) $_GET['before_id'] : null;
 
-        $pagination = Grievance::listPaginated($search, $columns, $sort, $order, $page, $perPage, $afterId, $beforeId);
+        $filterStatus = $_GET['status'] ?? '';
+        $filterProjectId = isset($_GET['project_id']) ? (int) $_GET['project_id'] : 0;
+        $filterStageId = isset($_GET['progress_level']) ? (int) $_GET['progress_level'] : 0;
+        $filterNeedsEscalation = $_GET['needs_escalation'] ?? '';
+
+        $pagination = Grievance::listPaginated(
+            $search,
+            $columns,
+            $sort,
+            $order,
+            $page,
+            $perPage,
+            $afterId,
+            $beforeId,
+            [
+                'status' => $filterStatus,
+                'project_id' => $filterProjectId,
+                'progress_level' => $filterStageId,
+                'needs_escalation' => $filterNeedsEscalation,
+            ]
+        );
 
         $progressLevels = GrievanceProgressLevel::all();
+        $projects = \App\Models\Project::all();
         $progressLevelMap = $this->buildProgressLevelMap($progressLevels);
 
         // Determine when each grievance entered its current in-progress level.
@@ -185,12 +206,18 @@ class GrievanceController extends Controller
             $gId = (int) ($item->id ?? 0);
             $plId = (int) ($item->progress_level ?? 0);
             $startedAt = $gId && $plId ? ($levelStartedAt[$gId . '_' . $plId] ?? null) : null;
+            $item->level_started_at = $startedAt;
             $item->escalation_message = $this->computeEscalationMessageForGrievance($item, $progressLevelMap, $startedAt);
         }
 
         $this->view('grievance/index', [
             'grievances' => $pagination['items'],
             'progressLevels' => $progressLevels,
+            'projects' => $projects,
+            'filterStatus' => $filterStatus,
+            'filterProjectId' => $filterProjectId,
+            'filterStageId' => $filterStageId,
+            'filterNeedsEscalation' => $filterNeedsEscalation,
             'listModule' => self::LIST_MODULE,
             'listBaseUrl' => self::LIST_BASE,
             'listSearch' => $search,

@@ -1,12 +1,21 @@
 <?php
 // Expects: $listBaseUrl, $listSearch, $listColumns, $listSort, $listOrder, $listPagination
+// Optional: $listExtraParams (associative array of extra query params to preserve across pages)
 $p = $listPagination ?? ['page' => 1, 'per_page' => 15, 'total' => 0, 'total_pages' => 0, 'first_id' => null, 'last_id' => null];
 $listBaseUrl = $listBaseUrl ?? '';
 $listSearch = $listSearch ?? '';
 $listColumns = $listColumns ?? [];
 $listSort = $listSort ?? '';
 $listOrder = $listOrder ?? 'asc';
-$base = $listBaseUrl . '?q=' . urlencode($listSearch) . '&columns=' . urlencode(implode(',', $listColumns)) . '&sort=' . urlencode($listSort) . '&order=' . urlencode($listOrder) . '&per_page=' . (int)($p['per_page'] ?? 15);
+$listExtraParams = $listExtraParams ?? [];
+
+$extraQuery = '';
+foreach ($listExtraParams as $k => $v) {
+    if ($v === '' || $v === null) continue;
+    $extraQuery .= '&' . urlencode($k) . '=' . urlencode((string)$v);
+}
+
+$base = $listBaseUrl . '?q=' . urlencode($listSearch) . '&columns=' . urlencode(implode(',', $listColumns)) . '&sort=' . urlencode($listSort) . '&order=' . urlencode($listOrder) . $extraQuery . '&per_page=' . (int)($p['per_page'] ?? 15);
 ?>
 <?php 
 $page = $p['page'] ?? 1;
