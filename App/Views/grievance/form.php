@@ -1,9 +1,10 @@
-<?php ob_start();
+ <?php ob_start();
 $g = $grievance ?? null;
 $fv = function($k, $d = '') use ($g) { return $g ? ($g->$k ?? $d) : $d; };
 $vulnIds = $g ? \App\Models\Grievance::parseJson($g->vulnerability_ids ?? '') : [];
 $respIds = $g ? \App\Models\Grievance::parseJson($g->respondent_type_ids ?? '') : [];
 $grmIds = $g ? \App\Models\Grievance::parseJson($g->grm_channel_ids ?? '') : [];
+$grmId = !empty($grmIds) ? (int)$grmIds[0] : '';
 $langIds = $g ? \App\Models\Grievance::parseJson($g->preferred_language_ids ?? '') : [];
 $typeIds = $g ? \App\Models\Grievance::parseJson($g->grievance_type_ids ?? '') : [];
 $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? '') : [];
@@ -168,7 +169,7 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
                 <label class="form-label">GRM Channel</label>
                 <div class="border rounded p-2">
                     <?php foreach ($grmChannels ?? [] as $gc): ?>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" name="grm_channel_ids[]" value="<?= (int)$gc->id ?>" id="grm<?= $gc->id ?>" <?= in_array((int)$gc->id, $grmIds) ? 'checked' : '' ?>><label class="form-check-label" for="grm<?= $gc->id ?>"><?= htmlspecialchars($gc->name) ?></label></div>
+                    <div class="form-check"><input class="form-check-input" type="radio" name="grm_channel_id" value="<?= (int)$gc->id ?>" id="grm<?= $gc->id ?>" <?= (int)$gc->id === $grmId ? 'checked' : '' ?>><label class="form-check-label" for="grm<?= $gc->id ?>"><?= htmlspecialchars($gc->name) ?></label></div>
                     <?php endforeach; ?>
                     <?php if (empty($grmChannels)): ?><small class="text-muted">No GRM channels defined. <a href="/grievance/options/grm-channels">Add in Options Library</a>.</small><?php endif; ?>
                 </div>

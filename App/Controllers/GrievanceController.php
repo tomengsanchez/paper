@@ -153,13 +153,12 @@ class GrievanceController extends Controller
     {
         $vulnIds = $_POST['vulnerability_ids'] ?? [];
         $respIds = $_POST['respondent_type_ids'] ?? [];
-        $grmIds = $_POST['grm_channel_ids'] ?? [];
+        $grmChannelId = $_POST['grm_channel_id'] ?? '';
         $langIds = $_POST['preferred_language_ids'] ?? [];
         $typeIds = $_POST['grievance_type_ids'] ?? [];
         $catIds = $_POST['grievance_category_ids'] ?? [];
         if (!is_array($vulnIds)) $vulnIds = [];
         if (!is_array($respIds)) $respIds = [];
-        if (!is_array($grmIds)) $grmIds = [];
         if (!is_array($langIds)) $langIds = [];
         if (!is_array($typeIds)) $typeIds = [];
         if (!is_array($catIds)) $catIds = [];
@@ -181,7 +180,7 @@ class GrievanceController extends Controller
             'mobile_number' => trim($_POST['mobile_number'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'contact_others_specify' => trim($_POST['contact_others_specify'] ?? ''),
-            'grm_channel_ids' => array_map('intval', array_filter($grmIds)),
+            'grm_channel_ids' => (isset($grmChannelId) && $grmChannelId !== '') ? [(int)$grmChannelId] : [],
             'preferred_language_ids' => array_map('intval', array_filter($langIds)),
             'preferred_language_other_specify' => trim($_POST['preferred_language_other_specify'] ?? ''),
             'grievance_type_ids' => array_map('intval', array_filter($typeIds)),
