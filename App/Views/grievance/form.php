@@ -13,6 +13,12 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
     <h2><?= $g ? 'Edit Grievance' : 'Grievance Registration' ?></h2>
     <a href="/grievance/list" class="btn btn-outline-secondary">Back</a>
 </div>
+<?php if (!empty($_SESSION['grievance_validation_error'])): ?>
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <?= htmlspecialchars($_SESSION['grievance_validation_error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+<?php unset($_SESSION['grievance_validation_error']); endif; ?>
 <form method="post" action="<?= $g ? "/grievance/update/{$g->id}" : '/grievance/store' ?>" id="grievanceForm">
     <!-- Card: Grievance Registration -->
     <div class="card mb-4">
@@ -166,17 +172,17 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
         <div class="card-header"><h6 class="mb-0">GRM Mode</h6></div>
         <div class="card-body">
             <div class="mb-3">
-                <label class="form-label">GRM Channel</label>
-                <div class="border rounded p-2">
-                    <?php foreach ($grmChannels ?? [] as $gc): ?>
-                    <div class="form-check"><input class="form-check-input" type="radio" name="grm_channel_id" value="<?= (int)$gc->id ?>" id="grm<?= $gc->id ?>" <?= (int)$gc->id === $grmId ? 'checked' : '' ?>><label class="form-check-label" for="grm<?= $gc->id ?>"><?= htmlspecialchars($gc->name) ?></label></div>
-                    <?php endforeach; ?>
+                <label class="form-label">GRM Channel <span class="text-danger">*</span></label>
+                <div class="border rounded p-2" id="grmChannelGroup">
+                    <?php $grmFirst = true; foreach ($grmChannels ?? [] as $gc): ?>
+                    <div class="form-check"><input class="form-check-input" type="radio" name="grm_channel_id" value="<?= (int)$gc->id ?>" id="grm<?= $gc->id ?>" <?= (int)$gc->id === $grmId ? 'checked' : '' ?> <?= $grmFirst && count($grmChannels ?? []) > 0 ? 'required' : '' ?>><label class="form-check-label" for="grm<?= $gc->id ?>"><?= htmlspecialchars($gc->name) ?></label></div>
+                    <?php $grmFirst = false; endforeach; ?>
                     <?php if (empty($grmChannels)): ?><small class="text-muted">No GRM channels defined. <a href="/grievance/options/grm-channels">Add in Options Library</a>.</small><?php endif; ?>
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Preferred Language of Communication</label>
-                <div class="border rounded p-2">
+                <label class="form-label">Preferred Language of Communication <span class="text-danger">*</span></label>
+                <div class="border rounded p-2" id="preferredLanguageGroup" data-required-group="preferred_language_ids[]">
                     <?php foreach ($preferredLanguages ?? [] as $pl): ?>
                     <div class="form-check"><input class="form-check-input" type="checkbox" name="preferred_language_ids[]" value="<?= (int)$pl->id ?>" id="lang<?= $pl->id ?>" <?= in_array((int)$pl->id, $langIds) ? 'checked' : '' ?>><label class="form-check-label" for="lang<?= $pl->id ?>"><?= htmlspecialchars($pl->name) ?></label></div>
                     <?php endforeach; ?>
@@ -188,8 +194,8 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Type of Grievance</label>
-                <div class="border rounded p-2">
+                <label class="form-label">Type of Grievance <span class="text-danger">*</span></label>
+                <div class="border rounded p-2" id="grievanceTypeGroup" data-required-group="grievance_type_ids[]">
                     <?php foreach ($grievanceTypes ?? [] as $gt): ?>
                     <div class="form-check"><input class="form-check-input" type="checkbox" name="grievance_type_ids[]" value="<?= (int)$gt->id ?>" id="type<?= $gt->id ?>" <?= in_array((int)$gt->id, $typeIds) ? 'checked' : '' ?>><label class="form-check-label" for="type<?= $gt->id ?>"><?= htmlspecialchars($gt->name) ?></label></div>
                     <?php endforeach; ?>
@@ -197,8 +203,8 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Category of Grievance</label>
-                <div class="border rounded p-2">
+                <label class="form-label">Category of Grievance <span class="text-danger">*</span></label>
+                <div class="border rounded p-2" id="grievanceCategoryGroup" data-required-group="grievance_category_ids[]">
                     <?php foreach ($grievanceCategories ?? [] as $gc): ?>
                     <div class="form-check"><input class="form-check-input" type="checkbox" name="grievance_category_ids[]" value="<?= (int)$gc->id ?>" id="cat<?= $gc->id ?>" <?= in_array((int)$gc->id, $catIds) ? 'checked' : '' ?>><label class="form-check-label" for="cat<?= $gc->id ?>"><?= htmlspecialchars($gc->name) ?></label></div>
                     <?php endforeach; ?>
@@ -276,6 +282,15 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
 $scripts = "
 <script>
 $(function(){
+    // GRM Mode: require at least one selection per checkbox group
+    $('#grievanceForm').on('submit', function(e){
+        var err = [];
+        if (!$('#grmChannelGroup input[name=grm_channel_id]:checked').length && $('#grmChannelGroup input[name=grm_channel_id]').length) err.push('Please select a GRM Channel.');
+        if (!$('#preferredLanguageGroup input[name=\"preferred_language_ids[]\"]:checked').length && $('#preferredLanguageGroup input[name=\"preferred_language_ids[]\"]').length) err.push('Please select at least one Preferred Language.');
+        if (!$('#grievanceTypeGroup input[name=\"grievance_type_ids[]\"]:checked').length && $('#grievanceTypeGroup input[name=\"grievance_type_ids[]\"]').length) err.push('Please select at least one Type of Grievance.');
+        if (!$('#grievanceCategoryGroup input[name=\"grievance_category_ids[]\"]:checked').length && $('#grievanceCategoryGroup input[name=\"grievance_category_ids[]\"]').length) err.push('Please select at least one Category of Grievance.');
+        if (err.length) { e.preventDefault(); alert(err.join('\\n')); return false; }
+    });
     // Is PAPS toggle
     $('#isPaps').on('change', function(){
         var checked = $(this).is(':checked');

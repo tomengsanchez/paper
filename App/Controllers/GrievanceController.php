@@ -86,6 +86,12 @@ class GrievanceController extends Controller
     public function store(): void
     {
         $this->requireCapability('add_grievance');
+        $err = $this->validateGrmModeFields();
+        if ($err !== null) {
+            $_SESSION['grievance_validation_error'] = $err;
+            $this->redirect('/grievance/create');
+            return;
+        }
         $data = $this->gatherGrievanceData(null);
         if (empty(trim($data['grievance_case_number'] ?? ''))) {
             $data['grievance_case_number'] = Grievance::generateCaseNumber();
@@ -141,6 +147,12 @@ class GrievanceController extends Controller
             $this->redirect('/grievance/list');
             return;
         }
+        $err = $this->validateGrmModeFields();
+        if ($err !== null) {
+            $_SESSION['grievance_validation_error'] = $err;
+            $this->redirect('/grievance/edit/' . $id);
+            return;
+        }
         $data = $this->gatherGrievanceData($grievance);
         Grievance::update($id, $data);
         $this->redirect('/grievance/view/' . $id);
@@ -151,6 +163,34 @@ class GrievanceController extends Controller
         $this->requireCapability('delete_grievance');
         Grievance::delete($id);
         $this->redirect('/grievance/list');
+    }
+
+    private function validateGrmModeFields(): ?string
+    {
+        $grmChannelId = $_POST['grm_channel_id'] ?? '';
+        $langIds = $_POST['preferred_language_ids'] ?? [];
+        $typeIds = $_POST['grievance_type_ids'] ?? [];
+        $catIds = $_POST['grievance_category_ids'] ?? [];
+        $grmChannels = GrievanceGrmChannel::all();
+        $preferredLanguages = GrievancePreferredLanguage::all();
+        $grievanceTypes = GrievanceType::all();
+        $grievanceCategories = GrievanceCategory::all();
+        if (!empty($grmChannels) && (!isset($grmChannelId) || $grmChannelId === '')) {
+            return 'Please select a GRM Channel.';
+        }
+        if (!is_array($langIds)) $langIds = [];
+        if (!empty($preferredLanguages) && array_filter(array_map('intval', $langIds)) === []) {
+            return 'Please select at least one Preferred Language of Communication.';
+        }
+        if (!is_array($typeIds)) $typeIds = [];
+        if (!empty($grievanceTypes) && array_filter(array_map('intval', $typeIds)) === []) {
+            return 'Please select at least one Type of Grievance.';
+        }
+        if (!is_array($catIds)) $catIds = [];
+        if (!empty($grievanceCategories) && array_filter(array_map('intval', $catIds)) === []) {
+            return 'Please select at least one Category of Grievance.';
+        }
+        return null;
     }
 
     private function gatherGrievanceData(?object $grievance): array

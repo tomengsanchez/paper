@@ -116,6 +116,13 @@ function randomSubset(array $arr, int $min = 0, int $max = 3): array
     return array_slice($ids, 0, $k);
 }
 
+/** At least one required (for GRM Mode required fields). Returns 1..max when options exist, else []. */
+function randomRequiredSubset(array $arr, int $max = 3): array
+{
+    if (empty($arr)) return [];
+    return randomSubset($arr, 1, $max);
+}
+
 function randomDateFromYearAgo(): string
 {
     $end = time();
@@ -190,6 +197,12 @@ $genders = ['Male', 'Female', 'Others', 'Prefer not to say'];
 echo "Projects: " . count($projectIds) . " | Profiles: " . count($profiles) . "\n";
 echo "Options: Vuln=" . count($vulnerabilities) . " Resp=" . count($respondentTypes) . " GRM=" . count($grmChannels) . " Lang=" . count($preferredLanguages) . " Types=" . count($grievanceTypes) . " Cat=" . count($grievanceCategories) . " Levels=" . count($progressLevels) . "\n\n";
 
+// GRM Mode fields are required when options exist: ensure at least one selection per group
+if (empty($grmChannels) || empty($preferredLanguages) || empty($grievanceTypes) || empty($grievanceCategories)) {
+    echo "WARNING: GRM Mode requires at least one option each (GRM Channel, Preferred Language, Type, Category).\n";
+    echo "         Add options in Grievance > Options Library, or seeded grievances may have empty GRM fields.\n\n";
+}
+
 $created = 0;
 $oneYearAgo = date('Y-m-d H:i:s', strtotime('-1 year'));
 $now = date('Y-m-d H:i:s');
@@ -211,11 +224,15 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
         if ($isPaps) $isPaps = false;
     }
 
+    // GRM Mode required: one GRM Channel, at least one Preferred Language, Type, Category (when options exist)
     $grmIds = [];
     if (!empty($grmChannels)) {
         $gc = randomElement($grmChannels);
         $grmIds = [(int) $gc->id];
     }
+    $preferredLangIds = randomRequiredSubset($preferredLanguages, 2);
+    $grievanceTypeIds = randomRequiredSubset($grievanceTypes, 2);
+    $grievanceCategoryIds = randomRequiredSubset($grievanceCategories, 2);
 
     $data = [
         'date_recorded' => $dateRecorded,
@@ -236,10 +253,10 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
         'email' => random_int(0, 1) ? ('user' . $i . '@example.ph') : '',
         'contact_others_specify' => '',
         'grm_channel_ids' => $grmIds,
-        'preferred_language_ids' => randomSubset($preferredLanguages, 0, 2),
+        'preferred_language_ids' => $preferredLangIds,
         'preferred_language_other_specify' => '',
-        'grievance_type_ids' => randomSubset($grievanceTypes, 0, 2),
-        'grievance_category_ids' => randomSubset($grievanceCategories, 0, 2),
+        'grievance_type_ids' => $grievanceTypeIds,
+        'grievance_category_ids' => $grievanceCategoryIds,
         'location_same_as_address' => random_int(0, 1),
         'location_specify' => random_int(0, 1) ? randomAddress() : '',
         'incident_one_time' => random_int(0, 1),
