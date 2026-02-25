@@ -8,3 +8,5 @@ config/database.php
 config/app.php
 
 public/uploads/*
+
+dbdump/*

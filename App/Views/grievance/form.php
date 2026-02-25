@@ -19,7 +19,7 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 <?php unset($_SESSION['grievance_validation_error']); endif; ?>
-<form method="post" action="<?= $g ? "/grievance/update/{$g->id}" : '/grievance/store' ?>" id="grievanceForm">
+<form method="post" action="<?= $g ? "/grievance/update/{$g->id}" : '/grievance/store' ?>" id="grievanceForm" enctype="multipart/form-data">
     <?= \Core\Csrf::field() ?>
     <!-- Card: Grievance Registration -->
     <div class="card mb-4">
@@ -277,6 +277,82 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
         </div>
     </div>
 
+    <!-- Attachments (Title, Description, File per card) -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Attachments</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="addAttachmentCard">+ Add attachment</button>
+        </div>
+        <div class="card-body">
+            <input type="hidden" name="attachment_section" value="1">
+            <div id="attachmentCards">
+                <?php
+                $attachments = $attachments ?? [];
+                if (empty($attachments)): ?>
+                <div class="attachment-card border rounded p-3 mb-3">
+                    <input type="hidden" name="attachment_id[]" value="">
+                    <div class="mb-2">
+                        <label class="form-label small">Title</label>
+                        <input type="text" name="attachment_title[]" class="form-control form-control-sm" placeholder="Attachment title">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Description</label>
+                        <textarea name="attachment_description[]" class="form-control form-control-sm" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">File</label>
+                        <input type="file" name="attachment_file[]" class="form-control form-control-sm" accept="image/*,.pdf">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-attachment-card">Remove</button>
+                </div>
+                <?php endif;
+                foreach ($attachments as $idx => $att):
+                    $aid = (int)($att->id ?? 0);
+                    $atitle = htmlspecialchars($att->title ?? '');
+                    $adesc = htmlspecialchars($att->description ?? '');
+                ?>
+                <div class="attachment-card border rounded p-3 mb-3" data-index="<?= $idx ?>">
+                    <input type="hidden" name="attachment_id[]" value="<?= $aid ?>">
+                    <div class="mb-2">
+                        <label class="form-label small">Title</label>
+                        <input type="text" name="attachment_title[]" class="form-control form-control-sm" value="<?= $atitle ?>" placeholder="Attachment title">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Description</label>
+                        <textarea name="attachment_description[]" class="form-control form-control-sm" rows="2" placeholder="Optional"><?= $adesc ?></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">File</label>
+                        <?php if ($aid && !empty($att->file_path)): ?>
+                        <div class="small text-muted mb-1">Current: <?= htmlspecialchars(basename($att->file_path)) ?></div>
+                        <?php endif; ?>
+                        <input type="file" name="attachment_file[]" class="form-control form-control-sm" accept="image/*,.pdf">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-attachment-card">Remove</button>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <template id="attachmentCardTemplate">
+                <div class="attachment-card border rounded p-3 mb-3">
+                    <input type="hidden" name="attachment_id[]" value="">
+                    <div class="mb-2">
+                        <label class="form-label small">Title</label>
+                        <input type="text" name="attachment_title[]" class="form-control form-control-sm" placeholder="Attachment title">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Description</label>
+                        <textarea name="attachment_description[]" class="form-control form-control-sm" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">File</label>
+                        <input type="file" name="attachment_file[]" class="form-control form-control-sm" accept="image/*,.pdf">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-attachment-card">Remove</button>
+                </div>
+            </template>
+        </div>
+    </div>
+
     <button type="submit" class="btn btn-primary"><?= $g ? 'Update' : 'Save' ?> Grievance</button>
 </form>
 <?php
@@ -354,6 +430,16 @@ $(function(){
     });
     $('#profileSelect').on('select2:clear', function(){
         $('#projectSelect').empty().append(new Option('-- Search Project --', '', true, true)).trigger('change');
+    });
+    // Attachment cards: add
+    $('#addAttachmentCard').on('click', function(){
+        var t = document.getElementById('attachmentCardTemplate');
+        var clone = t.content.cloneNode(true);
+        $('#attachmentCards').append(clone);
+    });
+    // Attachment cards: remove
+    $(document).on('click', '.remove-attachment-card', function(){
+        $(this).closest('.attachment-card').remove();
     });
 });
 </script>";

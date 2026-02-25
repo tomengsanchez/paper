@@ -119,6 +119,7 @@ $router->get('/serve/structure', 'StructureController@serveImage');
 // Serve profile attachments (images + PDF)
 $router->get('/serve/profile', 'ProfileController@serveProfileFile');
 $router->get('/serve/grievance', 'GrievanceController@serveGrievanceAttachment');
+$router->get('/serve/grievance-card-attachment', 'GrievanceController@serveGrievanceCardAttachment');
 
 // API for dropdown search (AJAX)
 $router->get('/api/coordinators', 'ApiController@coordinators');

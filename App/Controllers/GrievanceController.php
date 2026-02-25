@@ -11,14 +11,18 @@ use App\Models\GrievanceType;
 use App\Models\GrievanceCategory;
 use App\Models\GrievanceProgressLevel;
 use App\Models\GrievanceStatusLog;
+use App\Models\GrievanceAttachment;
 use App\ListConfig;
 use App\DashboardConfig;
+use Core\Logger;
 
 class GrievanceController extends Controller
 {
     private const LIST_BASE = '/grievance/list';
     private const UPLOAD_BASE = __DIR__ . '/../../public/uploads/grievance/status';
     private const WEB_BASE = '/uploads/grievance/status';
+    private const UPLOAD_BASE_ATTACHMENTS = __DIR__ . '/../../public/uploads/grievance/attachments';
+    private const WEB_BASE_ATTACHMENTS = '/uploads/grievance/attachments';
     private const ALLOWED_ATTACH_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
     private const LIST_MODULE = 'grievance';
 
@@ -236,6 +240,7 @@ class GrievanceController extends Controller
         $this->requireCapability('add_grievance');
         $this->view('grievance/form', [
             'grievance' => null,
+            'attachments' => [],
             'vulnerabilities' => GrievanceVulnerability::all(),
             'respondentTypes' => GrievanceRespondentType::all(),
             'grmChannels' => GrievanceGrmChannel::all(),
@@ -261,6 +266,7 @@ class GrievanceController extends Controller
         }
         $id = Grievance::create($data);
         GrievanceStatusLog::create($id, 'open', null, '', [], \Core\Auth::id());
+        $this->processAttachmentCards($id, false);
         $this->redirect('/grievance/view/' . $id);
     }
 
@@ -300,7 +306,8 @@ class GrievanceController extends Controller
 
         $grievance->escalation_message = $this->computeEscalationMessageForGrievance($grievance, $progressLevelMap, $levelStartedAt);
 
-        $this->view('grievance/view', compact('grievance', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels'));
+        $attachments = GrievanceAttachment::byGrievance($id);
+        $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels'));
     }
 
     public function edit(int $id): void
@@ -313,6 +320,7 @@ class GrievanceController extends Controller
         }
         $this->view('grievance/form', [
             'grievance' => $grievance,
+            'attachments' => GrievanceAttachment::byGrievance($id),
             'vulnerabilities' => GrievanceVulnerability::all(),
             'respondentTypes' => GrievanceRespondentType::all(),
             'grmChannels' => GrievanceGrmChannel::all(),
@@ -339,6 +347,7 @@ class GrievanceController extends Controller
         }
         $data = $this->gatherGrievanceData($grievance);
         Grievance::update($id, $data);
+        $this->processAttachmentCards($id, true);
         $this->redirect('/grievance/view/' . $id);
     }
 
@@ -502,6 +511,54 @@ class GrievanceController extends Controller
         exit;
     }
 
+    /** Serve a grievance attachment card file by attachment id (IDOR: user must have view_grievance). */
+    public function serveGrievanceCardAttachment(): void
+    {
+        $this->requireAuth();
+        if (!\Core\Auth::can('view_grievance')) {
+            http_response_code(403);
+            exit;
+        }
+        $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+        if ($id <= 0) {
+            http_response_code(400);
+            exit;
+        }
+        $att = GrievanceAttachment::find($id);
+        if (!$att || (int) $att->grievance_id <= 0) {
+            http_response_code(404);
+            exit;
+        }
+        $grievance = Grievance::find((int) $att->grievance_id);
+        if (!$grievance) {
+            http_response_code(404);
+            exit;
+        }
+        $file = basename($att->file_path ?? '');
+        if ($file === '' || !preg_match('/^[a-zA-Z0-9_\-\.]+$/', $file)) {
+            http_response_code(400);
+            exit;
+        }
+        $path = self::UPLOAD_BASE_ATTACHMENTS . '/' . $file;
+        if (!is_file($path)) {
+            http_response_code(404);
+            exit;
+        }
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        $mime = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf' => 'application/pdf',
+            default => 'application/octet-stream',
+        };
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($path));
+        readfile($path);
+        exit;
+    }
+
     private function handleStatusUpload(): array
     {
         $paths = [];
@@ -531,6 +588,135 @@ class GrievanceController extends Controller
             }
         }
         return $paths;
+    }
+
+    /**
+     * Process attachment cards from POST: create (store), update/delete (update).
+     */
+    private function processAttachmentCards(int $grievanceId, bool $isUpdate): void
+    {
+        $ids = $_POST['attachment_id'] ?? [];
+        $titles = $_POST['attachment_title'] ?? [];
+        $descriptions = $_POST['attachment_description'] ?? [];
+        $files = $_FILES['attachment_file'] ?? null;
+        // PHP may send a single value as string when there's only one input; normalize to array
+        if (!is_array($ids)) $ids = $ids === '' || $ids === null ? [] : [$ids];
+        if (!is_array($titles)) $titles = $titles === '' || $titles === null ? [] : [$titles];
+        if (!is_array($descriptions)) $descriptions = $descriptions === '' || $descriptions === null ? [] : [$descriptions];
+        $fileNames = $files && isset($files['name']) ? $files['name'] : [];
+        $fileTmps = $files && isset($files['tmp_name']) ? $files['tmp_name'] : [];
+        $fileErrors = $files && isset($files['error']) ? $files['error'] : [];
+        if (!is_array($fileNames)) $fileNames = $fileNames === '' ? [] : [$fileNames];
+        if (!is_array($fileTmps)) $fileTmps = $fileTmps === '' ? [] : [$fileTmps];
+        if (!is_array($fileErrors)) $fileErrors = $fileErrors === '' || $fileErrors === null ? [] : [$fileErrors];
+
+        $hasAttachmentData = count($ids) > 0 || count($titles) > 0 || count($descriptions) > 0;
+        $attachmentSectionSent = isset($_POST['attachment_section']);
+        $numCards = max(count($ids), count($titles), count($descriptions));
+
+        Logger::log('attachment_debug.log', 'processAttachmentCards', [
+            'grievanceId' => $grievanceId,
+            'isUpdate' => $isUpdate,
+            'numCards' => $numCards,
+            'hasAttachmentData' => $hasAttachmentData,
+            'attachmentSectionSent' => $attachmentSectionSent,
+            'post_attachment_id' => array_key_exists('attachment_id', $_POST),
+            'files_set' => $files !== null,
+        ]);
+
+        if ($isUpdate && !$hasAttachmentData && !$attachmentSectionSent) {
+            return;
+        }
+
+        if (!is_dir(self::UPLOAD_BASE_ATTACHMENTS)) {
+            mkdir(self::UPLOAD_BASE_ATTACHMENTS, 0755, true);
+        }
+
+        $submittedIds = [];
+        for ($i = 0; $i < $numCards; $i++) {
+            $id = isset($ids[$i]) ? trim((string) $ids[$i]) : '';
+            $title = isset($titles[$i]) ? trim((string) $titles[$i]) : '';
+            $description = isset($descriptions[$i]) ? trim((string) $descriptions[$i]) : '';
+            $hasFile = isset($fileErrors[$i]) && (int)$fileErrors[$i] === UPLOAD_ERR_OK && !empty($fileTmps[$i]) && is_uploaded_file($fileTmps[$i]);
+
+            Logger::log('attachment_debug.log', "card[$i]", ['id' => $id, 'title' => substr($title, 0, 40), 'hasFile' => $hasFile, 'fileError' => $fileErrors[$i] ?? null]);
+
+            try {
+                if ($isUpdate && $id !== '') {
+                    $attId = (int) $id;
+                    if ($attId > 0) {
+                        $existingAtt = GrievanceAttachment::find($attId);
+                        if ($existingAtt && (int)$existingAtt->grievance_id === $grievanceId) {
+                            $submittedIds[] = $attId;
+                            $newPath = $hasFile ? $this->uploadOneAttachmentCard($i) : null;
+                            GrievanceAttachment::update($attId, $title !== '' ? $title : 'Untitled', $description, $newPath);
+                        }
+                    }
+                } else {
+                    if ($title !== '' && $hasFile) {
+                        $path = $this->uploadOneAttachmentCard($i);
+                        if ($path !== null) {
+                            $newId = GrievanceAttachment::create($grievanceId, $title, $description, $path, $i);
+                            $submittedIds[] = $newId; // so cleanup does not delete the row we just created
+                        } else {
+                            Logger::log('attachment_debug.log', "card[$i] upload returned null", []);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Logger::log('attachment_debug.log', 'attachment_error', ['message' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+                $_SESSION['grievance_attachment_error'] = 'Attachments could not be saved. See logs/attachment_debug.log.';
+            }
+        }
+
+        try {
+            if ($isUpdate && ($hasAttachmentData || $attachmentSectionSent)) {
+                $existing = GrievanceAttachment::byGrievance($grievanceId);
+                foreach ($existing as $att) {
+                    if (!in_array((int) $att->id, $submittedIds, true)) {
+                        $fullPath = self::UPLOAD_BASE_ATTACHMENTS . '/' . basename($att->file_path ?? '');
+                        if (is_file($fullPath)) @unlink($fullPath);
+                        GrievanceAttachment::delete((int) $att->id);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Logger::log('attachment_debug.log', 'attachment_delete_error', ['message' => $e->getMessage()]);
+            $_SESSION['grievance_attachment_error'] = 'Attachments could not be saved. See logs/attachment_debug.log.';
+        }
+    }
+
+    private function uploadOneAttachmentCard(int $index): ?string
+    {
+        $files = $_FILES['attachment_file'] ?? null;
+        if (!$files) return null;
+        $tmps = $files['tmp_name'] ?? [];
+        $errors = $files['error'] ?? [];
+        if (!is_array($tmps)) $tmps = [$tmps];
+        if (!is_array($errors)) $errors = [$errors];
+        if (!isset($tmps[$index], $errors[$index]) || (int)$errors[$index] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        $tmp = $tmps[$index];
+        if (empty($tmp) || !is_uploaded_file($tmp)) return null;
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $tmp);
+        finfo_close($finfo);
+        if (!in_array($mime, self::ALLOWED_ATTACH_TYPES, true)) return null;
+        $ext = match ($mime) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+            default => 'bin',
+        };
+        $filename = uniqid('card_', true) . '.' . $ext;
+        $dest = self::UPLOAD_BASE_ATTACHMENTS . '/' . $filename;
+        if (move_uploaded_file($tmp, $dest)) {
+            return self::WEB_BASE_ATTACHMENTS . '/' . $filename;
+        }
+        return null;
     }
 
     public static function attachmentUrl(string $path, ?int $grievanceId = null): string
