@@ -40,7 +40,9 @@ ob_start();
                     <td>
                         <?php if (\Core\Auth::can('view_structure')): ?><a href="/structure/view/<?= (int)$s->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_structure')): ?><a href="/structure/edit/<?= (int)$s->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
-                        <?php if (\Core\Auth::can('delete_structure')): ?><a href="/structure/delete/<?= (int)$s->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this structure?')">Delete</a><?php endif; ?>
+                        <?php if (\Core\Auth::can('delete_structure')): ?>
+                        <form method="post" action="/structure/delete/<?= (int)$s->id ?>" class="d-inline" onsubmit="return confirm('Delete this structure?');"><?= \Core\Csrf::field() ?><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

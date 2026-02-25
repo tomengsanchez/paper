@@ -66,6 +66,7 @@ class StructureController extends Controller
 
     public function store(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_structure');
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
@@ -104,6 +105,7 @@ class StructureController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_structure');
         $structure = Structure::find($id);
         if (!$structure) {
@@ -132,6 +134,7 @@ class StructureController extends Controller
 
     public function delete(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_structure');
         Structure::delete($id);
         $this->redirect('/structure');
@@ -139,6 +142,7 @@ class StructureController extends Controller
 
     public function storeApi(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_structure');
         $ownerId = (int) ($_POST['owner_id'] ?? 0) ?: null;
         if (!$ownerId) {
@@ -161,6 +165,7 @@ class StructureController extends Controller
 
     public function updateApi(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_structure');
         $structure = Structure::find($id);
         if (!$structure) {
@@ -190,6 +195,7 @@ class StructureController extends Controller
 
     public function deleteApi(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_structure');
         Structure::delete($id);
         $this->json(['success' => true]);

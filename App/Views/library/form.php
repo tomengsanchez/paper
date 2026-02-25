@@ -6,6 +6,7 @@
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $project ? "/library/update/{$project->id}" : '/library/store' ?>" id="libraryForm">
+            <?= \Core\Csrf::field() ?>
             <div class="mb-3">
                 <label class="form-label">Project Name</label>
                 <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($project->name ?? '') ?>" required>

@@ -58,6 +58,7 @@ class UserController extends Controller
 
     public function store(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_users');
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -106,6 +107,7 @@ class UserController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_users');
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -125,6 +127,7 @@ class UserController extends Controller
 
     public function delete(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_users');
         if ($id === Auth::id()) {
             $this->redirect('/users?error=self');

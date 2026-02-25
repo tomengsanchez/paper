@@ -70,7 +70,9 @@ ob_start();
                     <td>
                         <?php if (\Core\Auth::can('view_profiles')): ?><a href="/profile/view/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_profiles')): ?><a href="/profile/edit/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
-                        <?php if (\Core\Auth::can('delete_profiles')): ?><a href="/profile/delete/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this profile?')">Delete</a><?php endif; ?>
+                        <?php if (\Core\Auth::can('delete_profiles')): ?>
+                        <form method="post" action="/profile/delete/<?= (int)$p->id ?>" class="d-inline" onsubmit="return confirm('Delete this profile?');"><?= \Core\Csrf::field() ?><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

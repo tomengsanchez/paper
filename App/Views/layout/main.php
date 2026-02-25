@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(\Core\Csrf::token()) ?>">
     <title><?= htmlspecialchars($pageTitle ?? 'PAPS') ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -102,6 +103,9 @@
             <a href="/logout" class="btn btn-outline-secondary btn-sm">Logout</a>
         </header>
         <main class="content">
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'csrf'): ?>
+            <div class="alert alert-warning alert-dismissible fade show">Invalid or expired request. Please try again. <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+            <?php endif; ?>
             <?= $content ?? '' ?>
         </main>
     </div>

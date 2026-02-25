@@ -9,6 +9,7 @@
     <div class="card-body">
         <?php if (\Core\Auth::can('manage_security_settings')): ?>
         <form method="post" action="/settings/security/update" id="securityForm">
+            <?= \Core\Csrf::field() ?>
             <div class="mb-3">
                 <div class="form-check form-switch">
                     <input type="checkbox" name="enable_email_2fa" value="1" class="form-check-input" id="enable2fa"

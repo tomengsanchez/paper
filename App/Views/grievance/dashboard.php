@@ -219,6 +219,7 @@ ob_start();
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post" action="/grievance/dashboard-config">
+                <?= \Core\Csrf::field() ?>
                 <div class="modal-header">
                     <h5 class="modal-title" id="dashboardDesignerLabel">Customize dashboard</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

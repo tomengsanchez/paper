@@ -14,7 +14,7 @@
                     <td><?= (int)$i->sort_order ?></td>
                     <td><?= isset($i->days_to_address) && $i->days_to_address !== null ? (int)$i->days_to_address : '' ?></td>
                     <td><?= htmlspecialchars(mb_substr($i->description ?? '', 0, 80)) ?><?= mb_strlen($i->description ?? '') > 80 ? '...' : '' ?></td>
-                    <td><a href="/grievance/options/progress-levels/edit/<?= (int)$i->id ?>" class="btn btn-sm btn-outline-primary">Edit</a> <a href="/grievance/options/progress-levels/delete/<?= (int)$i->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this stage? Grievances using it may show an unknown level.')">Delete</a></td>
+                    <td><a href="/grievance/options/progress-levels/edit/<?= (int)$i->id ?>" class="btn btn-sm btn-outline-primary">Edit</a> <form method="post" action="/grievance/options/progress-levels/delete/<?= (int)$i->id ?>" class="d-inline" onsubmit="return confirm('Delete this stage? Grievances using it may show an unknown level.');"><?= \Core\Csrf::field() ?><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form></td>
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($items)): ?><tr><td colspan="5" class="text-muted text-center py-4">No stages yet. Add Level 1, Level 2, Level 3 or custom stages.</td></tr><?php endif; ?>

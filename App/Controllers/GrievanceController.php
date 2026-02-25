@@ -116,6 +116,7 @@ class GrievanceController extends Controller
 
     public function dashboardSaveConfig(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('view_grievance');
         $widgets = $_POST['widgets'] ?? [];
         $widgets = is_array($widgets) ? array_values(array_filter(array_map('trim', $widgets))) : [];
@@ -246,6 +247,7 @@ class GrievanceController extends Controller
 
     public function store(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_grievance');
         $err = $this->validateGrmModeFields();
         if ($err !== null) {
@@ -322,6 +324,7 @@ class GrievanceController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_grievance');
         $grievance = Grievance::find($id);
         if (!$grievance) {
@@ -341,6 +344,7 @@ class GrievanceController extends Controller
 
     public function delete(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_grievance');
         Grievance::delete($id);
         $this->redirect('/grievance/list');
@@ -426,6 +430,7 @@ class GrievanceController extends Controller
 
     public function statusUpdate(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_grievance');
         $grievance = Grievance::find($id);
         if (!$grievance) {
@@ -453,9 +458,28 @@ class GrievanceController extends Controller
             http_response_code(403);
             exit;
         }
+        $grievanceId = isset($_GET['grievance_id']) ? (int) $_GET['grievance_id'] : 0;
         $file = $_GET['file'] ?? '';
-        if (!preg_match('/^[a-zA-Z0-9_\-\.]+$/', $file)) {
+        if (!$grievanceId || !preg_match('/^[a-zA-Z0-9_\-\.]+$/', $file)) {
             http_response_code(400);
+            exit;
+        }
+        $grievance = Grievance::find($grievanceId);
+        if (!$grievance) {
+            http_response_code(404);
+            exit;
+        }
+        $logs = GrievanceStatusLog::byGrievance($grievanceId);
+        $allowedFiles = [];
+        foreach ($logs as $log) {
+            $atts = GrievanceStatusLog::parseAttachments($log->attachments ?? '[]');
+            foreach ($atts as $path) {
+                $base = basename($path);
+                if ($base !== '') $allowedFiles[$base] = true;
+            }
+        }
+        if (!isset($allowedFiles[$file])) {
+            http_response_code(403);
             exit;
         }
         $path = self::UPLOAD_BASE . '/' . $file;
@@ -509,11 +533,16 @@ class GrievanceController extends Controller
         return $paths;
     }
 
-    public static function attachmentUrl(string $path): string
+    public static function attachmentUrl(string $path, ?int $grievanceId = null): string
     {
         $prefix = defined('BASE_URL') && BASE_URL ? BASE_URL : '';
         if (preg_match('#^/uploads/grievance/status/([a-zA-Z0-9_\-\.]+)$#', $path, $m)) {
-            return $prefix . '/serve/grievance?file=' . urlencode($m[1]);
+            $file = $m[1];
+            $q = 'file=' . urlencode($file);
+            if ($grievanceId !== null && $grievanceId > 0) {
+                $q .= '&grievance_id=' . (int) $grievanceId;
+            }
+            return $prefix . '/serve/grievance?' . $q;
         }
         return $prefix . ($path[0] === '/' ? $path : '/' . $path);
     }

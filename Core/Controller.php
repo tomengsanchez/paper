@@ -46,4 +46,18 @@ abstract class Controller
             $this->redirect('/');
         }
     }
+
+    /** Validate CSRF for POST requests. Call at the start of any action that accepts POST. Redirects with error if invalid. */
+    protected function validateCsrf(): void
+    {
+        if (!\Core\Csrf::validate()) {
+            $this->redirect($this->csrfRedirectUrl(), 403);
+        }
+    }
+
+    /** Override in subclass to set redirect target when CSRF validation fails (default /). */
+    protected function csrfRedirectUrl(): string
+    {
+        return '/?error=csrf';
+    }
 }

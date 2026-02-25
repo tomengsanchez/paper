@@ -6,6 +6,7 @@
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $item ? "/grievance/options/progress-levels/update/{$item->id}" : '/grievance/options/progress-levels/store' ?>">
+            <?= \Core\Csrf::field() ?>
             <div class="mb-3">
                 <label class="form-label">Name</label>
                 <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($item->name ?? '') ?>" required placeholder="e.g. Level 1">

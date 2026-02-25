@@ -58,6 +58,7 @@ class UserProfileController extends Controller
 
     public function store(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_user_profiles');
         try {
             $id = UserProfile::create([
@@ -104,6 +105,7 @@ class UserProfileController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_user_profiles');
         try {
             UserProfile::update($id, [
@@ -127,6 +129,7 @@ class UserProfileController extends Controller
 
     public function delete(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_user_profiles');
         UserProfile::delete($id);
         $this->redirect('/users/profiles');

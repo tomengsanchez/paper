@@ -135,6 +135,7 @@ class ProfileController extends Controller
 
     public function store(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_profiles');
         $data = $this->gatherProfileData(null);
         $id = Profile::create($data);
@@ -166,6 +167,7 @@ class ProfileController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_profiles');
         $profile = Profile::find($id);
         if (!$profile) {
@@ -230,6 +232,7 @@ class ProfileController extends Controller
 
     public function delete(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_profiles');
         Profile::delete($id);
         $this->redirect('/profile');

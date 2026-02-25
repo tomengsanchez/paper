@@ -6,6 +6,7 @@
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $user ? "/users/update/{$user->id}" : '/users/store' ?>">
+            <?= \Core\Csrf::field() ?>
             <div class="mb-3">
                 <label class="form-label">Username</label>
                 <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($user->username ?? '') ?>" required>
