@@ -1,5 +1,5 @@
 <?php
-namespace App\Controllers;
+namespace App\Controllers\Api;
 
 use Core\Controller;
 use Core\Auth;
@@ -46,7 +46,7 @@ class ApiController extends Controller
 
     public function profiles(): void
     {
-        if (!\Core\Auth::canAny(['view_structure', 'add_structure', 'edit_structure', 'view_profiles', 'view_grievance', 'add_grievance', 'edit_grievance'])) {
+        if (!Auth::canAny(['view_structure', 'add_structure', 'edit_structure', 'view_profiles', 'view_grievance', 'add_grievance', 'edit_grievance'])) {
             $this->json([]);
             return;
         }
@@ -89,3 +89,4 @@ class ApiController extends Controller
         $this->json($out);
     }
 }
+

@@ -122,18 +122,18 @@ $router->get('/serve/grievance', 'GrievanceController@serveGrievanceAttachment')
 $router->get('/serve/grievance-card-attachment', 'GrievanceController@serveGrievanceCardAttachment');
 
 // API for dropdown search (AJAX)
-$router->get('/api/coordinators', 'ApiController@coordinators');
-$router->get('/api/projects', 'ApiController@projects');
-$router->get('/api/profiles', 'ApiController@profiles');
-$router->get('/api/profile/{id}/structures', 'ApiController@profileStructures');
+$router->get('/api/coordinators', 'Api\ApiController@coordinators');
+$router->get('/api/projects', 'Api\ApiController@projects');
+$router->get('/api/profiles', 'Api\ApiController@profiles');
+$router->get('/api/profile/{id}/structures', 'Api\ApiController@profileStructures');
 // API for grievance dashboard aggregates (AJAX)
-$router->get('/api/grievance/dashboard', 'GrievanceController@dashboardData');
+$router->get('/api/grievance/dashboard', 'Api\GrievanceController@dashboard');
 
 // Structure API (for Profile lightbox CRUD)
-$router->get('/api/structure/next-strid', 'StructureController@nextStridApi');
-$router->get('/api/structure/{id}', 'StructureController@getApi');
-$router->post('/api/structure/store', 'StructureController@storeApi');
-$router->post('/api/structure/update/{id}', 'StructureController@updateApi');
-$router->post('/api/structure/delete/{id}', 'StructureController@deleteApi');
+$router->get('/api/structure/next-strid', 'Api\StructureController@nextStridApi');
+$router->get('/api/structure/{id}', 'Api\StructureController@getApi');
+$router->post('/api/structure/store', 'Api\StructureController@storeApi');
+$router->post('/api/structure/update/{id}', 'Api\StructureController@updateApi');
+$router->post('/api/structure/delete/{id}', 'Api\StructureController@deleteApi');
 
 $router->dispatch();
