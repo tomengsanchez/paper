@@ -34,7 +34,6 @@ class GrievanceController extends Controller
     public function dashboard(): void
     {
         $this->requireCapability('view_grievance');
-        $db = \Core\Database::getInstance();
 
         $selectedProjectId = isset($_GET['project_id']) ? (int) $_GET['project_id'] : 0;
         if ($selectedProjectId < 0) {
@@ -42,6 +41,42 @@ class GrievanceController extends Controller
         }
 
         $projects = \App\Models\Project::all();
+        $dashboardWidgets = DashboardConfig::GRIEVANCE_WIDGETS_DEFAULT;
+        $visibleWidgets = DashboardConfig::visibleWidgets(DashboardConfig::MODULE_GRIEVANCE);
+        $chartOptions = DashboardConfig::chartOptions(DashboardConfig::MODULE_GRIEVANCE);
+        $progressLevels = GrievanceProgressLevel::all();
+
+        // Initial load is now lightweight; heavy aggregates are fetched via AJAX.
+        $this->view('grievance/dashboard', [
+            'totalGrievances'        => null,
+            'recentGrievances'       => [],
+            'statusBreakdown'        => [],
+            'thisMonth'              => null,
+            'lastMonth'              => null,
+            'byProject'              => [],
+            'monthlyTrend'           => [],
+            'byCategory'             => [],
+            'byType'                 => [],
+            'inProgressLevels'       => [],
+            'dashboardWidgets'       => $dashboardWidgets,
+            'visibleWidgets'         => $visibleWidgets,
+            'chartOptions'           => $chartOptions,
+            'progressLevels'         => $progressLevels,
+            'needsEscalationByLevel' => [],
+            'projects'               => $projects,
+            'selectedProjectId'      => $selectedProjectId,
+        ]);
+    }
+
+    public function dashboardData(): void
+    {
+        $this->requireCapability('view_grievance');
+        $db = \Core\Database::getInstance();
+
+        $selectedProjectId = isset($_GET['project_id']) ? (int) $_GET['project_id'] : 0;
+        if ($selectedProjectId < 0) {
+            $selectedProjectId = 0;
+        }
 
         // Total grievances (optionally filtered by project)
         if ($selectedProjectId > 0) {
@@ -79,29 +114,45 @@ class GrievanceController extends Controller
         $stmt->execute($statusParams);
         $statusBreakdown = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        $thisMonthStart = date('Y-m-01 00:00:00');
-        $lastMonthStart = date('Y-m-01 00:00:00', strtotime('first day of last month'));
-
-        // This month vs last month (optionally filtered by project)
-        $sqlThisMonth = 'SELECT COUNT(*) FROM grievances WHERE date_recorded >= ?';
-        $paramsThisMonth = [$thisMonthStart];
+        // Monthly trend and this/last month counts (single aggregate query)
+        $trendMonths = 12;
+        $trendStart = date('Y-m-01 00:00:00', strtotime('-' . ($trendMonths - 1) . ' months'));
+        $trendSql = '
+            SELECT DATE_FORMAT(date_recorded, "%Y-%m") AS ym, COUNT(*) AS cnt
+            FROM grievances
+            WHERE date_recorded >= ?
+        ';
+        $trendParams = [$trendStart];
         if ($selectedProjectId > 0) {
-            $sqlThisMonth .= ' AND project_id = ?';
-            $paramsThisMonth[] = $selectedProjectId;
+            $trendSql .= ' AND project_id = ?';
+            $trendParams[] = $selectedProjectId;
         }
-        $stmt = $db->prepare($sqlThisMonth);
-        $stmt->execute($paramsThisMonth);
-        $thisMonth = (int) $stmt->fetchColumn();
+        $trendSql .= ' GROUP BY ym ORDER BY ym';
+        $stmt = $db->prepare($trendSql);
+        $stmt->execute($trendParams);
+        $trendByKey = [];
+        foreach ($stmt->fetchAll(\PDO::FETCH_OBJ) as $row) {
+            $key = (string) ($row->ym ?? '');
+            if ($key === '') {
+                continue;
+            }
+            $trendByKey[$key] = (int) ($row->cnt ?? 0);
+        }
 
-        $sqlLastMonth = 'SELECT COUNT(*) FROM grievances WHERE date_recorded >= ? AND date_recorded < ?';
-        $paramsLastMonth = [$lastMonthStart, $thisMonthStart];
-        if ($selectedProjectId > 0) {
-            $sqlLastMonth .= ' AND project_id = ?';
-            $paramsLastMonth[] = $selectedProjectId;
+        $monthlyTrend = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $key = date('Y-m', strtotime("-$i months"));
+            $monthlyTrend[] = [
+                'month' => $key,
+                'label' => date('M Y', strtotime("-$i months")),
+                'count' => $trendByKey[$key] ?? 0,
+            ];
         }
-        $stmt = $db->prepare($sqlLastMonth);
-        $stmt->execute($paramsLastMonth);
-        $lastMonth = (int) $stmt->fetchColumn();
+
+        $currentKey = date('Y-m');
+        $lastKey = date('Y-m', strtotime('-1 month'));
+        $thisMonth = $trendByKey[$currentKey] ?? 0;
+        $lastMonth = $trendByKey[$lastKey] ?? 0;
 
         // By project breakdown (honors selected project filter, so it will
         // typically show a single row when a project is selected).
@@ -123,23 +174,6 @@ class GrievanceController extends Controller
         $stmt = $db->prepare($byProjectSql);
         $stmt->execute($byProjectParams);
         $byProject = $stmt->fetchAll(\PDO::FETCH_OBJ);
-
-        // Monthly trend for chart (last 12 months by date_recorded)
-        $monthlyTrend = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $monthStart = date('Y-m-01 00:00:00', strtotime("-$i months"));
-            $monthEnd = date('Y-m-t 23:59:59', strtotime("-$i months"));
-            $key = date('Y-m', strtotime("-$i months"));
-            $sqlMonth = 'SELECT COUNT(*) FROM grievances WHERE date_recorded >= ? AND date_recorded <= ?';
-            $paramsMonth = [$monthStart, $monthEnd];
-            if ($selectedProjectId > 0) {
-                $sqlMonth .= ' AND project_id = ?';
-                $paramsMonth[] = $selectedProjectId;
-            }
-            $stmt = $db->prepare($sqlMonth);
-            $stmt->execute($paramsMonth);
-            $monthlyTrend[] = ['month' => $key, 'label' => date('M Y', strtotime("-$i months")), 'count' => (int) $stmt->fetchColumn()];
-        }
 
         // In-progress by stage (optionally filtered by project)
         $inProgressSql = "
@@ -239,29 +273,18 @@ class GrievanceController extends Controller
         $stmt->execute($byTypeParams);
         $byType = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        $dashboardWidgets = DashboardConfig::GRIEVANCE_WIDGETS_DEFAULT;
-        $visibleWidgets = DashboardConfig::visibleWidgets(DashboardConfig::MODULE_GRIEVANCE);
-        $chartOptions = DashboardConfig::chartOptions(DashboardConfig::MODULE_GRIEVANCE);
-        $progressLevels = GrievanceProgressLevel::all();
-
-        $this->view('grievance/dashboard', [
-            'totalGrievances'    => $total,
-            'recentGrievances'   => $recent,
-            'statusBreakdown'   => $statusBreakdown,
-            'thisMonth'         => $thisMonth,
-            'lastMonth'         => $lastMonth,
-            'byProject'         => $byProject,
-            'monthlyTrend'      => $monthlyTrend,
-            'byCategory'        => $byCategory,
-            'byType'            => $byType,
-            'inProgressLevels'  => $inProgressLevels,
-            'dashboardWidgets'  => $dashboardWidgets,
-            'visibleWidgets'   => $visibleWidgets,
-            'chartOptions'      => $chartOptions,
-            'progressLevels'   => $progressLevels,
+        $this->json([
+            'totalGrievances'        => $total,
+            'recentGrievances'       => $recent,
+            'statusBreakdown'        => $statusBreakdown,
+            'thisMonth'              => $thisMonth,
+            'lastMonth'              => $lastMonth,
+            'byProject'              => $byProject,
+            'monthlyTrend'           => $monthlyTrend,
+            'byCategory'             => $byCategory,
+            'byType'                 => $byType,
+            'inProgressLevels'       => $inProgressLevels,
             'needsEscalationByLevel' => $needsEscalationByLevel,
-            'projects'          => $projects,
-            'selectedProjectId' => $selectedProjectId,
         ]);
     }
 

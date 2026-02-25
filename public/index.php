@@ -126,6 +126,8 @@ $router->get('/api/coordinators', 'ApiController@coordinators');
 $router->get('/api/projects', 'ApiController@projects');
 $router->get('/api/profiles', 'ApiController@profiles');
 $router->get('/api/profile/{id}/structures', 'ApiController@profileStructures');
+// API for grievance dashboard aggregates (AJAX)
+$router->get('/api/grievance/dashboard', 'GrievanceController@dashboardData');
 
 // Structure API (for Profile lightbox CRUD)
 $router->get('/api/structure/next-strid', 'StructureController@nextStridApi');
