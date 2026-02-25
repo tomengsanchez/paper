@@ -133,7 +133,9 @@ ob_start();
                     <td>
                         <?php if (\Core\Auth::can('view_grievance')): ?><a href="/grievance/view/<?= (int)$g->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_grievance')): ?><a href="/grievance/edit/<?= (int)$g->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
-                        <?php if (\Core\Auth::can('delete_grievance')): ?><a href="/grievance/delete/<?= (int)$g->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this grievance?')">Delete</a><?php endif; ?>
+                        <?php if (\Core\Auth::can('delete_grievance')): ?>
+                        <form method="post" action="/grievance/delete/<?= (int)$g->id ?>" class="d-inline" onsubmit="return confirm('Delete this grievance?');"><?= \Core\Csrf::field() ?><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

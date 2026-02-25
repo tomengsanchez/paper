@@ -40,7 +40,9 @@ ob_start();
                     <td>
                         <?php if (\Core\Auth::can('view_projects')): ?><a href="/library/view/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_projects')): ?><a href="/library/edit/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
-                        <?php if (\Core\Auth::can('delete_projects')): ?><a href="/library/delete/<?= (int)$p->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this project?')">Delete</a><?php endif; ?>
+                        <?php if (\Core\Auth::can('delete_projects')): ?>
+                        <form method="post" action="/library/delete/<?= (int)$p->id ?>" class="d-inline" onsubmit="return confirm('Delete this project?');"><?= \Core\Csrf::field() ?><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

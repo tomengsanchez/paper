@@ -20,6 +20,7 @@ class EmailSettingsController extends Controller
 
     public function update(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('manage_email_settings');
         AppSettings::saveEmailConfig([
             'smtp_host'     => trim($_POST['smtp_host'] ?? ''),
@@ -35,6 +36,7 @@ class EmailSettingsController extends Controller
 
     public function testMail(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('manage_email_settings');
         $to = trim($_POST['test_email'] ?? '');
         if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {

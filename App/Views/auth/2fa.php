@@ -18,7 +18,11 @@
             <?php if (!empty($error)): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'csrf'): ?>
+            <div class="alert alert-warning">Invalid or expired request. Please try again.</div>
+            <?php endif; ?>
             <form method="post" action="/login/2fa/verify">
+                <?= \Core\Csrf::field() ?>
                 <div class="mb-3">
                     <label class="form-label">Verification Code</label>
                     <input type="text" name="code" class="form-control text-center" maxlength="6" pattern="[0-9]{6}" placeholder="000000" required autofocus

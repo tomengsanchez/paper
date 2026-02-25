@@ -7,6 +7,7 @@
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $prof ? "/profile/update/{$prof->id}" : '/profile/store' ?>" enctype="multipart/form-data" id="profileForm">
+            <?= \Core\Csrf::field() ?>
             <?php if (!empty($prof)): ?>
             <div class="mb-3">
                 <label class="form-label">PAPSID</label>
@@ -318,7 +319,8 @@ $(function(){
     $(document).on('click', '.structure-delete', function() {
         if (!confirm('Delete this structure?')) return;
         var id = $(this).data('id');
-        $.post('/api/structure/delete/' + id).done(function() { loadStructures(); });
+        var token = $('meta[name="csrf-token"]').attr('content');
+        $.post('/api/structure/delete/' + id, { csrf_token: token }).done(function() { loadStructures(); });
     });
     $(document).on('click', '.struct-img-thumb', function(e) {
         e.preventDefault();
@@ -338,6 +340,7 @@ $(function(){
         var fid = $('input[name=structure_id]').val();
         var url = fid ? '/api/structure/update/' + fid : '/api/structure/store';
         var fd = new FormData(this);
+        fd.append('csrf_token', $('meta[name="csrf-token"]').attr('content') || '');
         removedTagging.forEach(function(p){ fd.append('tagging_images_remove[]', p); });
         removedStructure.forEach(function(p){ fd.append('structure_images_remove[]', p); });
         $.ajax({ url: url, type: 'POST', data: fd, processData: false, contentType: false })

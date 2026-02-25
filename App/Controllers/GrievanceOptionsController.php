@@ -32,6 +32,7 @@ class GrievanceOptionsController extends Controller
 
     public function vulnerabilityStore(): void
     {
+        $this->validateCsrf();
         $id = GrievanceVulnerability::create(['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/vulnerabilities');
     }
@@ -45,12 +46,14 @@ class GrievanceOptionsController extends Controller
 
     public function vulnerabilityUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievanceVulnerability::update($id, ['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/vulnerabilities');
     }
 
     public function vulnerabilityDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievanceVulnerability::delete($id);
         $this->redirect('/grievance/options/vulnerabilities');
     }
@@ -69,6 +72,7 @@ class GrievanceOptionsController extends Controller
 
     public function respondentTypeStore(): void
     {
+        $this->validateCsrf();
         $id = GrievanceRespondentType::create([
             'name' => $_POST['name'] ?? '',
             'type' => $_POST['type'] ?? 'Directly Affected',
@@ -88,6 +92,7 @@ class GrievanceOptionsController extends Controller
 
     public function respondentTypeUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievanceRespondentType::update($id, [
             'name' => $_POST['name'] ?? '',
             'type' => $_POST['type'] ?? 'Directly Affected',
@@ -100,6 +105,7 @@ class GrievanceOptionsController extends Controller
 
     public function respondentTypeDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievanceRespondentType::delete($id);
         $this->redirect('/grievance/options/respondent-types');
     }
@@ -118,6 +124,7 @@ class GrievanceOptionsController extends Controller
 
     public function grmChannelStore(): void
     {
+        $this->validateCsrf();
         GrievanceGrmChannel::create(['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/grm-channels');
     }
@@ -131,12 +138,14 @@ class GrievanceOptionsController extends Controller
 
     public function grmChannelUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievanceGrmChannel::update($id, ['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/grm-channels');
     }
 
     public function grmChannelDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievanceGrmChannel::delete($id);
         $this->redirect('/grievance/options/grm-channels');
     }
@@ -155,6 +164,7 @@ class GrievanceOptionsController extends Controller
 
     public function preferredLanguageStore(): void
     {
+        $this->validateCsrf();
         GrievancePreferredLanguage::create(['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/preferred-languages');
     }
@@ -168,12 +178,14 @@ class GrievanceOptionsController extends Controller
 
     public function preferredLanguageUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievancePreferredLanguage::update($id, ['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/preferred-languages');
     }
 
     public function preferredLanguageDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievancePreferredLanguage::delete($id);
         $this->redirect('/grievance/options/preferred-languages');
     }
@@ -192,6 +204,7 @@ class GrievanceOptionsController extends Controller
 
     public function grievanceTypeStore(): void
     {
+        $this->validateCsrf();
         GrievanceType::create(['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/types');
     }
@@ -205,12 +218,14 @@ class GrievanceOptionsController extends Controller
 
     public function grievanceTypeUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievanceType::update($id, ['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/types');
     }
 
     public function grievanceTypeDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievanceType::delete($id);
         $this->redirect('/grievance/options/types');
     }
@@ -229,6 +244,7 @@ class GrievanceOptionsController extends Controller
 
     public function grievanceCategoryStore(): void
     {
+        $this->validateCsrf();
         GrievanceCategory::create(['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/categories');
     }
@@ -242,12 +258,14 @@ class GrievanceOptionsController extends Controller
 
     public function grievanceCategoryUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievanceCategory::update($id, ['name' => $_POST['name'] ?? '', 'description' => $_POST['description'] ?? '']);
         $this->redirect('/grievance/options/categories');
     }
 
     public function grievanceCategoryDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievanceCategory::delete($id);
         $this->redirect('/grievance/options/categories');
     }
@@ -266,6 +284,7 @@ class GrievanceOptionsController extends Controller
 
     public function progressLevelStore(): void
     {
+        $this->validateCsrf();
         GrievanceProgressLevel::create([
             'name' => $_POST['name'] ?? '',
             'description' => $_POST['description'] ?? '',
@@ -284,6 +303,7 @@ class GrievanceOptionsController extends Controller
 
     public function progressLevelUpdate(int $id): void
     {
+        $this->validateCsrf();
         GrievanceProgressLevel::update($id, [
             'name' => $_POST['name'] ?? '',
             'description' => $_POST['description'] ?? '',
@@ -295,6 +315,7 @@ class GrievanceOptionsController extends Controller
 
     public function progressLevelDelete(int $id): void
     {
+        $this->validateCsrf();
         GrievanceProgressLevel::delete($id);
         $this->redirect('/grievance/options/progress-levels');
     }

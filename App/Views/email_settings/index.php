@@ -18,6 +18,7 @@
     <div class="card-body">
         <?php if (\Core\Auth::can('manage_email_settings')): ?>
         <form method="post" action="/settings/email/update">
+            <?= \Core\Csrf::field() ?>
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
@@ -63,6 +64,7 @@
         <hr class="my-4">
         <h5 class="mb-3">Test Email</h5>
         <form method="post" action="/settings/email/test" class="d-flex gap-2 align-items-end flex-wrap">
+            <?= \Core\Csrf::field() ?>
             <div class="flex-grow-1" style="min-width: 200px;">
                 <label class="form-label">Send test email to</label>
                 <input type="email" name="test_email" class="form-control" placeholder="test@example.com" required>

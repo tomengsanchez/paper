@@ -20,6 +20,7 @@ class SecuritySettingsController extends Controller
 
     public function update(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('manage_security_settings');
         AppSettings::saveSecurityConfig([
             'enable_email_2fa' => isset($_POST['enable_email_2fa']),

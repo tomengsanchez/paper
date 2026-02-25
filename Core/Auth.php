@@ -8,6 +8,25 @@ class Auth
 
     public static function init(): void
     {
+        $params = [
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+        if (PHP_VERSION_ID >= 70300) {
+            session_set_cookie_params($params);
+        } else {
+            session_set_cookie_params(
+                $params['lifetime'],
+                $params['path'] . '; samesite=' . $params['samesite'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
         session_start();
         if (isset($_SESSION['user_id'])) {
             $logoutMins = (int) \App\Models\AppSettings::get('user_logout_after_minutes', 30);
@@ -75,7 +94,11 @@ class Auth
 
     public static function logout(): void
     {
-        unset($_SESSION['user_id']);
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+        }
         session_destroy();
     }
 

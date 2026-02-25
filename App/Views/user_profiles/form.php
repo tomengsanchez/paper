@@ -9,6 +9,7 @@
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $profile ? "/users/profiles/update/{$profile->id}" : '/users/profiles/store' ?>">
+            <?= \Core\Csrf::field() ?>
             <div class="mb-3">
                 <label class="form-label">Name</label>
                 <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($profile->name ?? '') ?>" required>

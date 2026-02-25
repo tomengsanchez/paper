@@ -6,6 +6,7 @@ use Core\Auth;
 use Core\Database;
 use Core\Logger;
 use Core\Mailer;
+use Core\LoginThrottle;
 use App\Models\AppSettings;
 
 class AuthController extends Controller
@@ -20,6 +21,15 @@ class AuthController extends Controller
 
     public function login(): void
     {
+        if (!\Core\Csrf::validate()) {
+            $this->redirect('/login?error=csrf');
+            return;
+        }
+        $ip = LoginThrottle::getClientIp();
+        if (LoginThrottle::isBlocked($ip)) {
+            $this->view('auth/login', ['error' => 'Too many login attempts. Please try again in 15 minutes.']);
+            return;
+        }
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
@@ -47,6 +57,7 @@ class AuthController extends Controller
             ]);
 
             if (!$user) {
+                LoginThrottle::recordFailure($ip);
                 Logger::auth('Login failed: user not found', ['username' => $username]);
                 $this->view('auth/login', ['error' => 'Invalid credentials']);
                 return;
@@ -59,6 +70,7 @@ class AuthController extends Controller
             ]);
 
             if (!$passwordValid) {
+                LoginThrottle::recordFailure($ip);
                 Logger::auth('Login failed: wrong password', ['username' => $username]);
                 $this->view('auth/login', ['error' => 'Invalid credentials']);
                 return;
@@ -89,10 +101,12 @@ class AuthController extends Controller
                 return;
             }
 
+            LoginThrottle::clear($ip);
             Auth::login((int) $user->id);
             Logger::auth('Login success', ['username' => $username, 'user_id' => $user->id]);
             $this->redirect('/');
         } catch (\Throwable $e) {
+            LoginThrottle::recordFailure($ip ?? LoginThrottle::getClientIp());
             Logger::auth('Login exception', [
                 'username' => $username,
                 'error' => $e->getMessage(),
@@ -129,6 +143,10 @@ class AuthController extends Controller
 
     public function twoFactorVerify(): void
     {
+        if (!\Core\Csrf::validate()) {
+            $this->redirect('/login?error=csrf');
+            return;
+        }
         $code = trim($_POST['code'] ?? '');
         $userId = $_SESSION['pending_2fa_user_id'] ?? null;
         $storedCode = $_SESSION['pending_2fa_code'] ?? '';

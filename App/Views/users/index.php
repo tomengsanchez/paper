@@ -40,7 +40,7 @@ ob_start();
                         <?php if (\Core\Auth::can('view_users')): ?><a href="/users/view/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-secondary">View</a><?php endif; ?>
                         <?php if (\Core\Auth::can('edit_users')): ?><a href="/users/edit/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-primary">Edit</a><?php endif; ?>
                         <?php if (\Core\Auth::can('delete_users') && $u->id != \Core\Auth::id()): ?>
-                        <a href="/users/delete/<?= (int)$u->id ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this user?')">Delete</a>
+                        <form method="post" action="/users/delete/<?= (int)$u->id ?>" class="d-inline" onsubmit="return confirm('Delete this user?');"><?= \Core\Csrf::field() ?><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form>
                         <?php endif; ?>
                     </td>
                 </tr>

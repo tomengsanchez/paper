@@ -96,6 +96,7 @@ class RoleController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_roles');
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT id, name FROM roles WHERE id = ?');

@@ -134,6 +134,7 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
         </div>
         <?php if (\Core\Auth::can('edit_grievance')): ?>
         <form method="post" action="/grievance/status-update/<?= (int)$g->id ?>" enctype="multipart/form-data" class="mt-3">
+            <?= \Core\Csrf::field() ?>
             <div class="row g-2">
                 <div class="col-md-4">
                     <label class="form-label small">Status</label>
@@ -180,7 +181,7 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
                 <?php if (!empty(trim($entry->note ?? ''))): ?><p class="mb-1 mt-1"><?= nl2br(htmlspecialchars($entry->note)) ?></p><?php endif; ?>
                 <?php $atts = \App\Models\GrievanceStatusLog::parseAttachments($entry->attachments ?? ''); if (!empty($atts)): ?>
                 <div class="mb-1">
-                    <?php foreach ($atts as $att): $url = \App\Controllers\GrievanceController::attachmentUrl($att); ?>
+                    <?php foreach ($atts as $att): $url = \App\Controllers\GrievanceController::attachmentUrl($att, $g->id); ?>
                     <a href="<?= htmlspecialchars($url) ?>" target="_blank" class="me-2"><?= htmlspecialchars(basename($att)) ?></a>
                     <?php endforeach; ?>
                 </div>

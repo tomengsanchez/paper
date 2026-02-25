@@ -20,6 +20,7 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
 </div>
 <?php unset($_SESSION['grievance_validation_error']); endif; ?>
 <form method="post" action="<?= $g ? "/grievance/update/{$g->id}" : '/grievance/store' ?>" id="grievanceForm">
+    <?= \Core\Csrf::field() ?>
     <!-- Card: Grievance Registration -->
     <div class="card mb-4">
         <div class="card-header"><h6 class="mb-0">Grievance Registration</h6></div>

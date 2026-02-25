@@ -15,6 +15,7 @@ $imgIdx = 0;
 <div class="card">
     <div class="card-body">
         <form method="post" action="<?= $structure ? "/structure/update/{$structure->id}" : '/structure/store' ?>" enctype="multipart/form-data">
+            <?= \Core\Csrf::field() ?>
             <?php if (!empty($structure)): ?>
             <div class="mb-3">
                 <label class="form-label">Structure ID</label>

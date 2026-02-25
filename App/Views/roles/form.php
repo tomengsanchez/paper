@@ -9,6 +9,7 @@
         <div class="alert alert-info">Administrator capabilities are locked and cannot be changed.</div>
         <?php endif; ?>
         <form method="post" action="/users/roles/update/<?= (int)$role->id ?>">
+            <?= \Core\Csrf::field() ?>
             <div class="mb-4">
                 <label class="form-label fw-semibold">Role Name</label>
                 <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($role->name) ?>" required <?= !empty($isLocked) ? 'readonly' : '' ?> style="max-width: 300px;">

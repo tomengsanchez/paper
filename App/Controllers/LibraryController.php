@@ -50,6 +50,7 @@ class LibraryController extends Controller
 
     public function store(): void
     {
+        $this->validateCsrf();
         $this->requireCapability('add_projects');
         $id = Project::create([
             'name' => trim($_POST['name'] ?? ''),
@@ -83,6 +84,7 @@ class LibraryController extends Controller
 
     public function update(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('edit_projects');
         Project::update($id, [
             'name' => trim($_POST['name'] ?? ''),
@@ -94,6 +96,7 @@ class LibraryController extends Controller
 
     public function delete(int $id): void
     {
+        $this->validateCsrf();
         $this->requireCapability('delete_projects');
         Project::delete($id);
         $this->redirect('/library');
