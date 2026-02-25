@@ -204,7 +204,7 @@ class GrievanceController extends Controller
             SELECT c.id, c.name, COUNT(g.id) AS cnt
             FROM grievance_categories c
             LEFT JOIN grievances g
-              ON JSON_CONTAINS(g.grievance_category_ids, CAST(c.id AS JSON), '$')
+              ON JSON_CONTAINS(g.grievance_category_ids, CAST(c.id AS CHAR), '$')
         ";
         $byCategoryParams = [];
         if ($selectedProjectId > 0) {
@@ -224,7 +224,7 @@ class GrievanceController extends Controller
             SELECT t.id, t.name, COUNT(g.id) AS cnt
             FROM grievance_types t
             LEFT JOIN grievances g
-              ON JSON_CONTAINS(g.grievance_type_ids, CAST(t.id AS JSON), '$')
+              ON JSON_CONTAINS(g.grievance_type_ids, CAST(t.id AS CHAR), '$')
         ";
         $byTypeParams = [];
         if ($selectedProjectId > 0) {
