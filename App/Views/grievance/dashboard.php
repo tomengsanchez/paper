@@ -1,9 +1,28 @@
 <?php
 $visible = $visibleWidgets ?? [];
-$allWidgets = $dashboardWidgets ?? ['total', 'status_breakdown', 'trend', 'by_project', 'in_progress_levels', 'recent'];
+$allWidgets = $dashboardWidgets ?? [
+    'total',
+    'status_breakdown',
+    'trend',
+    'chart_status',
+    'chart_trend',
+    'chart_by_project',
+    'chart_in_progress',
+    'by_category',
+    'by_type',
+    'by_project',
+    'in_progress_levels',
+    'recent',
+];
 $statusBreakdown = $statusBreakdown ?? [];
 $byProject = $byProject ?? [];
+$byCategory = $byCategory ?? [];
+$byType = $byType ?? [];
+$monthlyTrend = $monthlyTrend ?? [];
 $inProgressLevels = $inProgressLevels ?? [];
+$chartOptions = $chartOptions ?? ['trend_months' => 12, 'trend_type' => 'bar'];
+$projects = $projects ?? [];
+$selectedProjectId = (int)($selectedProjectId ?? 0);
 $statusLabels = ['open' => 'Open', 'in_progress' => 'In Progress', 'closed' => 'Closed'];
 $levelNameById = [];
 foreach ($progressLevels ?? [] as $pl) { $levelNameById[(int)$pl->id] = $pl->name; }
@@ -28,7 +47,21 @@ if (!empty($progressLevels)) {
 ob_start();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h2 class="mb-0">Grievance Dashboard</h2>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <h2 class="mb-0">Grievance Dashboard</h2>
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label class="small text-muted mb-0" for="dashboardProjectFilter">Project</label>
+            <select id="dashboardProjectFilter" name="project_id" class="form-select form-select-sm">
+                <option value="">All projects</option>
+                <?php foreach ($projects as $proj): ?>
+                <option value="<?= (int)$proj->id ?>" <?= $selectedProjectId === (int)$proj->id ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($proj->name) ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Apply</button>
+        </form>
+    </div>
     <div class="d-flex gap-2">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardDesignerModal" title="Choose which widgets to show">
             <span class="d-none d-sm-inline">Customize dashboard</span>
@@ -46,6 +79,50 @@ ob_start();
                 <h6 class="text-muted text-uppercase small mb-2">Total Grievances</h6>
                 <h3 class="mb-0"><?= number_format((int)($totalGrievances ?? 0)) ?></h3>
                 <a href="/grievance/list" class="small text-decoration-none mt-2 d-inline-block">View all →</a>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (in_array('by_category', $visible) && !empty($byCategory)): ?>
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="text-muted text-uppercase small mb-0">By Category of Grievance</h6>
+            </div>
+            <div class="card-body pt-0">
+                <ul class="list-unstyled mb-0">
+                    <?php foreach ($byCategory as $row):
+                        if ((int)($row->cnt ?? 0) <= 0) continue;
+                    ?>
+                    <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+                        <span><?= htmlspecialchars($row->name ?? '—') ?></span>
+                        <span class="badge bg-secondary"><?= number_format((int)$row->cnt) ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (in_array('by_type', $visible) && !empty($byType)): ?>
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="text-muted text-uppercase small mb-0">By Type of Grievance</h6>
+            </div>
+            <div class="card-body pt-0">
+                <ul class="list-unstyled mb-0">
+                    <?php foreach ($byType as $row):
+                        if ((int)($row->cnt ?? 0) <= 0) continue;
+                    ?>
+                    <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+                        <span><?= htmlspecialchars($row->name ?? '—') ?></span>
+                        <span class="badge bg-secondary"><?= number_format((int)$row->cnt) ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         </div>
     </div>
@@ -91,6 +168,66 @@ ob_start();
                     }
                     ?>
                 </p>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (in_array('chart_status', $visible)): ?>
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pt-3 d-flex justify-content-between align-items-center">
+                <h6 class="text-muted text-uppercase small mb-0">Status distribution</h6>
+            </div>
+            <div class="card-body pt-0">
+                <div class="chart-container" style="position: relative; height: 220px;">
+                    <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (in_array('chart_trend', $visible)): ?>
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pt-3 d-flex justify-content-between align-items-center">
+                <h6 class="text-muted text-uppercase small mb-0">Grievances over time</h6>
+            </div>
+            <div class="card-body pt-0">
+                <div class="chart-container" style="position: relative; height: 260px;">
+                    <canvas id="chartTrend"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (in_array('chart_by_project', $visible) && !empty($byProject)): ?>
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="text-muted text-uppercase small mb-0">By project</h6>
+            </div>
+            <div class="card-body pt-0">
+                <div class="chart-container" style="position: relative; height: 280px;">
+                    <canvas id="chartByProject"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (in_array('chart_in_progress', $visible) && !empty($inProgressLevels)): ?>
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="text-muted text-uppercase small mb-0">In progress by stage</h6>
+            </div>
+            <div class="card-body pt-0">
+                <div class="chart-container" style="position: relative; height: 240px;">
+                    <canvas id="chartInProgress"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -225,7 +362,7 @@ ob_start();
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small">Select which widgets to show on your grievance dashboard.</p>
+                    <p class="text-muted small">Select which widgets and charts to show on your grievance dashboard.</p>
                     <div class="list-group list-group-flush">
                         <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
                             <input type="checkbox" name="widgets[]" value="total" class="form-check-input" <?= in_array('total', $visible) ? 'checked' : '' ?>>
@@ -239,18 +376,63 @@ ob_start();
                             <input type="checkbox" name="widgets[]" value="trend" class="form-check-input" <?= in_array('trend', $visible) ? 'checked' : '' ?>>
                             <span>This Month vs Last Month</span>
                         </label>
+                        <span class="list-group-item text-muted small pt-2">Charts</span>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input type="checkbox" name="widgets[]" value="chart_status" class="form-check-input" <?= in_array('chart_status', $visible) ? 'checked' : '' ?>>
+                            <span>Chart: Status distribution (doughnut)</span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input type="checkbox" name="widgets[]" value="chart_trend" class="form-check-input" <?= in_array('chart_trend', $visible) ? 'checked' : '' ?>>
+                            <span>Chart: Grievances over time</span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input type="checkbox" name="widgets[]" value="chart_by_project" class="form-check-input" <?= in_array('chart_by_project', $visible) ? 'checked' : '' ?>>
+                            <span>Chart: By project (bar)</span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input type="checkbox" name="widgets[]" value="chart_in_progress" class="form-check-input" <?= in_array('chart_in_progress', $visible) ? 'checked' : '' ?>>
+                            <span>Chart: In progress by stage (bar)</span>
+                        </label>
+                        <span class="list-group-item text-muted small pt-2">Tables &amp; lists</span>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input type="checkbox" name="widgets[]" value="by_category" class="form-check-input" <?= in_array('by_category', $visible) ? 'checked' : '' ?>>
+                            <span>By Category of Grievance</span>
+                        </label>
+                        <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
+                            <input type="checkbox" name="widgets[]" value="by_type" class="form-check-input" <?= in_array('by_type', $visible) ? 'checked' : '' ?>>
+                            <span>By Type of Grievance</span>
+                        </label>
                         <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
                             <input type="checkbox" name="widgets[]" value="by_project" class="form-check-input" <?= in_array('by_project', $visible) ? 'checked' : '' ?>>
-                            <span>By Project</span>
+                            <span>By Project (table)</span>
                         </label>
                         <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
                             <input type="checkbox" name="widgets[]" value="in_progress_levels" class="form-check-input" <?= in_array('in_progress_levels', $visible) ? 'checked' : '' ?>>
-                            <span>In Progress by Stage</span>
+                            <span>In Progress by Stage (list)</span>
                         </label>
                         <label class="list-group-item list-group-item-action d-flex align-items-center gap-2">
                             <input type="checkbox" name="widgets[]" value="recent" class="form-check-input" <?= in_array('recent', $visible) ? 'checked' : '' ?>>
                             <span>Recent Grievances</span>
                         </label>
+                    </div>
+                    <div class="mt-3 pt-3 border-top">
+                        <h6 class="small text-uppercase text-muted mb-2">Trend chart options</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small">Period</label>
+                                <select name="chart_trend_months" class="form-select form-select-sm">
+                                    <option value="6" <?= (int)($chartOptions['trend_months'] ?? 12) === 6 ? 'selected' : '' ?>>Last 6 months</option>
+                                    <option value="12" <?= (int)($chartOptions['trend_months'] ?? 12) === 12 ? 'selected' : '' ?>>Last 12 months</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Chart type</label>
+                                <select name="chart_trend_type" class="form-select form-select-sm">
+                                    <option value="bar" <?= ($chartOptions['trend_type'] ?? 'bar') === 'bar' ? 'selected' : '' ?>>Bar</option>
+                                    <option value="line" <?= ($chartOptions['trend_type'] ?? 'bar') === 'line' ? 'selected' : '' ?>>Line</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -265,4 +447,74 @@ ob_start();
 $content = ob_get_clean();
 $pageTitle = 'Grievance Dashboard';
 $currentPage = 'grievance-dashboard';
+$scripts = '';
+if (in_array('chart_status', $visible) || in_array('chart_trend', $visible) || in_array('chart_by_project', $visible) || in_array('chart_in_progress', $visible)) {
+    $byStatusForChart = [];
+    foreach (['open', 'in_progress', 'closed'] as $st) {
+        $cnt = 0;
+        foreach ($statusBreakdown as $r) {
+            if (($r->status ?? '') === $st) { $cnt = (int)$r->cnt; break; }
+        }
+        $byStatusForChart[] = ['label' => $statusLabels[$st] ?? $st, 'count' => $cnt];
+    }
+    $trendMonths = (int)($chartOptions['trend_months'] ?? 12);
+    $monthlyTrendSliced = $trendMonths === 6 ? array_slice($monthlyTrend, -6) : $monthlyTrend;
+    $scripts = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>';
+    $scripts .= '<script>window.GRIEVANCE_CHARTS = {';
+    $scripts .= 'status: ' . json_encode($byStatusForChart) . ',';
+    $scripts .= 'trend: ' . json_encode($monthlyTrendSliced) . ',';
+    $scripts .= 'trendType: ' . json_encode($chartOptions['trend_type'] ?? 'bar') . ',';
+    $scripts .= 'byProject: ' . json_encode(array_map(function($r) { return ['name' => $r->project_name ?: '— No project —', 'count' => (int)$r->cnt]; }, $byProject)) . ',';
+    $scripts .= 'inProgress: ' . json_encode(array_map(function($r) { return ['name' => $r->level_name ?? '—', 'count' => (int)$r->cnt]; }, $inProgressLevels));
+    $scripts .= '};</script>';
+    $scripts .= '<script>
+(function() {
+    var d = window.GRIEVANCE_CHARTS;
+    if (!d) return;
+    var statusColors = { open: "#22c55e", in_progress: "#3b82f6", closed: "#64748b" };
+    var defaultColors = ["#22c55e", "#3b82f6", "#64748b"];
+    if (document.getElementById("chartStatus") && d.status) {
+        new Chart(document.getElementById("chartStatus"), {
+            type: "doughnut",
+            data: {
+                labels: d.status.map(function(x) { return x.label; }),
+                datasets: [{ data: d.status.map(function(x) { return x.count; }), backgroundColor: defaultColors, borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+        });
+    }
+    if (document.getElementById("chartTrend") && d.trend && d.trend.length) {
+        var type = (d.trendType === "line") ? "line" : "bar";
+        new Chart(document.getElementById("chartTrend"), {
+            type: type,
+            data: {
+                labels: d.trend.map(function(x) { return x.label; }),
+                datasets: [{ label: "Grievances", data: d.trend.map(function(x) { return x.count; }), backgroundColor: "rgba(59,130,246,0.6)", borderColor: "#3b82f6", borderWidth: type === "line" ? 2 : 0, fill: type === "line", tension: 0.3 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+        });
+    }
+    if (document.getElementById("chartByProject") && d.byProject && d.byProject.length) {
+        new Chart(document.getElementById("chartByProject"), {
+            type: "bar",
+            data: {
+                labels: d.byProject.map(function(x) { return x.name.length > 20 ? x.name.substring(0, 18) + "…" : x.name; }),
+                datasets: [{ label: "Count", data: d.byProject.map(function(x) { return x.count; }), backgroundColor: "rgba(59,130,246,0.6)", borderColor: "#3b82f6", borderWidth: 1 }]
+            },
+            options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+        });
+    }
+    if (document.getElementById("chartInProgress") && d.inProgress && d.inProgress.length) {
+        new Chart(document.getElementById("chartInProgress"), {
+            type: "bar",
+            data: {
+                labels: d.inProgress.map(function(x) { return x.name; }),
+                datasets: [{ label: "Count", data: d.inProgress.map(function(x) { return x.count; }), backgroundColor: "rgba(59,130,246,0.6)", borderColor: "#3b82f6", borderWidth: 1 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+        });
+    }
+})();
+</script>';
+}
 require __DIR__ . '/../layout/main.php';
