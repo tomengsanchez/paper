@@ -89,7 +89,7 @@ class AuthController extends Controller
                 $_SESSION['pending_2fa_user_id'] = (int) $user->id;
                 $_SESSION['pending_2fa_code'] = $code;
                 $_SESSION['pending_2fa_expires'] = $expires;
-                $result = Mailer::send($email, 'PAPS Login Code', "Your verification code is: $code\n\nThis code expires in {$security->{'2fa_expiration_minutes'}} minutes.");
+                $result = Mailer::send($email, 'Login Code', "Your verification code is: $code\n\nThis code expires in {$security->{'2fa_expiration_minutes'}} minutes.");
                 if (!$result['success']) {
                     Logger::auth('2FA email send failed', ['user_id' => $user->id, 'error' => $result['error'] ?? '']);
                     unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_code'], $_SESSION['pending_2fa_expires']);

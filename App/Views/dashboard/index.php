@@ -4,12 +4,12 @@
 </div>
 <div class="card">
     <div class="card-body">
-        <p class="text-muted mb-0">Welcome to PAPS. Use the sidebar to navigate.</p>
+        <p class="text-muted mb-0">Welcome. Use the sidebar to navigate (Dashboard, Items example, User Management, Settings).</p>
     </div>
 </div>
 <?php
 $content = ob_get_clean();
 $pageTitle = 'Dashboard';
-$currentPage = '';
+$currentPage = $currentPage ?? 'dashboard';
 require __DIR__ . '/../layout/main.php';
 ?>

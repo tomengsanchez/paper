@@ -2,6 +2,8 @@
 
 A lightweight PHP MVC framework with flat database tables, jQuery, and MySQL. Version 1.
 
+**Pwedeng gamitin bilang scaffold/template** sa kahit anong sistema (parang Laravel)—may Router, MVC, migrations, at instructions. See **[docs/FRAMEWORK.md](docs/FRAMEWORK.md)** for the full framework guide (Tagalog + English).
+
 **Requirements:** PHP 8.0+, MySQL 5.7+ (or MariaDB 10.2+), Apache with mod_rewrite (or nginx equivalent).
 
 ## Setup
@@ -37,7 +39,7 @@ From the project root:
 php cli/migrate.php
 ```
 
-This creates all tables (roles, users, app_settings, role_capabilities, projects, profiles, structures, user_profiles) and runs migration_003 for profile fields. Use `php cli/migrate.php --status` to see migration status.
+This creates base tables (roles, users, app_settings, role_capabilities), user_profiles (and related), user_list_columns, user_dashboard_config, and the example `items` table. Use `php cli/migrate.php --status` to see migration status.
 
 ### 4. Web Server
 
@@ -57,53 +59,30 @@ This creates all tables (roles, users, app_settings, role_capabilities, projects
 ## Structure
 
 ```
-paper/
-├── app/
+project/
+├── App/
 │   ├── Controllers/
 │   ├── Models/
 │   └── Views/
 ├── config/
-├── core/          # Framework (Router, Database, Auth, etc.)
+├── Core/          # Framework (Router, Database, Auth, etc.)
+├── routes/        # web.php — all routes defined here
 ├── cli/           # migrate.php
 ├── database/      # migrations (migration_*.php)
 ├── public/        # Web root, index.php
+├── docs/          # Framework docs (FRAMEWORK.md, GETTING_STARTED, etc.)
+├── stubs/         # Copy-paste templates for new modules
 └── bootstrap.php
 ```
 
-## Features
+**Documentation:** [docs/FRAMEWORK.md](docs/FRAMEWORK.md) (main), [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md), [docs/STRUCTURE.md](docs/STRUCTURE.md), [docs/ROUTING.md](docs/ROUTING.md), [docs/CREATING_MODULES.md](docs/CREATING_MODULES.md). **Stubs:** [stubs/README.md](stubs/README.md).
 
-- **Roles:** Administrator, Standard User, Coordinator
-- **Menu Links:** Profile, Structure, Grievance, Library, Settings
-- **Profile:** PAPSID, Control Number, Full Name, Age, Contact Number, Project; Relevant Information (residing in project affected, structure owners); Additional Information (own property elsewhere, availed gov't housing, HH Income); attachments (images + PDF)
-- **Structure:** CRUD with tagging/structure images, linked to profiles
-- **Library:** Projects with Coordinator dropdown (searchable)
-- **Settings:** Email (SMTP), Security (2FA, session timeout)
-- **User Management:** Admin-only CRUD for users, roles, user profiles
+## Features (scaffold)
 
+- **Auth:** Login, logout, 2FA (optional), session timeout
+- **Roles:** Administrator, Standard User, Coordinator (capabilities for users, roles, settings, items)
+- **User Management:** Users CRUD, Roles & capabilities, User profiles
+- **Settings:** General, Email (SMTP), Security (2FA, session timeout)
+- **Example module:** Items — sample CRUD (see `App/Controllers/ItemController`, `App/Models/Item`, `App/Views/item/`, `docs/CREATING_MODULES.md`)
 
-Database refactor: EAV → flat tables
-1. Migration files
-database/migration_000_initial.php – Creates base tables (roles, users, app_settings, role_capabilities) and seeds admin user and capabilities.
-database/migration_001_from_eav_to_flat.php – Creates flat tables (projects, profiles, structures, user_profiles) with created_at/updated_at, migrates existing EAV data, and drops EAV tables.
-Migration format for future use:
-return [    'name' => 'migration_XXX_description',    'up' => function (\PDO $db): void { /* ... */ },    'down' => function (\PDO $db): void { /* optional rollback */ },];
-2. Migration runner
-core/MigrationRunner.php – Loads migration_*.php files and runs pending migrations.
-cli/migrate.php – CLI for migrations:
-php cli/migrate.php – Run pending migrations
-php cli/migrate.php --status – List migration status
-3. Flat table models
-Profile, Structure, Project, UserProfile – Refactored to use flat tables instead of EAV.
-Pagination now uses direct queries on flat tables instead of joins on eav_entities/eav_values.
-4. ApiController
-projects() and profiles() updated to query flat tables instead of EAV.
-5. SQL files removed
-beforeseed.sql, schema.sql, add_app_settings.sql, add_user_email.sql, fix_admin_password.sql, seed_administrator_capabilities.sql
-6. README
-Installation steps updated to use migrations instead of importing SQL.
-New installation flow
-Create the database.
-Run php cli/migrate.php.
-Optionally run php database/seed_profiles_structures.php for sample data.
-
-testing dev to main
+Migrations: `migration_000_initial`, `migration_001_from_eav_to_flat`, `migration_004_user_list_columns`, `migration_011_user_dashboard_config`, `migration_012_example_items`.

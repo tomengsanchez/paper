@@ -9,18 +9,6 @@ use Core\Database;
  */
 class DashboardConfig
 {
-    public const MODULE_GRIEVANCE = 'grievance';
-
-    /** Default widget keys for grievance dashboard (order matters) */
-    public const GRIEVANCE_WIDGETS_DEFAULT = [
-        'total',
-        'status_breakdown',
-        'trend',
-        'by_project',
-        'in_progress_levels',
-        'recent',
-    ];
-
     public static function get(string $module): array
     {
         $userId = Auth::id();
@@ -51,12 +39,6 @@ class DashboardConfig
 
     public static function defaultConfig(string $module): array
     {
-        if ($module === self::MODULE_GRIEVANCE) {
-            return [
-                'widgets' => self::GRIEVANCE_WIDGETS_DEFAULT,
-                'order'   => self::GRIEVANCE_WIDGETS_DEFAULT,
-            ];
-        }
         return ['widgets' => [], 'order' => []];
     }
 

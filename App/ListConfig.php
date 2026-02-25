@@ -11,21 +11,6 @@ use Core\Database;
 class ListConfig
 {
     private static array $configs = [
-        'profile' => [
-            ['key' => 'papsid', 'label' => 'PAPSID', 'sortable' => true],
-            ['key' => 'control_number', 'label' => 'Control Number', 'sortable' => true],
-            ['key' => 'full_name', 'label' => 'Full Name', 'sortable' => true],
-            ['key' => 'age', 'label' => 'Age', 'sortable' => true],
-            ['key' => 'contact_number', 'label' => 'Contact', 'sortable' => true],
-            ['key' => 'project_name', 'label' => 'Project', 'sortable' => true],
-            ['key' => 'other_details', 'label' => 'Other Details', 'sortable' => true],
-        ],
-        'structure' => [
-            ['key' => 'strid', 'label' => 'Structure ID', 'sortable' => true],
-            ['key' => 'owner_name', 'label' => 'Paps/Owner', 'sortable' => true],
-            ['key' => 'structure_tag', 'label' => 'Structure Tag #', 'sortable' => true],
-            ['key' => 'description', 'label' => 'Description', 'sortable' => true],
-        ],
         'users' => [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'username', 'label' => 'Username', 'sortable' => true],
@@ -37,22 +22,9 @@ class ListConfig
             ['key' => 'role_name', 'label' => 'Role', 'sortable' => true],
             ['key' => 'username', 'label' => 'Linked User', 'sortable' => true],
         ],
-        'library' => [
-            ['key' => 'name', 'label' => 'Project Name', 'sortable' => true],
-            ['key' => 'description', 'label' => 'Description', 'sortable' => true],
-            ['key' => 'coordinator_name', 'label' => 'Coordinator', 'sortable' => true],
-        ],
         'roles' => [
             ['key' => 'name', 'label' => 'Role', 'sortable' => true],
             ['key' => 'capabilities', 'label' => 'Capabilities', 'sortable' => false],
-        ],
-        'grievance' => [
-            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
-            ['key' => 'date_recorded', 'label' => 'Date Recorded', 'sortable' => true],
-            ['key' => 'grievance_case_number', 'label' => 'Case Number', 'sortable' => true],
-            ['key' => 'status', 'label' => 'Status', 'sortable' => true],
-            ['key' => 'respondent_name', 'label' => 'Respondent', 'sortable' => true],
-            ['key' => 'profile_name', 'label' => 'Profile (PAPS)', 'sortable' => true],
         ],
     ];
 

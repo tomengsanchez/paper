@@ -12,6 +12,6 @@ class DashboardController extends Controller
 
     public function index(): void
     {
-        $this->view('dashboard/index');
+        $this->view('dashboard/index', ['pageTitle' => 'Dashboard', 'currentPage' => 'dashboard']);
     }
 }

@@ -53,20 +53,27 @@ return [
 
         $adminId = $db->query("SELECT id FROM roles WHERE name = 'Administrator'")->fetchColumn();
         $coordId = $db->query("SELECT id FROM roles WHERE name = 'Coordinator'")->fetchColumn();
-        $caps = [
-            'add_grievance','add_profiles','add_projects','add_structure','add_user_profiles','add_users',
-            'delete_grievance','delete_profiles','delete_projects','delete_structure','delete_user_profiles','delete_users',
-            'edit_grievance','edit_profiles','edit_projects','edit_roles','edit_structure','edit_user_profiles','edit_users',
-            'manage_email_settings','manage_security_settings','manage_settings','view_email_settings',
-            'view_grievance','view_profiles','view_projects','view_roles','view_security_settings','view_settings',
-            'view_structure','view_user_profiles','view_users',
+        // Capabilities: users, roles, user_profiles, settings, email, security, example items
+        $adminCaps = [
+            'view_users','add_users','edit_users','delete_users',
+            'view_roles','edit_roles',
+            'view_user_profiles','add_user_profiles','edit_user_profiles','delete_user_profiles',
+            'view_settings','manage_settings',
+            'view_email_settings','manage_email_settings',
+            'view_security_settings','manage_security_settings',
+            'view_items','add_items','edit_items','delete_items',
+        ];
+        $coordCaps = [
+            'view_users','view_roles','view_user_profiles',
+            'view_settings','view_email_settings','view_security_settings',
+            'view_items','add_items','edit_items','delete_items',
         ];
         $ins = $db->prepare('INSERT IGNORE INTO role_capabilities (role_id, capability) VALUES (?, ?)');
         if ($adminId) {
-            foreach ($caps as $c) $ins->execute([$adminId, $c]);
+            foreach ($adminCaps as $c) $ins->execute([$adminId, $c]);
         }
         if ($coordId) {
-            foreach (['view_grievance','view_profiles','view_structure'] as $c) $ins->execute([$coordId, $c]);
+            foreach ($coordCaps as $c) $ins->execute([$coordId, $c]);
         }
     },
     'down' => null,
