@@ -16,9 +16,21 @@ class DashboardConfig
         'total',
         'status_breakdown',
         'trend',
+        'chart_status',
+        'chart_trend',
+        'chart_by_project',
+        'chart_in_progress',
+        'by_category',
+        'by_type',
         'by_project',
         'in_progress_levels',
         'recent',
+    ];
+
+    /** Default chart options for grievance dashboard */
+    public const GRIEVANCE_CHART_OPTIONS_DEFAULT = [
+        'trend_months' => 12,
+        'trend_type'   => 'bar', // 'bar' | 'line'
     ];
 
     public static function get(string $module): array
@@ -53,11 +65,21 @@ class DashboardConfig
     {
         if ($module === self::MODULE_GRIEVANCE) {
             return [
-                'widgets' => self::GRIEVANCE_WIDGETS_DEFAULT,
-                'order'   => self::GRIEVANCE_WIDGETS_DEFAULT,
+                'widgets'      => self::GRIEVANCE_WIDGETS_DEFAULT,
+                'order'        => self::GRIEVANCE_WIDGETS_DEFAULT,
+                'chart_options' => self::GRIEVANCE_CHART_OPTIONS_DEFAULT,
             ];
         }
         return ['widgets' => [], 'order' => []];
+    }
+
+    /** Returns chart options for the module (trend_months, trend_type, etc.) */
+    public static function chartOptions(string $module): array
+    {
+        $config = self::get($module);
+        $defaults = $module === self::MODULE_GRIEVANCE ? self::GRIEVANCE_CHART_OPTIONS_DEFAULT : [];
+        $opts = $config['chart_options'] ?? [];
+        return array_merge($defaults, is_array($opts) ? $opts : []);
     }
 
     /** Returns list of widget keys to show (in order) for the module */
