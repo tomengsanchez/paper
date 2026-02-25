@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../bootstrap.php';
 
 use App\Models\Grievance;
+use App\Models\GrievanceAttachment;
 use App\Models\GrievanceStatusLog;
 use App\Models\GrievanceVulnerability;
 use App\Models\GrievanceRespondentType;
@@ -87,6 +88,28 @@ const RESOLUTION_PHRASES = [
     'Gusto naming ma-clarify ang timeline at next steps.',
     'Nais naming ma-acknowledge ang complaint at makatanggap ng feedback.',
     'Sana ay ma-follow up ang aming case at ma-resolve within 30 days.',
+];
+
+// Attachment card titles/descriptions (Filipino) – for grievance_attachments seed
+const ATTACHMENT_TITLES = [
+    'ID / Valid ID',
+    'Proof of residency',
+    'Picture ng insidente',
+    'Medical certificate',
+    'Affidavit',
+    'Screenshot ng complaint',
+    'Receipt / Resibo',
+    'Contract / Kasulatan',
+];
+const ATTACHMENT_DESCRIPTIONS = [
+    'Submitted for verification.',
+    'Supporting document for the complaint.',
+    'Photo taken on the date of incident.',
+    '',
+    'Notarized affidavit.',
+    '',
+    'Copy of official receipt.',
+    '',
 ];
 
 // Status change notes (Filipino)
@@ -207,6 +230,21 @@ $created = 0;
 $oneYearAgo = date('Y-m-d H:i:s', strtotime('-1 year'));
 $now = date('Y-m-d H:i:s');
 
+// Prepare shared placeholder file for grievance_attachments (so seeded attachments have a valid file)
+$uploadDir = __DIR__ . '/../public/uploads/grievance/attachments';
+$seedPlaceholderName = 'seed_placeholder.txt';
+$seedPlaceholderPath = '/uploads/grievance/attachments/' . $seedPlaceholderName;
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0755, true);
+}
+$placeholderFullPath = $uploadDir . '/' . $seedPlaceholderName;
+if (!is_file($placeholderFullPath)) {
+    file_put_contents($placeholderFullPath, "Seeded attachment placeholder.\nThis file is used by the grievance seeder so attachment cards have a valid file to display.\n");
+    echo "Created placeholder file for attachments: {$seedPlaceholderName}\n";
+}
+
+$attachmentsCreated = 0;
+
 for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
     $dateRecorded = randomDateFromYearAgo();
     $projectId = randomElement($projectIds);
@@ -310,6 +348,17 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
     $finalLevel = $currentStatus === 'in_progress' ? $currentLevel : null;
     $db->prepare('UPDATE grievances SET status = ?, progress_level = ? WHERE id = ?')->execute([$currentStatus, $finalLevel, $gid]);
 
+    // Seed grievance_attachments for a subset of grievances (0, 1, or 2 cards per grievance)
+    if (random_int(1, 100) <= 40) {
+        $numAttachments = random_int(1, 2);
+        for ($a = 0; $a < $numAttachments; $a++) {
+            $title = randomElement(ATTACHMENT_TITLES);
+            $desc = random_int(0, 1) ? randomElement(ATTACHMENT_DESCRIPTIONS) : '';
+            GrievanceAttachment::create($gid, $title, $desc, $seedPlaceholderPath, $a);
+            $attachmentsCreated++;
+        }
+    }
+
     if (($i + 1) % 100 === 0) {
         echo "  " . ($i + 1) . " / " . $SEED_GRIEVANCE_COUNT . " grievances created.\n";
     }
@@ -317,3 +366,4 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
 
 echo "\nDone!\n";
 echo "  Grievances created: " . number_format($created) . "\n";
+echo "  Attachment cards created: " . number_format($attachmentsCreated) . "\n";

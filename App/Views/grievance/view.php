@@ -26,6 +26,13 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
     </div>
 </div>
 
+<?php if (!empty($_SESSION['grievance_attachment_error'])): ?>
+<div class="alert alert-warning alert-dismissible fade show mb-3">
+    <?= htmlspecialchars($_SESSION['grievance_attachment_error']) ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+<?php unset($_SESSION['grievance_attachment_error']); endif; ?>
+
 <?php if (!empty($g->escalation_message)): ?>
 <div class="alert alert-danger mb-3">
     <?= htmlspecialchars($g->escalation_message) ?>
@@ -120,6 +127,29 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
     <div class="card-header"><h6 class="mb-0">Desired Resolution</h6></div>
     <div class="card-body"><p class="mb-0"><?= nl2br(htmlspecialchars($g->desired_resolution ?: '-')) ?></p></div>
 </div>
+
+<?php $cardAttachments = $attachments ?? []; if (!empty($cardAttachments)): ?>
+<div class="card mb-3">
+    <div class="card-header"><h6 class="mb-0">Attachments</h6></div>
+    <div class="card-body">
+        <div class="row g-3">
+            <?php foreach ($cardAttachments as $att): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="border rounded p-3 h-100">
+                    <h6 class="mb-1"><?= htmlspecialchars($att->title ?: 'Untitled') ?></h6>
+                    <?php if (!empty(trim($att->description ?? ''))): ?>
+                    <p class="small text-muted mb-2"><?= nl2br(htmlspecialchars($att->description)) ?></p>
+                    <?php endif; ?>
+                    <?php if (!empty($att->file_path)): ?>
+                    <a href="/serve/grievance-card-attachment?id=<?= (int)$att->id ?>" target="_blank" class="btn btn-sm btn-outline-primary"><?= htmlspecialchars(basename($att->file_path)) ?></a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Status Card -->
 <div class="card mb-3 border-primary">
