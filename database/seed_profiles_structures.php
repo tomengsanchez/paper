@@ -290,7 +290,22 @@ if (count($projectIds) < SEED_PROJECT_COUNT) {
     $toCreate = SEED_PROJECT_COUNT - count($projectIds);
     echo "Creating $toCreate Philippine Government Project(s)...\n";
     for ($i = 0; $i < $toCreate && $i < count(PROJECTS); $i++) {
-        $projectIds[] = Project::create(PROJECTS[$i]);
+        $src = PROJECTS[$i];
+        $rawName = $src['name'] ?? '';
+        $baseDesc = $src['description'] ?? '';
+        $parts = explode(' - ', $rawName, 2);
+        $acronym = trim($parts[0] ?? '');
+        if ($acronym === '') {
+            $acronym = $rawName !== '' ? $rawName : 'PRJ-' . ($i + 1);
+        }
+        $longName = isset($parts[1]) && trim($parts[1]) !== '' ? trim($parts[1]) : $rawName;
+        $finalName = $acronym;
+        $finalDescription = ($longName !== '' ? $longName : $acronym) . ' - ' . $baseDesc;
+
+        $projectIds[] = Project::create([
+            'name' => $finalName,
+            'description' => $finalDescription,
+        ]);
     }
     echo "  Total projects: " . count($projectIds) . "\n";
 }
