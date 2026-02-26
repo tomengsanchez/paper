@@ -29,7 +29,6 @@ class DashboardConfig
 
     /** Default chart options for grievance dashboard */
     public const GRIEVANCE_CHART_OPTIONS_DEFAULT = [
-        'trend_months' => 12,
         'trend_type'   => 'bar', // 'bar' | 'line'
     ];
 
