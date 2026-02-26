@@ -4,7 +4,7 @@
 </div>
 <div class="card">
     <div class="card-body">
-        <p class="text-muted mb-0">Welcome to PAPS. Use the sidebar to navigate.</p>
+        <p class="text-muted mb-0">Welcome to PAPeR. Use the sidebar to navigate.</p>
     </div>
 </div>
 <?php

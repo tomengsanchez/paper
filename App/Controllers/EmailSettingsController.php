@@ -43,7 +43,7 @@ class EmailSettingsController extends Controller
             $this->redirect('/settings/email?error=invalid');
             return;
         }
-        $result = \Core\Mailer::send($to, 'PAPS Test Email', 'This is a test email from PAPS. Your SMTP configuration is working correctly.');
+        $result = \Core\Mailer::send($to, 'PAPeR Test Email', 'This is a test email from PAPeR. Your SMTP configuration is working correctly.');
         if ($result['success']) {
             $this->redirect('/settings/email?test=success');
         } else {

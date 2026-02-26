@@ -1,4 +1,6 @@
-# PAPS - Custom PHP MVC Framework
+# PAPeR - Project Affected Profiles and Redress
+
+Custom PHP MVC framework for PAPeR.
 
 A lightweight PHP MVC framework with flat database tables, jQuery, and MySQL. Version 1.
 

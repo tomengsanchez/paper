@@ -55,7 +55,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">From Name</label>
-                        <input type="text" name="from_name" class="form-control" value="<?= htmlspecialchars($config->from_name) ?>" placeholder="PAPS System">
+                        <input type="text" name="from_name" class="form-control" value="<?= htmlspecialchars($config->from_name) ?>" placeholder="PAPeR">
                     </div>
                 </div>
             </div>
