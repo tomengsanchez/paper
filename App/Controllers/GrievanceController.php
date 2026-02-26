@@ -403,7 +403,7 @@ class GrievanceController extends Controller
     public function statusUpdate(int $id): void
     {
         $this->validateCsrf();
-        $this->requireCapability('edit_grievance');
+        $this->requireCapability('change_grievance_status');
         $grievance = Grievance::find($id);
         if (!$grievance) {
             $this->redirect('/grievance/list');

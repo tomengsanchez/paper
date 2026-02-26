@@ -55,6 +55,7 @@ return [
         $coordId = $db->query("SELECT id FROM roles WHERE name = 'Coordinator'")->fetchColumn();
         $caps = [
             'add_grievance','add_profiles','add_projects','add_structure','add_user_profiles','add_users',
+            'change_grievance_status',
             'delete_grievance','delete_profiles','delete_projects','delete_structure','delete_user_profiles','delete_users',
             'edit_grievance','edit_profiles','edit_projects','edit_roles','edit_structure','edit_user_profiles','edit_users',
             'manage_email_settings','manage_security_settings','manage_settings','view_email_settings',

@@ -23,10 +23,11 @@ class Capabilities
             'delete_structure' => 'Delete',
         ],
         'Grievance' => [
-            'view_grievance'   => 'View List',
-            'add_grievance'    => 'Add',
-            'edit_grievance'   => 'Edit',
-            'delete_grievance' => 'Delete',
+            'view_grievance'        => 'View List',
+            'add_grievance'         => 'Add',
+            'edit_grievance'        => 'Edit',
+            'delete_grievance'      => 'Delete',
+            'change_grievance_status' => 'Change Status',
         ],
         'Grievance Options' => [
             'manage_grievance_options' => 'Manage Options Library',
