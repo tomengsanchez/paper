@@ -53,7 +53,7 @@ class UserController extends Controller
     {
         $this->requireCapability('add_users');
         $roles = Database::getInstance()->query('SELECT * FROM roles')->fetchAll(\PDO::FETCH_OBJ);
-        $this->view('users/form', ['user' => null, 'roles' => $roles]);
+        $this->view('users/form', ['user' => null, 'roles' => $roles, 'linkedProjects' => []]);
     }
 
     public function store(): void
@@ -62,8 +62,11 @@ class UserController extends Controller
         $this->requireCapability('add_users');
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
+        $displayName = trim($_POST['display_name'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
+        $projectIds = isset($_POST['project_ids']) && is_array($_POST['project_ids'])
+            ? array_map('intval', array_filter($_POST['project_ids'])) : [];
 
         if (empty($username) || empty($password) || !$roleId) {
             $this->redirect('/users/create?error=1');
@@ -71,9 +74,11 @@ class UserController extends Controller
         }
 
         $db = Database::getInstance();
-        $stmt = $db->prepare('INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)');
-        $stmt->execute([$username, $email ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId]);
-        $this->redirect('/users/view/' . (int) $db->lastInsertId());
+        $stmt = $db->prepare('INSERT INTO users (username, email, display_name, password_hash, role_id) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([$username, $email ?: null, $displayName ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId]);
+        $userId = (int) $db->lastInsertId();
+        $this->saveUserProjects($db, $userId, $projectIds);
+        $this->redirect('/users/view/' . $userId);
     }
 
     public function show(int $id): void
@@ -87,7 +92,8 @@ class UserController extends Controller
             $this->redirect('/users');
             return;
         }
-        $this->view('users/view', ['user' => $user]);
+        $linkedProjects = $this->getLinkedProjects($db, $id);
+        $this->view('users/view', ['user' => $user, 'linkedProjects' => $linkedProjects]);
     }
 
     public function edit(int $id): void
@@ -102,7 +108,8 @@ class UserController extends Controller
             return;
         }
         $roles = $db->query('SELECT * FROM roles')->fetchAll(\PDO::FETCH_OBJ);
-        $this->view('users/form', ['user' => $user, 'roles' => $roles]);
+        $linkedProjects = $this->getLinkedProjects($db, $id);
+        $this->view('users/form', ['user' => $user, 'roles' => $roles, 'linkedProjects' => $linkedProjects]);
     }
 
     public function update(int $id): void
@@ -111,17 +118,21 @@ class UserController extends Controller
         $this->requireCapability('edit_users');
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
+        $displayName = trim($_POST['display_name'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
+        $projectIds = isset($_POST['project_ids']) && is_array($_POST['project_ids'])
+            ? array_map('intval', array_filter($_POST['project_ids'])) : [];
 
         $db = Database::getInstance();
         if (!empty($password)) {
-            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, password_hash = ?, role_id = ? WHERE id = ?');
-            $stmt->execute([$username, $email ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId, $id]);
+            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, password_hash = ?, role_id = ? WHERE id = ?');
+            $stmt->execute([$username, $email ?: null, $displayName ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId, $id]);
         } else {
-            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, role_id = ? WHERE id = ?');
-            $stmt->execute([$username, $email ?: null, $roleId, $id]);
+            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, role_id = ? WHERE id = ?');
+            $stmt->execute([$username, $email ?: null, $displayName ?: null, $roleId, $id]);
         }
+        $this->saveUserProjects($db, $id, $projectIds);
         $this->redirect('/users/view/' . $id);
     }
 
@@ -135,5 +146,32 @@ class UserController extends Controller
         }
         Database::getInstance()->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
         $this->redirect('/users');
+    }
+
+    private function getLinkedProjects(\PDO $db, int $userId): array
+    {
+        $stmt = $db->prepare('
+            SELECT p.id, p.name
+            FROM user_projects up
+            JOIN projects p ON p.id = up.project_id
+            WHERE up.user_id = ?
+            ORDER BY p.name
+        ');
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(\PDO::FETCH_OBJ);
+    }
+
+    private function saveUserProjects(\PDO $db, int $userId, array $projectIds): void
+    {
+        $db->prepare('DELETE FROM user_projects WHERE user_id = ?')->execute([$userId]);
+        if (empty($projectIds)) {
+            return;
+        }
+        $stmt = $db->prepare('INSERT INTO user_projects (user_id, project_id) VALUES (?, ?)');
+        foreach (array_unique($projectIds) as $pid) {
+            if ($pid > 0) {
+                $stmt->execute([$userId, $pid]);
+            }
+        }
     }
 }

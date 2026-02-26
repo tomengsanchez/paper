@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Core\Database;
+use App\UserProjects;
 
 class Profile
 {
@@ -90,6 +91,21 @@ class Profile
         $offset = ($afterId === null && $beforeId === null) ? ($page - 1) * $limit : 0;
         $limitClause = $cursorCond !== '' ? "LIMIT $limit" : "LIMIT $limit OFFSET $offset";
 
+        // Project scoping (non-admin users see only their linked projects)
+        $allowed = UserProjects::allowedProjectIds();
+        $projectFilter = '';
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                $projectFilter = ' AND 1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+                $projectFilter = " AND p.project_id IN ($placeholders)";
+                foreach ($allowed as $pid) {
+                    $params[] = $pid;
+                }
+            }
+        }
+
         $sql = "SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id,
             COALESCE(proj.name, '') as project_name,
             COALESCE(p.structure_count, 0) as structure_count,
@@ -99,7 +115,7 @@ class Profile
             p.availed_government_housing, p.availed_government_housing_note, p.hh_income
             FROM profiles p
             LEFT JOIN projects proj ON proj.id = p.project_id
-            WHERE 1=1 $searchCond $cursorCond
+            WHERE 1=1 $searchCond $projectFilter $cursorCond
             ORDER BY $sortCol $dir
             $limitClause";
         $stmt = $db->prepare($sql);
@@ -109,7 +125,7 @@ class Profile
         $countParams = $cursorCond !== '' ? array_slice($params, 0, -1) : $params;
         $countSql = "SELECT COUNT(*) FROM profiles p
             LEFT JOIN projects proj ON proj.id = p.project_id
-            WHERE 1=1 $searchCond";
+            WHERE 1=1 $searchCond $projectFilter";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($countParams);
         $total = (int) $stmtCount->fetchColumn();
@@ -130,12 +146,29 @@ class Profile
 
     public static function all(): array
     {
-        $stmt = self::db()->query('
-            SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id, proj.name as project_name
-            FROM profiles p
-            LEFT JOIN projects proj ON proj.id = p.project_id
-            ORDER BY p.id DESC
-        ');
+        $db = self::db();
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                return [];
+            }
+            $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+            $stmt = $db->prepare('
+                SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id, proj.name as project_name
+                FROM profiles p
+                LEFT JOIN projects proj ON proj.id = p.project_id
+                WHERE p.project_id IN (' . $placeholders . ')
+                ORDER BY p.id DESC
+            ');
+            $stmt->execute($allowed);
+        } else {
+            $stmt = $db->query('
+                SELECT p.id, p.papsid, p.control_number, p.full_name, p.age, p.contact_number, p.project_id, proj.name as project_name
+                FROM profiles p
+                LEFT JOIN projects proj ON proj.id = p.project_id
+                ORDER BY p.id DESC
+            ');
+        }
         return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
@@ -148,14 +181,26 @@ class Profile
 
     public static function find(int $id): ?object
     {
-        $stmt = self::db()->prepare('
+        $db = self::db();
+        $stmt = $db->prepare('
             SELECT p.*, proj.name as project_name
             FROM profiles p
             LEFT JOIN projects proj ON proj.id = p.project_id
             WHERE p.id = ?
         ');
         $stmt->execute([$id]);
-        return $stmt->fetch(\PDO::FETCH_OBJ) ?: null;
+        $row = $stmt->fetch(\PDO::FETCH_OBJ);
+        if (!$row) {
+            return null;
+        }
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            $projectId = (int) ($row->project_id ?? 0);
+            if ($projectId > 0 && !in_array($projectId, $allowed, true)) {
+                return null;
+            }
+        }
+        return $row;
     }
 
     public static function create(array $data): int

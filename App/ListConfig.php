@@ -29,18 +29,13 @@ class ListConfig
         'users' => [
             ['key' => 'id', 'label' => 'ID', 'sortable' => true],
             ['key' => 'username', 'label' => 'Username', 'sortable' => true],
+            ['key' => 'display_name', 'label' => 'Display name', 'sortable' => true],
             ['key' => 'email', 'label' => 'Email', 'sortable' => true],
             ['key' => 'role_name', 'label' => 'Role', 'sortable' => true],
-        ],
-        'user_profiles' => [
-            ['key' => 'name', 'label' => 'Name', 'sortable' => true],
-            ['key' => 'role_name', 'label' => 'Role', 'sortable' => true],
-            ['key' => 'username', 'label' => 'Linked User', 'sortable' => true],
         ],
         'library' => [
             ['key' => 'name', 'label' => 'Project Name', 'sortable' => true],
             ['key' => 'description', 'label' => 'Description', 'sortable' => true],
-            ['key' => 'coordinator_name', 'label' => 'Coordinator', 'sortable' => true],
         ],
         'roles' => [
             ['key' => 'name', 'label' => 'Role', 'sortable' => true],
