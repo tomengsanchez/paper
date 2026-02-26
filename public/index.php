@@ -88,6 +88,7 @@ $router->get('/library/edit/{id}', 'LibraryController@edit');
 $router->post('/library/update/{id}', 'LibraryController@update');
 $router->post('/library/delete/{id}', 'LibraryController@delete');
 $router->get('/settings', 'SettingsController@index');
+$router->post('/settings/ui', 'SettingsController@updateUi');
 $router->get('/settings/email', 'EmailSettingsController@index');
 $router->post('/settings/email/update', 'EmailSettingsController@update');
 $router->post('/settings/email/test', 'EmailSettingsController@testMail');
