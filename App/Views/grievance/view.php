@@ -162,7 +162,7 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
                 </span>
             </div>
         </div>
-        <?php if (\Core\Auth::can('edit_grievance')): ?>
+        <?php if (\Core\Auth::can('change_grievance_status')): ?>
         <form method="post" action="/grievance/status-update/<?= (int)$g->id ?>" enctype="multipart/form-data" class="mt-3">
             <?= \Core\Csrf::field() ?>
             <div class="row g-2">
