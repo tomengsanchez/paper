@@ -5,6 +5,7 @@ use Core\Controller;
 use Core\Auth;
 use Core\Database;
 use App\Models\Structure;
+use App\UserProjects;
 
 class ApiController extends Controller
 {
@@ -13,33 +14,35 @@ class ApiController extends Controller
         $this->requireAuth();
     }
 
-    public function coordinators(): void
-    {
-        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects'])) {
-            $this->json([]);
-            return;
-        }
-        $q = $_GET['q'] ?? '';
-        $db = Database::getInstance();
-        $stmt = $db->prepare('SELECT u.id, u.username FROM users u 
-            JOIN roles r ON u.role_id = r.id 
-            WHERE r.name = "Coordinator" AND u.username LIKE ? 
-            ORDER BY u.username LIMIT 20');
-        $stmt->execute(['%' . $q . '%']);
-        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        $this->json($rows);
-    }
-
     public function projects(): void
     {
-        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects', 'view_profiles', 'add_profiles', 'edit_profiles', 'view_grievance', 'add_grievance', 'edit_grievance'])) {
+        if (!Auth::canAny(['view_projects', 'add_projects', 'edit_projects', 'view_profiles', 'add_profiles', 'edit_profiles', 'view_grievance', 'add_grievance', 'edit_grievance', 'view_users', 'add_users', 'edit_users'])) {
             $this->json([]);
             return;
         }
         $q = $_GET['q'] ?? '';
         $db = Database::getInstance();
-        $stmt = $db->prepare('SELECT id, name FROM projects WHERE name LIKE ? ORDER BY name LIMIT 20');
-        $stmt->execute(['%' . $q . '%']);
+        $term = '%' . $q . '%';
+
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null && empty($allowed)) {
+            $this->json([]);
+            return;
+        }
+
+        $params = [$term];
+        $where = 'name LIKE ?';
+        if ($allowed !== null) {
+            $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+            $where .= " AND id IN ($placeholders)";
+            foreach ($allowed as $pid) {
+                $params[] = $pid;
+            }
+        }
+
+        $sql = "SELECT id, name FROM projects WHERE $where ORDER BY name LIMIT 20";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $this->json($rows);
     }
@@ -53,15 +56,33 @@ class ApiController extends Controller
         $q = trim($_GET['q'] ?? '');
         $db = Database::getInstance();
         $search = '%' . $q . '%';
-        $stmt = $db->prepare('
+
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null && empty($allowed)) {
+            $this->json([]);
+            return;
+        }
+
+        $params = [$q, $search, $search];
+        $projectFilter = '';
+        if ($allowed !== null) {
+            $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+            $projectFilter = " AND p.project_id IN ($placeholders)";
+            foreach ($allowed as $pid) {
+                $params[] = $pid;
+            }
+        }
+
+        $sql = '
             SELECT p.id, COALESCE(NULLIF(p.full_name,""), p.papsid, "") as name,
                    p.project_id, proj.name as project_name
             FROM profiles p
             LEFT JOIN projects proj ON proj.id = p.project_id
-            WHERE ? = "" OR p.full_name LIKE ? OR p.papsid LIKE ?
+            WHERE (? = "" OR p.full_name LIKE ? OR p.papsid LIKE ?)' . $projectFilter . '
             ORDER BY COALESCE(NULLIF(p.full_name,""), p.papsid)
-            LIMIT 20');
-        $stmt->execute([$q, $search, $search]);
+            LIMIT 20';
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $this->json($rows);
     }

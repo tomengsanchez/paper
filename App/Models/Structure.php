@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Core\Database;
 use App\Models\Profile;
+use App\UserProjects;
 
 class Structure
 {
@@ -39,6 +40,20 @@ class Structure
     public static function byOwner(int $profileId, int $limit = 100, ?int $afterId = null): array
     {
         $db = self::db();
+        // Restrict by profile's project for non-admin users
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                return [];
+            }
+            $projStmt = $db->prepare('SELECT project_id FROM profiles WHERE id = ?');
+            $projStmt->execute([$profileId]);
+            $projectId = (int) ($projStmt->fetchColumn() ?: 0);
+            if ($projectId > 0 && !in_array($projectId, $allowed, true)) {
+                return [];
+            }
+        }
+
         $params = [$profileId];
         $cursorCond = '';
         if ($afterId !== null) {
@@ -108,11 +123,26 @@ class Structure
         $offset = ($afterId === null && $beforeId === null) ? ($page - 1) * $limit : 0;
         $limitClause = $cursorCond !== '' ? "LIMIT $limit" : "LIMIT $limit OFFSET $offset";
 
+        // Project scoping via owner's profile.project_id
+        $allowed = UserProjects::allowedProjectIds();
+        $projectFilter = '';
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                $projectFilter = ' AND 1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+                $projectFilter = " AND p.project_id IN ($placeholders)";
+                foreach ($allowed as $pid) {
+                    $params[] = $pid;
+                }
+            }
+        }
+
         $sql = "SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
             COALESCE(p.full_name, p.papsid, '') as owner_name
             FROM structures s
             LEFT JOIN profiles p ON p.id = s.owner_id
-            WHERE 1=1 $searchCond $cursorCond
+            WHERE 1=1 $searchCond $projectFilter $cursorCond
             ORDER BY $sortCol $dir
             $limitClause";
         $stmt = $db->prepare($sql);
@@ -122,7 +152,7 @@ class Structure
         $countParams = $cursorCond !== '' ? array_slice($params, 0, -1) : $params;
         $countSql = "SELECT COUNT(*) FROM structures s
             LEFT JOIN profiles p ON p.id = s.owner_id
-            WHERE 1=1 $searchCond";
+            WHERE 1=1 $searchCond $projectFilter";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($countParams);
         $total = (int) $stmtCount->fetchColumn();
@@ -144,28 +174,59 @@ class Structure
 
     public static function all(): array
     {
-        $stmt = self::db()->query('
-            SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
-                COALESCE(p.full_name, p.papsid) as owner_name
-            FROM structures s
-            LEFT JOIN profiles p ON p.id = s.owner_id
-            ORDER BY s.id DESC
-        ');
+        $db = self::db();
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                return [];
+            }
+            $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+            $stmt = $db->prepare('
+                SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
+                    COALESCE(p.full_name, p.papsid) as owner_name
+                FROM structures s
+                LEFT JOIN profiles p ON p.id = s.owner_id
+                WHERE p.project_id IN (' . $placeholders . ')
+                ORDER BY s.id DESC
+            ');
+            $stmt->execute($allowed);
+        } else {
+            $stmt = $db->query('
+                SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
+                    COALESCE(p.full_name, p.papsid) as owner_name
+                FROM structures s
+                LEFT JOIN profiles p ON p.id = s.owner_id
+                ORDER BY s.id DESC
+            ');
+        }
         return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
     public static function find(int $id): ?object
     {
-        $stmt = self::db()->prepare('
+        $db = self::db();
+        $stmt = $db->prepare('
             SELECT s.id, s.strid, s.owner_id, s.structure_tag, s.description, s.tagging_images, s.structure_images, s.other_details,
-                COALESCE(p.full_name, p.papsid) as owner_name
+                COALESCE(p.full_name, p.papsid) as owner_name,
+                p.project_id
             FROM structures s
             LEFT JOIN profiles p ON p.id = s.owner_id
             WHERE s.id = ?
         ');
         $stmt->execute([$id]);
         $row = $stmt->fetch(\PDO::FETCH_OBJ);
-        return $row ?: null;
+        if (!$row) {
+            return null;
+        }
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            $projectId = (int) ($row->project_id ?? 0);
+            if ($projectId > 0 && !in_array($projectId, $allowed, true)) {
+                return null;
+            }
+        }
+        unset($row->project_id);
+        return $row;
     }
 
     public static function parseImages(string $json): array

@@ -95,14 +95,7 @@ $router->post('/settings/email/test', 'EmailSettingsController@testMail');
 $router->get('/settings/security', 'SecuritySettingsController@index');
 $router->post('/settings/security/update', 'SecuritySettingsController@update');
 
-// User Management (Admin)
-$router->get('/users/profiles', 'UserProfileController@index');
-$router->get('/users/profiles/view/{id}', 'UserProfileController@show');
-$router->get('/users/profiles/create', 'UserProfileController@create');
-$router->post('/users/profiles/store', 'UserProfileController@store');
-$router->get('/users/profiles/edit/{id}', 'UserProfileController@edit');
-$router->post('/users/profiles/update/{id}', 'UserProfileController@update');
-$router->post('/users/profiles/delete/{id}', 'UserProfileController@delete');
+// User Management (Admin) — User Profile merged into Users
 $router->get('/users', 'UserController@index');
 $router->get('/users/view/{id}', 'UserController@show');
 $router->get('/users/create', 'UserController@create');
@@ -123,7 +116,6 @@ $router->get('/serve/grievance', 'GrievanceController@serveGrievanceAttachment')
 $router->get('/serve/grievance-card-attachment', 'GrievanceController@serveGrievanceCardAttachment');
 
 // API for dropdown search (AJAX)
-$router->get('/api/coordinators', 'Api\ApiController@coordinators');
 $router->get('/api/projects', 'Api\ApiController@projects');
 $router->get('/api/profiles', 'Api\ApiController@profiles');
 $router->get('/api/profile/{id}/structures', 'Api\ApiController@profileStructures');

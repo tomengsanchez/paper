@@ -272,6 +272,107 @@ function randomStructureTag(int $seq): string
     return randomElement(STRUCTURE_TAG_PREFIXES) . '-' . randomElement(STRUCTURE_TAG_SUFFIXES) . '-' . str_pad((string) $seq, 4, '0');
 }
 
+/**
+ * Seed demo application users with linked projects:
+ * - 5 Standard Users
+ * - 5 Coordinators
+ *
+ * Safe to re-run: if a username already exists, it will be reused; if the user
+ * already has linked projects, they are left unchanged.
+ */
+function seedDemoUsersWithProjects(\PDO $db, array $projectIds): void
+{
+    if (empty($projectIds)) {
+        echo "Skipping demo users seed (no projects available).\n";
+        return;
+    }
+
+    // Look up role IDs
+    $roleStmt = $db->query("SELECT id, name FROM roles WHERE name IN ('Standard User','Coordinator')");
+    $standardRoleId = null;
+    $coordRoleId = null;
+    foreach ($roleStmt->fetchAll(\PDO::FETCH_OBJ) as $r) {
+        if ($r->name === 'Standard User') {
+            $standardRoleId = (int) $r->id;
+        } elseif ($r->name === 'Coordinator') {
+            $coordRoleId = (int) $r->id;
+        }
+    }
+    if (!$standardRoleId || !$coordRoleId) {
+        echo "Skipping demo users seed (Standard User / Coordinator roles not found).\n";
+        return;
+    }
+
+    echo "Seeding demo users with linked projects...\n";
+
+    $definitions = [];
+    for ($i = 1; $i <= 5; $i++) {
+        $definitions[] = [
+            'username' => 'standard' . $i,
+            'display_name' => 'Standard User ' . $i,
+            'role_id' => $standardRoleId,
+        ];
+    }
+    for ($i = 1; $i <= 5; $i++) {
+        $definitions[] = [
+            'username' => 'coord' . $i,
+            'display_name' => 'Coordinator ' . $i,
+            'role_id' => $coordRoleId,
+        ];
+    }
+
+    $findUser = $db->prepare('SELECT id FROM users WHERE username = ?');
+    $insertUser = $db->prepare('INSERT INTO users (username, email, display_name, password_hash, role_id) VALUES (?, ?, ?, ?, ?)');
+    $countLinks = $db->prepare('SELECT COUNT(*) FROM user_projects WHERE user_id = ?');
+    $insertLink = $db->prepare('INSERT IGNORE INTO user_projects (user_id, project_id) VALUES (?, ?)');
+
+    foreach ($definitions as $def) {
+        $username = $def['username'];
+        $displayName = $def['display_name'];
+        $roleId = (int) $def['role_id'];
+
+        // Find or create user
+        $findUser->execute([$username]);
+        $userId = (int) ($findUser->fetchColumn() ?: 0);
+        if (!$userId) {
+            $passwordHash = password_hash('password123', PASSWORD_DEFAULT);
+            $insertUser->execute([$username, null, $displayName, $passwordHash, $roleId]);
+            $userId = (int) $db->lastInsertId();
+            echo "  Created user {$username} (id {$userId})\n";
+        } else {
+            echo "  User {$username} already exists (id {$userId})\n";
+        }
+
+        // If user already has linked projects, do not modify them
+        $countLinks->execute([$userId]);
+        $existingLinks = (int) $countLinks->fetchColumn();
+        if ($existingLinks > 0) {
+            echo "    Skipping project links (already has {$existingLinks}).\n";
+            continue;
+        }
+
+        // Assign 1–3 random distinct projects
+        $numProjects = min(3, max(1, random_int(1, 3)));
+        $projectSample = [];
+        $totalProjects = count($projectIds);
+        if ($totalProjects <= $numProjects) {
+            $projectSample = $projectIds;
+        } else {
+            $keys = array_rand($projectIds, $numProjects);
+            if (!is_array($keys)) {
+                $keys = [$keys];
+            }
+            foreach ($keys as $k) {
+                $projectSample[] = $projectIds[$k];
+            }
+        }
+        foreach ($projectSample as $pid) {
+            $insertLink->execute([$userId, (int) $pid]);
+        }
+        echo "    Linked " . count($projectSample) . " project(s).\n";
+    }
+}
+
 // --- Main ---
 $structRange = SEED_STRUCTURES_MIN . '-' . SEED_STRUCTURES_MAX;
 $ownerStructRange = (SEED_STRUCTURES_MIN > 0 ? SEED_STRUCTURES_MIN : 1) . '-' . SEED_STRUCTURES_MAX;
@@ -311,6 +412,9 @@ if (count($projectIds) < SEED_PROJECT_COUNT) {
 }
 $projectIds = array_slice($projectIds, 0, SEED_PROJECT_COUNT);
 echo "Assigning profiles randomly to " . count($projectIds) . " projects.\n";
+
+// 1b. Seed demo users (Standard Users + Coordinators) with linked projects
+seedDemoUsersWithProjects($db, $projectIds);
 
 ensureUploadDirs();
 echo "Building image pool...\n";

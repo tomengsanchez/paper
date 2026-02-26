@@ -13,8 +13,6 @@
             <dd class="col-sm-9"><?= htmlspecialchars($project->name ?? '') ?></dd>
             <dt class="col-sm-3">Description</dt>
             <dd class="col-sm-9"><?= nl2br(htmlspecialchars($project->description ?? '-')) ?></dd>
-            <dt class="col-sm-3">Coordinator</dt>
-            <dd class="col-sm-9"><?= htmlspecialchars($project->coordinator_name ?? '-') ?></dd>
         </dl>
     </div>
 </div>

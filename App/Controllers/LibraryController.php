@@ -55,7 +55,6 @@ class LibraryController extends Controller
         $id = Project::create([
             'name' => trim($_POST['name'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
-            'coordinator_id' => (int) ($_POST['coordinator_id'] ?? 0) ?: null,
         ]);
         $this->redirect('/library/view/' . $id);
     }
@@ -89,7 +88,6 @@ class LibraryController extends Controller
         Project::update($id, [
             'name' => trim($_POST['name'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
-            'coordinator_id' => (int) ($_POST['coordinator_id'] ?? 0) ?: null,
         ]);
         $this->redirect('/library/view/' . $id);
     }

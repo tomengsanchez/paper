@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Core\Database;
+use App\UserProjects;
 
 class Project
 {
@@ -18,7 +19,6 @@ class Project
         $sortCol = match ($sortBy) {
             'name' => 'pr.name',
             'description' => 'pr.description',
-            'coordinator_name' => 'u.username',
             default => 'pr.id',
         };
         $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
@@ -30,19 +30,32 @@ class Project
             $conds = [];
             if (in_array('name', $searchColumns)) { $conds[] = 'pr.name LIKE ?'; $params[] = $term; }
             if (in_array('description', $searchColumns)) { $conds[] = 'pr.description LIKE ?'; $params[] = $term; }
-            if (in_array('coordinator_name', $searchColumns)) { $conds[] = 'COALESCE(u.username, \'\') LIKE ?'; $params[] = $term; }
             if (!empty($conds)) {
                 $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
+            }
+        }
+
+        // Restrict to projects linked to current user (except Administrator)
+        $allowed = UserProjects::allowedProjectIds();
+        $projectFilter = '';
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                $projectFilter = ' AND 1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+                $projectFilter = " AND pr.id IN ($placeholders)";
+                foreach ($allowed as $pid) {
+                    $params[] = $pid;
+                }
             }
         }
 
         $offset = ($page - 1) * $perPage;
         $limit = max(1, min(100, $perPage));
 
-        $sql = "SELECT pr.id, pr.name, pr.description, pr.coordinator_id, COALESCE(u.username, '') as coordinator_name
+        $sql = "SELECT pr.id, pr.name, pr.description
             FROM projects pr
-            LEFT JOIN users u ON u.id = pr.coordinator_id
-            WHERE 1=1 $searchCond
+            WHERE 1=1 $searchCond $projectFilter
             ORDER BY $sortCol $dir
             LIMIT $limit OFFSET $offset";
         $stmt = $db->prepare($sql);
@@ -50,8 +63,7 @@ class Project
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
         $countSql = "SELECT COUNT(*) FROM projects pr
-            LEFT JOIN users u ON u.id = pr.coordinator_id
-            WHERE 1=1 $searchCond";
+            WHERE 1=1 $searchCond $projectFilter";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($params);
         $total = (int) $stmtCount->fetchColumn();
@@ -68,21 +80,42 @@ class Project
 
     public static function all(): array
     {
-        $stmt = self::db()->query('
-            SELECT pr.id, pr.name, pr.description, pr.coordinator_id, u.username as coordinator_name
-            FROM projects pr
-            LEFT JOIN users u ON u.id = pr.coordinator_id
-            ORDER BY pr.id DESC
-        ');
+        $db = self::db();
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                return [];
+            }
+            $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+            $stmt = $db->prepare("
+                SELECT pr.id, pr.name, pr.description
+                FROM projects pr
+                WHERE pr.id IN ($placeholders)
+                ORDER BY pr.id DESC
+            ");
+            $stmt->execute($allowed);
+        } else {
+            $stmt = $db->query('
+                SELECT pr.id, pr.name, pr.description
+                FROM projects pr
+                ORDER BY pr.id DESC
+            ');
+        }
         return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
     public static function find(int $id): ?object
     {
-        $stmt = self::db()->prepare('
-            SELECT pr.id, pr.name, pr.description, pr.coordinator_id, u.username as coordinator_name
+        $db = self::db();
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            if (empty($allowed) || !in_array($id, $allowed, true)) {
+                return null;
+            }
+        }
+        $stmt = $db->prepare('
+            SELECT pr.id, pr.name, pr.description
             FROM projects pr
-            LEFT JOIN users u ON u.id = pr.coordinator_id
             WHERE pr.id = ?
         ');
         $stmt->execute([$id]);
@@ -92,11 +125,10 @@ class Project
 
     public static function create(array $data): int
     {
-        $stmt = self::db()->prepare('INSERT INTO projects (name, description, coordinator_id) VALUES (?, ?, ?)');
+        $stmt = self::db()->prepare('INSERT INTO projects (name, description) VALUES (?, ?)');
         $stmt->execute([
             trim($data['name'] ?? ''),
             trim($data['description'] ?? ''),
-            ($id = (int) ($data['coordinator_id'] ?? 0)) ? $id : null,
         ]);
         return (int) self::db()->lastInsertId();
     }
@@ -104,11 +136,10 @@ class Project
     public static function update(int $id, array $data): bool
     {
         if (!self::find($id)) return false;
-        $stmt = self::db()->prepare('UPDATE projects SET name = ?, description = ?, coordinator_id = ? WHERE id = ?');
+        $stmt = self::db()->prepare('UPDATE projects SET name = ?, description = ? WHERE id = ?');
         $stmt->execute([
             trim($data['name'] ?? ''),
             trim($data['description'] ?? ''),
-            ($cid = (int) ($data['coordinator_id'] ?? 0)) ? $cid : null,
             $id,
         ]);
         return true;

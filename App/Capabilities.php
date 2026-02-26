@@ -50,12 +50,6 @@ class Capabilities
             'view_security_settings' => 'View',
             'manage_security_settings' => 'Manage',
         ],
-        'User Profile' => [
-            'view_user_profiles'   => 'View List',
-            'add_user_profiles'    => 'Add',
-            'edit_user_profiles'   => 'Edit',
-            'delete_user_profiles' => 'Delete',
-        ],
         'Users' => [
             'view_users'   => 'View List',
             'add_users'    => 'Add',
@@ -85,7 +79,6 @@ class Capabilities
         'settings'      => 'view_settings',
         'email-settings' => 'view_email_settings',
         'security-settings' => 'view_security_settings',
-        'user-profiles' => 'view_user_profiles',
         'users'         => 'view_users',
         'user-roles'    => 'view_roles',
     ];

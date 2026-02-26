@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Core\Database;
+use App\UserProjects;
 
 class Grievance
 {
@@ -21,7 +22,8 @@ class Grievance
 
     public static function find(int $id): ?object
     {
-        $stmt = self::db()->prepare('
+        $db = self::db();
+        $stmt = $db->prepare('
             SELECT g.*, p.full_name as profile_name, p.papsid, proj.name as project_name
             FROM grievances g
             LEFT JOIN profiles p ON p.id = g.profile_id
@@ -29,7 +31,18 @@ class Grievance
             WHERE g.id = ?
         ');
         $stmt->execute([$id]);
-        return $stmt->fetch(\PDO::FETCH_OBJ) ?: null;
+        $row = $stmt->fetch(\PDO::FETCH_OBJ);
+        if (!$row) {
+            return null;
+        }
+        $allowed = UserProjects::allowedProjectIds();
+        if ($allowed !== null) {
+            $projectId = (int) ($row->project_id ?? 0);
+            if ($projectId > 0 && !in_array($projectId, $allowed, true)) {
+                return null;
+            }
+        }
+        return $row;
     }
 
     public static function listPaginated(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage, ?int $afterId = null, ?int $beforeId = null, array $filters = []): array
@@ -117,6 +130,21 @@ class Grievance
         $offset = ($afterId === null && $beforeId === null) ? ($page - 1) * $limit : 0;
         $limitClause = $cursorCond !== '' ? "LIMIT $limit" : "LIMIT $limit OFFSET $offset";
 
+        // Restrict to grievances in the user's allowed projects (non-admin)
+        $allowed = UserProjects::allowedProjectIds();
+        $projectFilter = '';
+        if ($allowed !== null) {
+            if (empty($allowed)) {
+                $projectFilter = ' AND 1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowed), '?'));
+                $projectFilter = " AND g.project_id IN ($placeholders)";
+                foreach ($allowed as $pid) {
+                    $params[] = $pid;
+                }
+            }
+        }
+
         $sql = "SELECT g.id, g.date_recorded, g.grievance_case_number, g.project_id, g.status, g.progress_level, g.profile_id, g.respondent_full_name,
             COALESCE(p.full_name, g.respondent_full_name) as respondent_name,
             p.full_name as profile_name,
@@ -124,7 +152,7 @@ class Grievance
             FROM grievances g
             LEFT JOIN profiles p ON p.id = g.profile_id
             LEFT JOIN projects proj ON proj.id = g.project_id
-            WHERE 1=1 $whereCond $cursorCond
+            WHERE 1=1 $whereCond $projectFilter $cursorCond
             ORDER BY $sortCol $dir
             $limitClause";
         $stmt = $db->prepare($sql);
@@ -132,7 +160,7 @@ class Grievance
         $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
         $countParams = $cursorCond !== '' ? array_slice($params, 0, -1) : $params;
-        $countSql = "SELECT COUNT(*) FROM grievances g LEFT JOIN profiles p ON p.id = g.profile_id LEFT JOIN projects proj ON proj.id = g.project_id WHERE 1=1 $whereCond";
+        $countSql = "SELECT COUNT(*) FROM grievances g LEFT JOIN profiles p ON p.id = g.profile_id LEFT JOIN projects proj ON proj.id = g.project_id WHERE 1=1 $whereCond $projectFilter";
         $stmtCount = $db->prepare($countSql);
         $stmtCount->execute($countParams);
         $total = (int) $stmtCount->fetchColumn();

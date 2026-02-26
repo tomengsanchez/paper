@@ -109,14 +109,11 @@ $currentPage = $currentPage ?? '';
             </ul>
         </div>
         <?php endif; ?>
-        <?php if (\Core\Auth::can('view_user_profiles') || \Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
-        <?php $umActive = in_array($currentPage, ['user-profiles', 'users', 'user-roles']); ?>
+        <?php if (\Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
+        <?php $umActive = in_array($currentPage, ['users', 'user-roles']); ?>
         <div class="dropdown">
             <a href="#" class="nav-link dropdown-toggle <?= $umActive ? 'active' : '' ?>" data-bs-toggle="dropdown">User Management</a>
             <ul class="dropdown-menu">
-                <?php if (\Core\Auth::can('view_user_profiles')): ?>
-                <li><a class="dropdown-item <?= $currentPage === 'user-profiles' ? 'active' : '' ?>" href="/users/profiles">User Profile</a></li>
-                <?php endif; ?>
                 <?php if (\Core\Auth::can('view_users')): ?>
                 <li><a class="dropdown-item <?= $currentPage === 'users' ? 'active' : '' ?>" href="/users">Users</a></li>
                 <?php endif; ?>
@@ -181,13 +178,10 @@ $currentPage = $currentPage ?? '';
                 <?php endif; ?>
             </div>
             <?php endif; ?>
-            <?php if (\Core\Auth::can('view_user_profiles') || \Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
-            <?php $umActive = in_array($currentPage, ['user-profiles', 'users', 'user-roles']); ?>
+            <?php if (\Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
+            <?php $umActive = in_array($currentPage, ['users', 'user-roles']); ?>
             <div class="nav-parent <?= $umActive ? 'open' : '' ?>">User Management</div>
             <div class="nav-sub">
-                <?php if (\Core\Auth::can('view_user_profiles')): ?>
-                <a href="/users/profiles" class="<?= $currentPage === 'user-profiles' ? 'active' : '' ?>">User Profile</a>
-                <?php endif; ?>
                 <?php if (\Core\Auth::can('view_users')): ?>
                 <a href="/users" class="<?= $currentPage === 'users' ? 'active' : '' ?>">Users</a>
                 <?php endif; ?>

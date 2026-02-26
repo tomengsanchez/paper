@@ -3,6 +3,7 @@ namespace App\Controllers\Api;
 
 use Core\Controller;
 use Core\Database;
+use App\UserProjects;
 
 class GrievanceController extends Controller
 {
@@ -23,11 +24,28 @@ class GrievanceController extends Controller
         $dateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
         $dateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 
+        // Project scoping based on user_projects (non-admin users)
+        $allowedProjects = UserProjects::allowedProjectIds();
+        // If a non-admin somehow sends a project_id they don't have, ignore it
+        if ($selectedProjectId > 0 && $allowedProjects !== null && !in_array($selectedProjectId, $allowedProjects, true)) {
+            $selectedProjectId = 0;
+        }
+
         $baseWhere = [];
         $baseParams = [];
         if ($selectedProjectId > 0) {
             $baseWhere[] = 'project_id = ?';
             $baseParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $baseWhere[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $baseWhere[] = "project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $baseParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $baseWhere[] = 'date_recorded >= ?';
@@ -45,7 +63,7 @@ class GrievanceController extends Controller
         $stmt->execute($baseParams);
         $total = (int) $stmt->fetchColumn();
 
-        // Recent grievances list (optionally filtered by project and date range)
+        // Recent grievances list (optionally filtered by project, user scope, and date range)
         $recentSql = 'SELECT g.id, g.grievance_case_number, g.date_recorded, g.status, g.progress_level,
             COALESCE(p.full_name, g.respondent_full_name) as respondent_name
             FROM grievances g
@@ -55,6 +73,16 @@ class GrievanceController extends Controller
         if ($selectedProjectId > 0) {
             $recentWhere[] = 'g.project_id = ?';
             $recentParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $recentWhere[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $recentWhere[] = "g.project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $recentParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $recentWhere[] = 'g.date_recorded >= ?';
@@ -78,12 +106,22 @@ class GrievanceController extends Controller
         $stmt->execute($baseParams);
         $statusBreakdown = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        // Monthly trend and this/last month counts
+        // Monthly trend and this/last month counts (honors project/user scope and date range)
         $trendWhere = [];
         $trendParams = [];
         if ($selectedProjectId > 0) {
             $trendWhere[] = 'project_id = ?';
             $trendParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $trendWhere[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $trendWhere[] = "project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $trendParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $trendWhere[] = 'date_recorded >= ?';
@@ -144,7 +182,7 @@ class GrievanceController extends Controller
         $thisMonth = $trendByKey[$currentKey] ?? 0;
         $lastMonth = $trendByKey[$lastKey] ?? 0;
 
-        // By project breakdown (honors selected project filter and date range)
+        // By project breakdown (honors selected project filter, user scope, and date range)
         $byProjectSql = '
             SELECT proj.name as project_name, COUNT(*) as cnt
             FROM grievances g
@@ -158,12 +196,22 @@ class GrievanceController extends Controller
         $stmt->execute($baseParams);
         $byProject = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        // In-progress by stage (optionally filtered by project and date range)
+        // In-progress by stage (optionally filtered by project, user scope, and date range)
         $inProgressWhere = ['g.status = \'in_progress\''];
         $inProgressParams = [];
         if ($selectedProjectId > 0) {
             $inProgressWhere[] = 'g.project_id = ?';
             $inProgressParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $inProgressWhere[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $inProgressWhere[] = "g.project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $inProgressParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $inProgressWhere[] = 'g.date_recorded >= ?';
@@ -197,6 +245,16 @@ class GrievanceController extends Controller
         if ($selectedProjectId > 0) {
             $needsEscalationWhere[] = 'g.project_id = ?';
             $needsEscalationParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $needsEscalationWhere[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $needsEscalationWhere[] = "g.project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $needsEscalationParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $needsEscalationWhere[] = 'g.date_recorded >= ?';
@@ -232,12 +290,22 @@ class GrievanceController extends Controller
             $needsEscalationByLevel[$levelId] = (int) ($row->cnt ?? 0);
         }
 
-        // By category of grievance (JSON array column, optionally filtered by project and date range)
+        // By category of grievance (JSON array column, optionally filtered by project, user scope, and date range)
         $byCategoryOn = ["JSON_CONTAINS(g.grievance_category_ids, CAST(c.id AS CHAR), '$')"];
         $byCategoryParams = [];
         if ($selectedProjectId > 0) {
             $byCategoryOn[] = "g.project_id = ?";
             $byCategoryParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $byCategoryOn[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $byCategoryOn[] = "g.project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $byCategoryParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $byCategoryOn[] = "g.date_recorded >= ?";
@@ -258,12 +326,22 @@ class GrievanceController extends Controller
         $stmt->execute($byCategoryParams);
         $byCategory = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        // By type of grievance (JSON array column, optionally filtered by project and date range)
+        // By type of grievance (JSON array column, optionally filtered by project, user scope, and date range)
         $byTypeOn = ["JSON_CONTAINS(g.grievance_type_ids, CAST(t.id AS CHAR), '$')"];
         $byTypeParams = [];
         if ($selectedProjectId > 0) {
             $byTypeOn[] = "g.project_id = ?";
             $byTypeParams[] = $selectedProjectId;
+        } elseif ($allowedProjects !== null) {
+            if (empty($allowedProjects)) {
+                $byTypeOn[] = '1=0';
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedProjects), '?'));
+                $byTypeOn[] = "g.project_id IN ($placeholders)";
+                foreach ($allowedProjects as $pid) {
+                    $byTypeParams[] = $pid;
+                }
+            }
         }
         if ($dateFrom !== '') {
             $byTypeOn[] = "g.date_recorded >= ?";
