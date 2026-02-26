@@ -49,7 +49,11 @@ ob_start();
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-3 flex-wrap">
         <h2 class="mb-0">Grievance Dashboard</h2>
-        <form method="get" class="d-flex align-items-center gap-2">
+        <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="small text-muted mb-0" for="dashboardDateFrom">From</label>
+            <input type="date" id="dashboardDateFrom" name="date_from" class="form-control form-control-sm" value="<?= htmlspecialchars($dateFrom ?? '') ?>" style="max-width: 140px;">
+            <label class="small text-muted mb-0" for="dashboardDateTo">To</label>
+            <input type="date" id="dashboardDateTo" name="date_to" class="form-control form-control-sm" value="<?= htmlspecialchars($dateTo ?? '') ?>" style="max-width: 140px;">
             <label class="small text-muted mb-0" for="dashboardProjectFilter">Project</label>
             <select id="dashboardProjectFilter" name="project_id" class="form-select form-select-sm">
                 <option value="">All projects</option>
@@ -61,6 +65,22 @@ ob_start();
             </select>
             <button type="submit" class="btn btn-sm btn-outline-secondary">Apply</button>
         </form>
+        <script>
+        (function() {
+            var fromEl = document.getElementById("dashboardDateFrom");
+            var toEl = document.getElementById("dashboardDateTo");
+            if (!fromEl || !toEl) return;
+            function syncToMin() {
+                var fromVal = fromEl.value;
+                toEl.min = fromVal || "";
+                if (fromVal && toEl.value && toEl.value < fromVal) {
+                    toEl.value = "";
+                }
+            }
+            fromEl.addEventListener("change", syncToMin);
+            syncToMin();
+        })();
+        </script>
     </div>
     <div class="d-flex gap-2">
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#dashboardDesignerModal" title="Choose which widgets to show">
@@ -336,13 +356,6 @@ ob_start();
                         <h6 class="small text-uppercase text-muted mb-2">Trend chart options</h6>
                         <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label small">Period</label>
-                                <select name="chart_trend_months" class="form-select form-select-sm">
-                                    <option value="6" <?= (int)($chartOptions['trend_months'] ?? 12) === 6 ? 'selected' : '' ?>>Last 6 months</option>
-                                    <option value="12" <?= (int)($chartOptions['trend_months'] ?? 12) === 12 ? 'selected' : '' ?>>Last 12 months</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
                                 <label class="form-label small">Chart type</label>
                                 <select name="chart_trend_type" class="form-select form-select-sm">
                                     <option value="bar" <?= ($chartOptions['trend_type'] ?? 'bar') === 'bar' ? 'selected' : '' ?>>Bar</option>
@@ -368,6 +381,8 @@ $currentPage = 'grievance-dashboard';
 $apiUrl = (defined('BASE_URL') && BASE_URL ? BASE_URL : '') . '/api/grievance/dashboard';
 $apiUrlJson = json_encode($apiUrl);
 $selectedProjectIdJson = json_encode($selectedProjectId);
+$dateFromJson = json_encode($dateFrom ?? '');
+$dateToJson = json_encode($dateTo ?? '');
 $statusLabelsJson = json_encode($statusLabels);
 $progressLevelsArray = array_map(function ($pl) {
     return [
@@ -378,7 +393,6 @@ $progressLevelsArray = array_map(function ($pl) {
 }, $progressLevels ?? []);
 $progressLevelsJson = json_encode($progressLevelsArray);
 $lastProgressLevelIdJson = json_encode($lastProgressLevelId);
-$trendMonths = (int)($chartOptions['trend_months'] ?? 12);
 $trendType = $chartOptions['trend_type'] ?? 'bar';
 $trendTypeJson = json_encode($trendType);
 
@@ -388,15 +402,20 @@ $scripts = <<<HTML
 (function() {
     var apiUrl = {$apiUrlJson};
     var selectedProjectId = {$selectedProjectIdJson};
+    var dateFrom = {$dateFromJson};
+    var dateTo = {$dateToJson};
     var statusLabels = {$statusLabelsJson};
     var progressLevels = {$progressLevelsJson};
     var lastProgressLevelId = {$lastProgressLevelIdJson};
 
     function fetchData() {
-        var url = apiUrl;
+        var params = [];
         if (selectedProjectId && selectedProjectId > 0) {
-            url += "?project_id=" + encodeURIComponent(selectedProjectId);
+            params.push("project_id=" + encodeURIComponent(selectedProjectId));
         }
+        if (dateFrom) params.push("date_from=" + encodeURIComponent(dateFrom));
+        if (dateTo) params.push("date_to=" + encodeURIComponent(dateTo));
+        var url = apiUrl + (params.length ? "?" + params.join("&") : "");
         fetch(url, { credentials: "same-origin" })
             .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
             .then(function (data) { renderDashboard(data || {}); })
@@ -631,10 +650,6 @@ $scripts = <<<HTML
             });
         }
         var trendData = Array.isArray(d.monthlyTrend) ? d.monthlyTrend.slice() : [];
-        var trendMonths = {$trendMonths};
-        if (trendMonths === 6 && trendData.length > 6) {
-            trendData = trendData.slice(-6);
-        }
         var byProjectForChart = Array.isArray(d.byProject) ? d.byProject.map(function(r) {
             return { name: (r.project_name && r.project_name.length) ? r.project_name : "— No project —", count: r.cnt || 0 };
         }) : [];

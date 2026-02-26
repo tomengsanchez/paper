@@ -39,6 +39,8 @@ class GrievanceController extends Controller
         if ($selectedProjectId < 0) {
             $selectedProjectId = 0;
         }
+        $dateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+        $dateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 
         $projects = \App\Models\Project::all();
         $dashboardWidgets = DashboardConfig::GRIEVANCE_WIDGETS_DEFAULT;
@@ -65,6 +67,8 @@ class GrievanceController extends Controller
             'needsEscalationByLevel' => [],
             'projects'               => $projects,
             'selectedProjectId'      => $selectedProjectId,
+            'dateFrom'               => $dateFrom,
+            'dateTo'                 => $dateTo,
         ]);
     }
 
@@ -80,10 +84,6 @@ class GrievanceController extends Controller
         if (empty($widgets)) {
             $widgets = $allowed;
         }
-        $trendMonths = (int) ($_POST['chart_trend_months'] ?? 12);
-        if (!in_array($trendMonths, [6, 12], true)) {
-            $trendMonths = 12;
-        }
         $trendType = trim($_POST['chart_trend_type'] ?? 'bar');
         if (!in_array($trendType, ['bar', 'line'], true)) {
             $trendType = 'bar';
@@ -93,7 +93,6 @@ class GrievanceController extends Controller
             'widgets'       => $widgets,
             'order'        => $widgets,
             'chart_options' => array_merge($current['chart_options'] ?? [], [
-                'trend_months' => $trendMonths,
                 'trend_type'   => $trendType,
             ]),
         ]);
