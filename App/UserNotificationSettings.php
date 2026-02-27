@@ -13,6 +13,7 @@ class UserNotificationSettings
     public const MODULE = 'notification_preferences';
 
     public const NOTIFY_NEW_PROFILE = 'notify_new_profile';
+    public const NOTIFY_PROFILE_UPDATED = 'notify_profile_updated';
     public const NOTIFY_NEW_GRIEVANCE = 'notify_new_grievance';
     public const NOTIFY_GRIEVANCE_STATUS_CHANGE = 'notify_grievance_status_change';
 
@@ -20,6 +21,7 @@ class UserNotificationSettings
     {
         return [
             self::NOTIFY_NEW_PROFILE            => true,
+            self::NOTIFY_PROFILE_UPDATED        => true,
             self::NOTIFY_NEW_GRIEVANCE          => true,
             self::NOTIFY_GRIEVANCE_STATUS_CHANGE => true,
         ];
@@ -44,6 +46,7 @@ class UserNotificationSettings
         }
         return array_merge(self::defaultConfig(), [
             self::NOTIFY_NEW_PROFILE            => !empty($decoded[self::NOTIFY_NEW_PROFILE]),
+            self::NOTIFY_PROFILE_UPDATED        => !empty($decoded[self::NOTIFY_PROFILE_UPDATED] ?? true),
             self::NOTIFY_NEW_GRIEVANCE          => !empty($decoded[self::NOTIFY_NEW_GRIEVANCE]),
             self::NOTIFY_GRIEVANCE_STATUS_CHANGE => !empty($decoded[self::NOTIFY_GRIEVANCE_STATUS_CHANGE]),
         ]);
@@ -57,6 +60,7 @@ class UserNotificationSettings
         }
         $json = json_encode([
             self::NOTIFY_NEW_PROFILE            => !empty($config[self::NOTIFY_NEW_PROFILE]),
+            self::NOTIFY_PROFILE_UPDATED        => !empty($config[self::NOTIFY_PROFILE_UPDATED]),
             self::NOTIFY_NEW_GRIEVANCE          => !empty($config[self::NOTIFY_NEW_GRIEVANCE]),
             self::NOTIFY_GRIEVANCE_STATUS_CHANGE => !empty($config[self::NOTIFY_GRIEVANCE_STATUS_CHANGE]),
         ]);

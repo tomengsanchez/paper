@@ -17,6 +17,7 @@ $grmNames = array_filter(array_map(function($id) use ($grmChannels) { foreach ($
 $langNames = array_filter(array_map(function($id) use ($preferredLanguages) { foreach ($preferredLanguages as $l) if ($l->id == $id) return $l->name; return null; }, $langIds));
 $typeNames = array_filter(array_map(function($id) use ($grievanceTypes) { foreach ($grievanceTypes as $t) if ($t->id == $id) return $t->name; return null; }, $typeIds));
 $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { foreach ($grievanceCategories as $c) if ($c->id == $id) return $c->name; return null; }, $catIds));
+$history = $history ?? [];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Grievance <?= htmlspecialchars($g->grievance_case_number ?: '#' . $g->id) ?></h2>
@@ -39,15 +40,17 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
 </div>
 <?php endif; ?>
 
-<div class="card mb-3">
-    <div class="card-header"><h6 class="mb-0">Grievance Registration</h6></div>
-    <div class="card-body">
+<div class="row">
+    <div class="col-lg-8 col-xl-9">
+        <div class="card mb-3">
+            <div class="card-header"><h6 class="mb-0">Grievance Registration</h6></div>
+            <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">Date Recorded</dt><dd class="col-sm-9"><?= $g->date_recorded ? date('M j, Y H:i', strtotime($g->date_recorded)) : '-' ?></dd>
             <dt class="col-sm-3">Case Number</dt><dd class="col-sm-9"><?= htmlspecialchars($g->grievance_case_number ?: '-') ?></dd>
         </dl>
-    </div>
-</div>
+            </div>
+        </div>
 
 <div class="card mb-3">
     <div class="card-header"><h6 class="mb-0">Respondent's Profile</h6></div>
@@ -200,26 +203,9 @@ $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { fo
         });
         </script>
         <?php endif; ?>
-        <?php if (!empty($statusLog)): ?>
-        <hr class="my-3">
-        <h6 class="small text-muted mb-2">Status History</h6>
-        <div class="status-log">
-            <?php foreach ($statusLog as $entry): ?>
-            <div class="border-start border-2 ps-2 mb-2 small">
-                <strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $entry->status))) ?><?= $entry->progress_level && isset($levelNameById[(int)$entry->progress_level]) ? ' ' . htmlspecialchars($levelNameById[(int)$entry->progress_level]) : ($entry->progress_level ? ' L' . (int)$entry->progress_level : '') ?></strong>
-                <span class="text-muted"><?= date('M j, Y H:i', strtotime($entry->created_at)) ?> <?= $entry->created_by_name ? 'by ' . htmlspecialchars($entry->created_by_name) : '' ?></span>
-                <?php if (!empty(trim($entry->note ?? ''))): ?><p class="mb-1 mt-1"><?= nl2br(htmlspecialchars($entry->note)) ?></p><?php endif; ?>
-                <?php $atts = \App\Models\GrievanceStatusLog::parseAttachments($entry->attachments ?? ''); if (!empty($atts)): ?>
-                <div class="mb-1">
-                    <?php foreach ($atts as $att): $url = \App\Controllers\GrievanceController::attachmentUrl($att, $g->id); ?>
-                    <a href="<?= htmlspecialchars($url) ?>" target="_blank" class="me-2"><?= htmlspecialchars(basename($att)) ?></a>
-                    <?php endforeach; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+    </div>
+    <div class="col-lg-4 col-xl-3">
+        <?php $statusLogForSidebar = $statusLog ?? []; $historyForSidebar = $history; $history = $historyForSidebar; $statusLog = $statusLogForSidebar; require __DIR__ . '/../partials/history_sidebar.php'; ?>
     </div>
 </div>
 <?php $content = ob_get_clean(); $pageTitle = 'Grievance ' . ($g->grievance_case_number ?: '#' . $g->id); $currentPage = 'grievance-list'; require __DIR__ . '/../layout/main.php'; ?>

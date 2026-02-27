@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use Core\Controller;
+use App\AuditLog;
 use App\Models\Grievance;
 use App\Models\GrievanceVulnerability;
 use App\Models\GrievanceRespondentType;
@@ -234,6 +235,7 @@ class GrievanceController extends Controller
         $msg = $caseNum ? ('New grievance: ' . $caseNum) : ('New grievance #' . $id);
         \App\NotificationService::notifyNewGrievance($id, $projectId ?: null, $msg);
         $this->processAttachmentCards($id, false);
+        AuditLog::record('grievance', $id, 'created');
         $this->redirect('/grievance/view/' . $id);
     }
 
@@ -274,7 +276,8 @@ class GrievanceController extends Controller
         $grievance->escalation_message = $this->computeEscalationMessageForGrievance($grievance, $progressLevelMap, $levelStartedAt);
 
         $attachments = GrievanceAttachment::byGrievance($id);
-        $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels'));
+        $history = \App\AuditLog::for('grievance', $id);
+        $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels', 'history'));
     }
 
     public function edit(int $id): void
@@ -314,6 +317,25 @@ class GrievanceController extends Controller
         }
         $data = $this->gatherGrievanceData($grievance);
         Grievance::update($id, $data);
+        $changes = [];
+        $fields = [
+            'project_id',
+            'profile_id',
+            'grievance_case_number',
+            'respondent_full_name',
+            'gender',
+            'valid_id_philippines',
+            'id_number',
+        ];
+        foreach ($fields as $field) {
+            $old = $grievance->$field ?? null;
+            $new = $data[$field] ?? null;
+            if ((string)($old ?? '') === (string)($new ?? '')) continue;
+            $changes[$field] = ['from' => $old, 'to' => $new];
+        }
+        if (!empty($changes)) {
+            AuditLog::record('grievance', $id, 'updated', $changes);
+        }
         $this->processAttachmentCards($id, true);
         $this->redirect('/grievance/view/' . $id);
     }
@@ -422,11 +444,34 @@ class GrievanceController extends Controller
         }
         $note = trim($_POST['status_note'] ?? '');
         $attachments = $this->handleStatusUpload();
+        $oldStatus = $grievance->status ?? 'open';
+        $oldLevel = $grievance->progress_level ?? null;
         Grievance::updateStatus($id, $status, $progressLevel);
         GrievanceStatusLog::create($id, $status, $progressLevel, $note, $attachments, \Core\Auth::id());
+        if ($oldStatus !== $status || $oldLevel !== $progressLevel) {
+            $changes = [
+                'status' => ['from' => $oldStatus, 'to' => $status],
+            ];
+            if ($oldLevel !== $progressLevel) {
+                $changes['progress_level'] = ['from' => $oldLevel, 'to' => $progressLevel];
+            }
+            AuditLog::record('grievance', $id, 'status_changed', $changes);
+        }
         $projectId = (int) ($grievance->project_id ?? 0);
         $caseNum = $grievance->grievance_case_number ?? ('#' . $id);
-        $msg = 'Grievance ' . $caseNum . ' status changed to ' . $status;
+        $label = match ($status) {
+            'open' => 'Open',
+            'in_progress' => 'In Progress',
+            'closed' => 'Closed',
+            default => $status,
+        };
+        $oldLabel = match ($oldStatus) {
+            'open' => 'Open',
+            'in_progress' => 'In Progress',
+            'closed' => 'Closed',
+            default => $oldStatus,
+        };
+        $msg = 'Grievance ' . $caseNum . ' status changed from ' . $oldLabel . ' to ' . $label;
         \App\NotificationService::notifyGrievanceStatusChange($id, $projectId ?: null, $msg);
         $this->redirect('/grievance/view/' . $id);
     }

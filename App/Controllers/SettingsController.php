@@ -30,6 +30,7 @@ class SettingsController extends Controller
         $this->requireCapability('view_settings');
         UserNotificationSettings::save([
             'notify_new_profile'             => !empty($_POST['notify_new_profile']),
+            'notify_profile_updated'         => !empty($_POST['notify_profile_updated']),
             'notify_new_grievance'           => !empty($_POST['notify_new_grievance']),
             'notify_grievance_status_change' => !empty($_POST['notify_grievance_status_change']),
         ]);

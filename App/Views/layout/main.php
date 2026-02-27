@@ -159,6 +159,7 @@ $currentPage = $currentPage ?? '';
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="/account">My Profile</a></li>
+                <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/logout">Logout</a></li>
             </ul>
@@ -244,6 +245,8 @@ $currentPage = $currentPage ?? '';
                         <li><h6 class="dropdown-header">Notifications</h6></li>
                         <li><hr class="dropdown-divider"></li>
                         <li id="notification-list"><span class="dropdown-item text-muted text-center py-3">Loading...</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center small" href="/notifications">View all notifications</a></li>
                     </ul>
                 </div>
                 <div class="dropdown header-user-dropdown">
@@ -254,6 +257,7 @@ $currentPage = $currentPage ?? '';
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="/account">My Profile</a></li>
+                    <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="/logout">Logout</a></li>
                 </ul>

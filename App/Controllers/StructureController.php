@@ -2,7 +2,10 @@
 namespace App\Controllers;
 
 use Core\Controller;
+use App\AuditLog;
+use App\NotificationService;
 use App\Models\Structure;
+use App\Models\Profile;
 use App\ListConfig;
 
 class StructureController extends Controller
@@ -70,14 +73,25 @@ class StructureController extends Controller
         $this->requireCapability('add_structure');
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
-        $id = Structure::create([
-            'owner_id' => (int) ($_POST['owner_id'] ?? 0) ?: null,
+        $ownerId = (int) ($_POST['owner_id'] ?? 0) ?: null;
+        $data = [
+            'owner_id' => $ownerId,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
             'tagging_images' => json_encode($taggingPaths),
             'structure_images' => json_encode($structurePaths),
             'other_details' => trim($_POST['other_details'] ?? ''),
-        ]);
+        ];
+        $id = Structure::create($data);
+        if ($ownerId) {
+            $owner = Profile::find($ownerId);
+            $projectId = (int) ($owner->project_id ?? 0);
+            if ($projectId > 0) {
+                $tag = $data['structure_tag'] !== '' ? $data['structure_tag'] : ('Structure #' . $id);
+                NotificationService::notifyNewStructure($id, $projectId, 'New structure: ' . $tag);
+            }
+        }
+        AuditLog::record('structure', $id, 'created');
         $this->redirect('/structure/view/' . $id);
     }
 
@@ -89,7 +103,8 @@ class StructureController extends Controller
             $this->redirect('/structure');
             return;
         }
-        $this->view('structure/view', ['structure' => $structure]);
+        $history = \App\AuditLog::for('structure', $structure->id);
+        $this->view('structure/view', ['structure' => $structure, 'history' => $history]);
     }
 
     public function edit(int $id): void
@@ -120,7 +135,7 @@ class StructureController extends Controller
         $structurePaths = array_values(array_diff($structurePaths, $removeStructure));
         $taggingPaths = array_merge($taggingPaths, $this->handleUpload('tagging_images', 'tagging'));
         $structurePaths = array_merge($structurePaths, $this->handleUpload('structure_images', 'images'));
-        Structure::update($id, [
+        $data = [
             'strid' => trim($_POST['strid'] ?? $structure->strid),
             'owner_id' => (int) ($_POST['owner_id'] ?? 0) ?: null,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
@@ -128,7 +143,19 @@ class StructureController extends Controller
             'tagging_images' => json_encode($taggingPaths),
             'structure_images' => json_encode($structurePaths),
             'other_details' => trim($_POST['other_details'] ?? ''),
-        ]);
+        ];
+        Structure::update($id, $data);
+        $changes = [];
+        $fields = ['strid', 'owner_id', 'structure_tag', 'description', 'other_details'];
+        foreach ($fields as $field) {
+            $old = $structure->$field ?? null;
+            $new = $data[$field] ?? null;
+            if ((string)($old ?? '') === (string)($new ?? '')) continue;
+            $changes[$field] = ['from' => $old, 'to' => $new];
+        }
+        if (!empty($changes)) {
+            AuditLog::record('structure', $id, 'updated', $changes);
+        }
         $this->redirect('/structure/view/' . $id);
     }
 
@@ -171,7 +198,7 @@ class StructureController extends Controller
         exit;
     }
 
-    private function handleUpload(string $field, string $subdir): array
+    protected function handleUpload(string $field, string $subdir): array
     {
         $paths = [];
         $dir = self::UPLOAD_BASE . '/' . $subdir;

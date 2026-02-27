@@ -2,6 +2,8 @@
 namespace App\Controllers\Api;
 
 use App\Models\Structure;
+use App\Models\Profile;
+use App\NotificationService;
 
 class StructureController extends \App\Controllers\StructureController
 {
@@ -22,14 +24,21 @@ class StructureController extends \App\Controllers\StructureController
         }
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
-        $id = Structure::create([
+        $data = [
             'owner_id' => $ownerId,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
             'tagging_images' => json_encode($taggingPaths),
             'structure_images' => json_encode($structurePaths),
             'other_details' => trim($_POST['other_details'] ?? ''),
-        ]);
+        ];
+        $id = Structure::create($data);
+        $owner = Profile::find($ownerId);
+        $projectId = (int) ($owner->project_id ?? 0);
+        if ($projectId > 0) {
+            $tag = $data['structure_tag'] !== '' ? $data['structure_tag'] : ('Structure #' . $id);
+            NotificationService::notifyNewStructure($id, $projectId, 'New structure: ' . $tag);
+        }
         $this->json(['success' => true, 'id' => $id]);
     }
 
