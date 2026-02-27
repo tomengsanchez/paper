@@ -444,18 +444,34 @@ class GrievanceController extends Controller
         }
         $note = trim($_POST['status_note'] ?? '');
         $attachments = $this->handleStatusUpload();
+        $oldStatus = $grievance->status ?? 'open';
+        $oldLevel = $grievance->progress_level ?? null;
         Grievance::updateStatus($id, $status, $progressLevel);
         GrievanceStatusLog::create($id, $status, $progressLevel, $note, $attachments, \Core\Auth::id());
-        $changes = [
-            'status' => ['from' => $grievance->status ?? 'open', 'to' => $status],
-        ];
-        if (($grievance->progress_level ?? null) !== $progressLevel) {
-            $changes['progress_level'] = ['from' => $grievance->progress_level ?? null, 'to' => $progressLevel];
+        if ($oldStatus !== $status || $oldLevel !== $progressLevel) {
+            $changes = [
+                'status' => ['from' => $oldStatus, 'to' => $status],
+            ];
+            if ($oldLevel !== $progressLevel) {
+                $changes['progress_level'] = ['from' => $oldLevel, 'to' => $progressLevel];
+            }
+            AuditLog::record('grievance', $id, 'status_changed', $changes);
         }
-        AuditLog::record('grievance', $id, 'status_changed', $changes);
         $projectId = (int) ($grievance->project_id ?? 0);
         $caseNum = $grievance->grievance_case_number ?? ('#' . $id);
-        $msg = 'Grievance ' . $caseNum . ' status changed to ' . $status;
+        $label = match ($status) {
+            'open' => 'Open',
+            'in_progress' => 'In Progress',
+            'closed' => 'Closed',
+            default => $status,
+        };
+        $oldLabel = match ($oldStatus) {
+            'open' => 'Open',
+            'in_progress' => 'In Progress',
+            'closed' => 'Closed',
+            default => $oldStatus,
+        };
+        $msg = 'Grievance ' . $caseNum . ' status changed from ' . $oldLabel . ' to ' . $label;
         \App\NotificationService::notifyGrievanceStatusChange($id, $projectId ?: null, $msg);
         $this->redirect('/grievance/view/' . $id);
     }

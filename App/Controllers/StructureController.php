@@ -3,7 +3,9 @@ namespace App\Controllers;
 
 use Core\Controller;
 use App\AuditLog;
+use App\NotificationService;
 use App\Models\Structure;
+use App\Models\Profile;
 use App\ListConfig;
 
 class StructureController extends Controller
@@ -71,14 +73,24 @@ class StructureController extends Controller
         $this->requireCapability('add_structure');
         $taggingPaths = $this->handleUpload('tagging_images', 'tagging');
         $structurePaths = $this->handleUpload('structure_images', 'images');
-        $id = Structure::create([
-            'owner_id' => (int) ($_POST['owner_id'] ?? 0) ?: null,
+        $ownerId = (int) ($_POST['owner_id'] ?? 0) ?: null;
+        $data = [
+            'owner_id' => $ownerId,
             'structure_tag' => trim($_POST['structure_tag'] ?? ''),
             'description' => trim($_POST['description'] ?? ''),
             'tagging_images' => json_encode($taggingPaths),
             'structure_images' => json_encode($structurePaths),
             'other_details' => trim($_POST['other_details'] ?? ''),
-        ]);
+        ];
+        $id = Structure::create($data);
+        if ($ownerId) {
+            $owner = Profile::find($ownerId);
+            $projectId = (int) ($owner->project_id ?? 0);
+            if ($projectId > 0) {
+                $tag = $data['structure_tag'] !== '' ? $data['structure_tag'] : ('Structure #' . $id);
+                NotificationService::notifyNewStructure($id, $projectId, 'New structure: ' . $tag);
+            }
+        }
         AuditLog::record('structure', $id, 'created');
         $this->redirect('/structure/view/' . $id);
     }

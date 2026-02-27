@@ -70,6 +70,10 @@ ob_start();
                     <span>New Profile on the linked projects</span>
                 </label>
                 <label class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="notify_profile_updated" value="1" class="form-check-input" <?= !empty($notifyPrefs['notify_profile_updated']) ? 'checked' : '' ?>>
+                    <span>Profile updated on the linked projects</span>
+                </label>
+                <label class="d-flex align-items-center gap-2">
                     <input type="checkbox" name="notify_new_grievance" value="1" class="form-check-input" <?= !empty($notifyPrefs['notify_new_grievance']) ? 'checked' : '' ?>>
                     <span>New Grievance on the linked projects</span>
                 </label>

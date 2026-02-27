@@ -226,6 +226,23 @@ class ProfileController extends Controller
         }
         if (!empty($changes)) {
             AuditLog::record('profile', $id, 'updated', $changes);
+            // Notify users on linked projects about profile updates (respecting separate preference)
+            $projectId = (int) ($data['project_id'] ?? $profile->project_id ?? 0);
+            if ($projectId > 0) {
+                $label = $profile->papsid ?? $profile->full_name ?? ('Profile #' . $id);
+                $parts = [];
+                foreach ($changes as $field => $change) {
+                    $from = (string)($change['from'] ?? '');
+                    $to   = (string)($change['to'] ?? '');
+                    $parts[] = $field . ': ' . $from . ' → ' . $to;
+                }
+                $details = implode('; ', $parts);
+                $message = 'Profile updated: ' . $label;
+                if ($details !== '') {
+                    $message .= ' (' . $details . ')';
+                }
+                \App\NotificationService::notifyProfileUpdated($id, $projectId, $message);
+            }
         }
         $this->redirect('/profile/view/' . $id);
     }
