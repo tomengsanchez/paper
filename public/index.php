@@ -12,6 +12,7 @@ $router->get('/logout', 'AuthController@logout');
 
 // Protected routes
 $router->get('/', 'DashboardController@index');
+$router->get('/account', 'AccountController@index');
 $router->get('/profile', 'ProfileController@index');
 $router->get('/profile/view/{id}', 'ProfileController@show');
 $router->get('/profile/create', 'ProfileController@create');
