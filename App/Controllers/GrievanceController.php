@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use Core\Controller;
+use App\AuditLog;
 use App\Models\Grievance;
 use App\Models\GrievanceVulnerability;
 use App\Models\GrievanceRespondentType;
@@ -234,6 +235,7 @@ class GrievanceController extends Controller
         $msg = $caseNum ? ('New grievance: ' . $caseNum) : ('New grievance #' . $id);
         \App\NotificationService::notifyNewGrievance($id, $projectId ?: null, $msg);
         $this->processAttachmentCards($id, false);
+        AuditLog::record('grievance', $id, 'created');
         $this->redirect('/grievance/view/' . $id);
     }
 
@@ -274,7 +276,8 @@ class GrievanceController extends Controller
         $grievance->escalation_message = $this->computeEscalationMessageForGrievance($grievance, $progressLevelMap, $levelStartedAt);
 
         $attachments = GrievanceAttachment::byGrievance($id);
-        $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels'));
+        $history = \App\AuditLog::for('grievance', $id);
+        $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels', 'history'));
     }
 
     public function edit(int $id): void
@@ -314,6 +317,25 @@ class GrievanceController extends Controller
         }
         $data = $this->gatherGrievanceData($grievance);
         Grievance::update($id, $data);
+        $changes = [];
+        $fields = [
+            'project_id',
+            'profile_id',
+            'grievance_case_number',
+            'respondent_full_name',
+            'gender',
+            'valid_id_philippines',
+            'id_number',
+        ];
+        foreach ($fields as $field) {
+            $old = $grievance->$field ?? null;
+            $new = $data[$field] ?? null;
+            if ((string)($old ?? '') === (string)($new ?? '')) continue;
+            $changes[$field] = ['from' => $old, 'to' => $new];
+        }
+        if (!empty($changes)) {
+            AuditLog::record('grievance', $id, 'updated', $changes);
+        }
         $this->processAttachmentCards($id, true);
         $this->redirect('/grievance/view/' . $id);
     }
@@ -424,6 +446,13 @@ class GrievanceController extends Controller
         $attachments = $this->handleStatusUpload();
         Grievance::updateStatus($id, $status, $progressLevel);
         GrievanceStatusLog::create($id, $status, $progressLevel, $note, $attachments, \Core\Auth::id());
+        $changes = [
+            'status' => ['from' => $grievance->status ?? 'open', 'to' => $status],
+        ];
+        if (($grievance->progress_level ?? null) !== $progressLevel) {
+            $changes['progress_level'] = ['from' => $grievance->progress_level ?? null, 'to' => $progressLevel];
+        }
+        AuditLog::record('grievance', $id, 'status_changed', $changes);
         $projectId = (int) ($grievance->project_id ?? 0);
         $caseNum = $grievance->grievance_case_number ?? ('#' . $id);
         $msg = 'Grievance ' . $caseNum . ' status changed to ' . $status;

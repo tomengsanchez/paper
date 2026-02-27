@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use Core\Controller;
+use App\AuditLog;
 use App\Models\Profile;
 use App\Models\Structure;
 use App\ListConfig;
@@ -145,6 +146,7 @@ class ProfileController extends Controller
             $msg = $created ? ('New profile: ' . ($created->papsid ?? '')) : 'New profile on linked project';
             \App\NotificationService::notifyNewProfile($id, $projectId, $msg);
         }
+        AuditLog::record('profile', $id, 'created');
         $this->redirect('/profile/view/' . $id);
     }
 
@@ -157,7 +159,8 @@ class ProfileController extends Controller
             return;
         }
         $structures = \Core\Auth::can('view_structure') ? Structure::byOwner($profile->id) : [];
-        $this->view('profile/view', ['profile' => $profile, 'structures' => $structures]);
+        $history = \App\AuditLog::for('profile', $profile->id);
+        $this->view('profile/view', ['profile' => $profile, 'structures' => $structures, 'history' => $history]);
     }
 
     public function edit(int $id): void
@@ -182,6 +185,48 @@ class ProfileController extends Controller
         }
         $data = $this->gatherProfileData($profile);
         Profile::update($id, $data);
+        $changes = [];
+        $fields = [
+            'control_number',
+            'full_name',
+            'age',
+            'contact_number',
+            'project_id',
+            'residing_in_project_affected',
+            'structure_owners',
+            'own_property_elsewhere',
+            'availed_government_housing',
+            'hh_income',
+        ];
+        $booleanFields = [
+            'residing_in_project_affected',
+            'structure_owners',
+            'own_property_elsewhere',
+            'availed_government_housing',
+        ];
+        foreach ($fields as $field) {
+            $old = $profile->$field ?? null;
+            $new = $data[$field] ?? null;
+            if (in_array($field, $booleanFields, true)) {
+                $oldVal = !empty($old);
+                $newVal = !empty($new);
+                if ($oldVal === $newVal) {
+                    continue;
+                }
+                $changes[$field] = [
+                    'from' => $oldVal ? 'Yes' : 'No',
+                    'to'   => $newVal ? 'Yes' : 'No',
+                ];
+                continue;
+            }
+            if ((string)($old ?? '') === (string)($new ?? '')) {
+                continue;
+            }
+            $changes[$field] = ['from' => $old, 'to' => $new];
+        }
+        if (!empty($changes)) {
+            AuditLog::record('profile', $id, 'updated', $changes);
+        }
         $this->redirect('/profile/view/' . $id);
     }
 

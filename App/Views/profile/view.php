@@ -1,5 +1,6 @@
 <?php ob_start();
 $structures = $structures ?? [];
+$history = $history ?? [];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>View Profile</h2>
@@ -8,8 +9,10 @@ $structures = $structures ?? [];
         <?php if (\Core\Auth::can('edit_profiles')): ?><a href="/profile/edit/<?= (int)$profile->id ?>" class="btn btn-primary">Edit</a><?php endif; ?>
     </div>
 </div>
-<div class="card">
-    <div class="card-body">
+<div class="row">
+    <div class="col-lg-8 col-xl-9">
+        <div class="card">
+            <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">PAPSID</dt>
             <dd class="col-sm-9"><?= htmlspecialchars($profile->papsid ?? '') ?></dd>
@@ -24,13 +27,13 @@ $structures = $structures ?? [];
             <dt class="col-sm-3">Project</dt>
             <dd class="col-sm-9"><?= htmlspecialchars($profile->project_name ?? '-') ?></dd>
         </dl>
-    </div>
-</div>
+            </div>
+        </div>
 
-<!-- Relevant Information -->
-<div class="card mt-4">
-    <div class="card-header"><h6 class="mb-0">Relevant Information</h6></div>
-    <div class="card-body">
+        <!-- Relevant Information -->
+        <div class="card mt-4">
+            <div class="card-header"><h6 class="mb-0">Relevant Information</h6></div>
+            <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-4">Residing in the Project Affected Structure?</dt>
             <dd class="col-sm-8"><?= !empty($profile->residing_in_project_affected) ? 'Yes' : 'No' ?></dd>
@@ -59,13 +62,13 @@ $structures = $structures ?? [];
             </dd>
             <?php endif; ?>
         </dl>
-    </div>
-</div>
+            </div>
+        </div>
 
-<!-- Additional Information -->
-<div class="card mt-4">
-    <div class="card-header"><h6 class="mb-0">Additional Information</h6></div>
-    <div class="card-body">
+        <!-- Additional Information -->
+        <div class="card mt-4">
+            <div class="card-header"><h6 class="mb-0">Additional Information</h6></div>
+            <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-4">Do they own property somewhere else?</dt>
             <dd class="col-sm-8"><?= !empty($profile->own_property_elsewhere) ? 'Yes' : 'No' ?></dd>
@@ -90,13 +93,13 @@ $structures = $structures ?? [];
             <dt class="col-sm-4">HH Income</dt>
             <dd class="col-sm-8"><?= isset($profile->hh_income) && $profile->hh_income !== '' && $profile->hh_income !== null ? htmlspecialchars($profile->hh_income) : '-' ?></dd>
         </dl>
-    </div>
-</div>
+            </div>
+        </div>
 
-<?php if (\Core\Auth::can('view_structure') && !empty($profile->structure_owners)): ?>
-<div class="card mt-4">
-    <div class="card-header"><h6 class="mb-0">Structures</h6></div>
-    <div class="card-body">
+        <?php if (\Core\Auth::can('view_structure') && !empty($profile->structure_owners)): ?>
+        <div class="card mt-4">
+            <div class="card-header"><h6 class="mb-0">Structures</h6></div>
+            <div class="card-body">
         <?php if (empty($structures)): ?>
         <p class="text-muted small mb-0">No structures linked to this profile.</p>
         <?php else: ?>
@@ -155,8 +158,8 @@ $structures = $structures ?? [];
                 </div>
             </div>
         </div>
-    </div>
-</div>
+            </div>
+        </div>
 
 <div class="modal fade" id="profileViewStructureModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -164,6 +167,12 @@ $structures = $structures ?? [];
             <div class="modal-header"><h5 class="modal-title">View Structure</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body" id="profileViewStructureBody"></div>
         </div>
+    </div>
+    </div>
+        <?php endif; ?>
+    </div>
+    <div class="col-lg-4 col-xl-3">
+        <?php $statusLog = []; require __DIR__ . '/../partials/history_sidebar.php'; ?>
     </div>
 </div>
 <?php
@@ -233,5 +242,4 @@ $(function(){
 });
 </script>';
 ?>
-<?php endif; ?>
 <?php $content = ob_get_clean(); $pageTitle = 'View Profile'; $currentPage = 'profile'; require __DIR__ . '/../layout/main.php'; ?>

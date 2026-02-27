@@ -3,6 +3,7 @@ $taggingImages = \App\Models\Structure::parseImages($structure->tagging_images ?
 $structureImages = \App\Models\Structure::parseImages($structure->structure_images ?? '[]');
 $allImageUrls = array_map(function($img) { return \App\Controllers\StructureController::imageUrl($img); }, array_merge($taggingImages, $structureImages));
 $imgIdx = 0;
+$history = $history ?? [];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>View Structure</h2>
@@ -11,8 +12,10 @@ $imgIdx = 0;
         <?php if (\Core\Auth::can('edit_structure')): ?><a href="/structure/edit/<?= (int)$structure->id ?>" class="btn btn-primary">Edit</a><?php endif; ?>
     </div>
 </div>
-<div class="card">
-    <div class="card-body">
+<div class="row">
+    <div class="col-lg-8 col-xl-9">
+        <div class="card">
+            <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">Structure ID</dt>
             <dd class="col-sm-9"><?= htmlspecialchars($structure->strid ?? '') ?></dd>
@@ -45,9 +48,9 @@ $imgIdx = 0;
             <dt class="col-sm-3">Other Details</dt>
             <dd class="col-sm-9"><?= nl2br(htmlspecialchars($structure->other_details ?? '-')) ?></dd>
         </dl>
-    </div>
-</div>
-<div class="modal fade" id="structViewImgModal" tabindex="-1">
+            </div>
+        </div>
+        <div class="modal fade" id="structViewImgModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
         <div class="modal-content bg-dark">
             <div class="modal-header border-secondary py-2">
@@ -67,6 +70,10 @@ $imgIdx = 0;
                 </div>
             </div>
         </div>
+    </div>
+</div>
+    <div class="col-lg-4 col-xl-3">
+        <?php $statusLog = []; require __DIR__ . '/../partials/history_sidebar.php'; ?>
     </div>
 </div>
 <?php
