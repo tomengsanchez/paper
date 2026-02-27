@@ -41,7 +41,15 @@ php cli/migrate.php
 
 This creates all tables (roles, users, app_settings, role_capabilities, projects, profiles, structures, user_profiles) and runs migration_003 for profile fields. Use `php cli/migrate.php --status` to see migration status.
 
-### 4. Web Server
+### 4. Seed Grievance Options (Recommended)
+
+Seed commonly used default data for the Grievance module (vulnerabilities, respondent types, GRM channels, preferred languages, grievance types, categories):
+
+```bash
+php database/seed_grievance_options.php
+```
+
+Safe to re-run: skips tables that already have data.
 
 **Option A - Document root = `public/`** (recommended)
 - Point your web server document root to the `public/` folder
@@ -51,7 +59,7 @@ This creates all tables (roles, users, app_settings, role_capabilities, projects
 - Ensure `index.php` in root forwards to `public/index.php`
 - Apache: Enable mod_rewrite and ensure `.htaccess` is in `public/` (or adjust RewriteBase)
 
-### 5. Default Login
+### 6. Default Login
 
 - **Username:** admin  
 - **Password:** admin123
@@ -104,8 +112,9 @@ beforeseed.sql, schema.sql, add_app_settings.sql, add_user_email.sql, fix_admin_
 6. README
 Installation steps updated to use migrations instead of importing SQL.
 New installation flow
-Create the database.
-Run php cli/migrate.php.
-Optionally run php database/seed_profiles_structures.php for sample data.
+1. Create the database.
+2. Run php cli/migrate.php.
+3. (Recommended) Run php database/seed_grievance_options.php for commonly used grievance options (vulnerabilities, respondent types, GRM channels, etc.).
+4. Optionally run php database/seed_profiles_structures.php for sample profiles/structures.
 
 testing dev to main
