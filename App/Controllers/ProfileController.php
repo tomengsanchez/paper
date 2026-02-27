@@ -139,6 +139,12 @@ class ProfileController extends Controller
         $this->requireCapability('add_profiles');
         $data = $this->gatherProfileData(null);
         $id = Profile::create($data);
+        $projectId = (int) ($data['project_id'] ?? 0);
+        if ($projectId > 0) {
+            $created = Profile::find($id);
+            $msg = $created ? ('New profile: ' . ($created->papsid ?? '')) : 'New profile on linked project';
+            \App\NotificationService::notifyNewProfile($id, $projectId, $msg);
+        }
         $this->redirect('/profile/view/' . $id);
     }
 

@@ -229,6 +229,10 @@ class GrievanceController extends Controller
         }
         $id = Grievance::create($data);
         GrievanceStatusLog::create($id, 'open', null, '', [], \Core\Auth::id());
+        $projectId = (int) ($data['project_id'] ?? 0);
+        $caseNum = trim($data['grievance_case_number'] ?? '');
+        $msg = $caseNum ? ('New grievance: ' . $caseNum) : ('New grievance #' . $id);
+        \App\NotificationService::notifyNewGrievance($id, $projectId ?: null, $msg);
         $this->processAttachmentCards($id, false);
         $this->redirect('/grievance/view/' . $id);
     }
@@ -420,6 +424,10 @@ class GrievanceController extends Controller
         $attachments = $this->handleStatusUpload();
         Grievance::updateStatus($id, $status, $progressLevel);
         GrievanceStatusLog::create($id, $status, $progressLevel, $note, $attachments, \Core\Auth::id());
+        $projectId = (int) ($grievance->project_id ?? 0);
+        $caseNum = $grievance->grievance_case_number ?? ('#' . $id);
+        $msg = 'Grievance ' . $caseNum . ' status changed to ' . $status;
+        \App\NotificationService::notifyGrievanceStatusChange($id, $projectId ?: null, $msg);
         $this->redirect('/grievance/view/' . $id);
     }
 

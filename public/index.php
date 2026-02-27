@@ -12,6 +12,9 @@ $router->get('/logout', 'AuthController@logout');
 
 // Protected routes
 $router->get('/', 'DashboardController@index');
+$router->get('/account', 'AccountController@index');
+$router->get('/notifications', 'NotificationController@index');
+$router->get('/notifications/click/{id}', 'NotificationController@click');
 $router->get('/profile', 'ProfileController@index');
 $router->get('/profile/view/{id}', 'ProfileController@show');
 $router->get('/profile/create', 'ProfileController@create');
@@ -89,6 +92,7 @@ $router->post('/library/update/{id}', 'LibraryController@update');
 $router->post('/library/delete/{id}', 'LibraryController@delete');
 $router->get('/settings', 'SettingsController@index');
 $router->post('/settings/ui', 'SettingsController@updateUi');
+$router->post('/settings/notifications', 'SettingsController@updateNotifications');
 $router->get('/settings/email', 'EmailSettingsController@index');
 $router->post('/settings/email/update', 'EmailSettingsController@update');
 $router->post('/settings/email/test', 'EmailSettingsController@testMail');
@@ -119,6 +123,7 @@ $router->get('/serve/grievance-card-attachment', 'GrievanceController@serveGriev
 $router->get('/api/projects', 'Api\ApiController@projects');
 $router->get('/api/profiles', 'Api\ApiController@profiles');
 $router->get('/api/profile/{id}/structures', 'Api\ApiController@profileStructures');
+$router->get('/api/notifications', 'Api\ApiController@notifications');
 // API for grievance dashboard aggregates (AJAX)
 $router->get('/api/grievance/dashboard', 'Api\GrievanceController@dashboard');
 

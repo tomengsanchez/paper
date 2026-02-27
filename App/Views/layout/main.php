@@ -45,6 +45,21 @@ $currentPage = $currentPage ?? '';
         .topnav .dropdown-item:hover { background: var(--nav-active-bg); color: var(--nav-text-hover); }
         .topnav .dropdown-item.active { background: var(--nav-active-bg); color: var(--nav-text-hover); }
         .topnav .nav-spacer { flex: 1; }
+        .user-dropdown .dropdown-toggle { color: var(--nav-text); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; }
+        .user-dropdown .dropdown-toggle:hover { background: var(--nav-active-bg); color: var(--nav-text-hover); }
+        .user-dropdown .dropdown-menu { min-width: 160px; }
+        .header-user-dropdown .dropdown-toggle { color: #6b7280; text-decoration: none; padding: 0.35rem 0.75rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem; }
+        .header-user-dropdown .dropdown-toggle:hover { background: #f3f4f6; color: #374151; }
+        /* Notification icon */
+        .notification-dropdown .dropdown-toggle { color: var(--nav-text); text-decoration: none; padding: 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; position: relative; }
+        .notification-dropdown .dropdown-toggle:hover { background: var(--nav-active-bg); color: var(--nav-text-hover); }
+        .topnav .notification-dropdown .dropdown-toggle { color: var(--nav-text); }
+        .topnav .notification-dropdown .dropdown-toggle:hover { color: var(--nav-text-hover); }
+        .header .notification-dropdown .dropdown-toggle { color: #6b7280; }
+        .header .notification-dropdown .dropdown-toggle:hover { background: #f3f4f6; color: #374151; }
+        .notification-dropdown .dropdown-menu { min-width: 280px; max-height: 360px; overflow-y: auto; }
+        .notification-dropdown .dropdown-header { font-size: 0.8rem; font-weight: 600; }
+        .notification-badge { position: absolute; top: 4px; right: 3px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; border-radius: 999px; background: #ef4444; color: #f9fafb; text-align: center; display: none; }
         /* Theme overrides */
         body.ui-theme-green { --nav-bg: #064e3b; --nav-border: #047857; --nav-active-bg: #047857; --nav-sub-bg: #022c22; }
         body.ui-theme-violet { --nav-bg: #4c1d95; --nav-border: #6d28d9; --nav-active-bg: #6d28d9; --nav-sub-bg: #2e1065; }
@@ -124,8 +139,30 @@ $currentPage = $currentPage ?? '';
         </div>
         <?php endif; ?>
         <span class="nav-spacer"></span>
-        <span class="text-muted small"><?= htmlspecialchars(\Core\Auth::user()->username ?? '') ?></span>
-        <a href="/logout" class="nav-link">Logout</a>
+        <div class="dropdown notification-dropdown">
+            <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/></svg>
+                <span class="notification-badge" id="notification-count">0</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" id="notification-dropdown-menu">
+                <li><h6 class="dropdown-header">Notifications</h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <li id="notification-list"><span class="dropdown-item text-muted text-center py-3">Loading...</span></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-center small" href="/notifications">View all notifications</a></li>
+            </ul>
+        </div>
+        <div class="dropdown user-dropdown">
+            <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <?= htmlspecialchars(\Core\Auth::user()->display_name ?: \Core\Auth::user()->username ?? '') ?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/account">My Profile</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/logout">Logout</a></li>
+            </ul>
+        </div>
     </nav>
 <?php else: ?>
     <aside class="sidebar">
@@ -196,8 +233,32 @@ $currentPage = $currentPage ?? '';
     <div class="main-wrap <?= $uiLayout === 'top' ? 'ui-layout-top' : '' ?>">
         <?php if ($uiLayout !== 'top'): ?>
         <header class="header">
-            <span class="text-muted"><?= htmlspecialchars(\Core\Auth::user()->username ?? '') ?> (<?= htmlspecialchars(\Core\Auth::user()->role_name ?? '') ?>)</span>
-            <a href="/logout" class="btn btn-outline-secondary btn-sm">Logout</a>
+            <span class="text-muted"></span>
+            <div class="d-flex align-items-center gap-1">
+                <div class="dropdown notification-dropdown">
+                    <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/></svg>
+                        <span class="notification-badge" id="notification-count">0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" id="notification-dropdown-menu">
+                        <li><h6 class="dropdown-header">Notifications</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li id="notification-list"><span class="dropdown-item text-muted text-center py-3">Loading...</span></li>
+                    </ul>
+                </div>
+                <div class="dropdown header-user-dropdown">
+                <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <?= htmlspecialchars(\Core\Auth::user()->display_name ?: \Core\Auth::user()->username ?? '') ?>
+                    <small class="text-muted">(<?= htmlspecialchars(\Core\Auth::user()->role_name ?? '') ?>)</small>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/account">My Profile</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+            </div>
         </header>
         <?php endif; ?>
         <main class="content">
@@ -209,7 +270,55 @@ $currentPage = $currentPage ?? '';
     </div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>
-    $(function(){ $('.nav-parent').on('click', function(){ $(this).toggleClass('open'); }); });
+    $(function(){
+        $('.nav-parent').on('click', function(){ $(this).toggleClass('open'); });
+
+        function updateNotificationBadge(count) {
+            var $badge = $('#notification-count');
+            if (!$badge.length) return;
+            if (count > 0) {
+                $badge.text(count > 99 ? '99+' : count);
+                $badge.show();
+            } else {
+                $badge.hide();
+            }
+        }
+
+        function loadNotificationsList() {
+            var $list = $('#notification-list');
+            $list.html('<span class="dropdown-item text-muted text-center py-2">Loading...</span>');
+            $.getJSON('/api/notifications').done(function(data){
+                if (!data || data.length === 0) {
+                    $list.html('<span class="dropdown-item text-muted text-center py-3">No new notifications</span>');
+                    updateNotificationBadge(0);
+                    return;
+                }
+                var html = '';
+                data.forEach(function(n){
+                    var url = n.url || '/notifications/click/' + n.id;
+                    html += '<a class="dropdown-item py-2 d-block" href="' + url + '">' + (n.message || 'Notification') + '<br><small class="text-muted">' + (n.created_at || '') + '</small></a>';
+                });
+                $list.html(html);
+                updateNotificationBadge(data.length);
+            }).fail(function(){
+                $list.html('<span class="dropdown-item text-muted text-center py-3">Unable to load notifications</span>');
+            });
+        }
+
+        function pollNotificationCount() {
+            $.getJSON('/api/notifications').done(function(data){
+                updateNotificationBadge(data && data.length ? data.length : 0);
+            });
+        }
+
+        $('.notification-dropdown').on('show.bs.dropdown', function(){
+            loadNotificationsList();
+        });
+
+        // Initial poll + interval for near-realtime updates
+        pollNotificationCount();
+        setInterval(pollNotificationCount, 15000);
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>

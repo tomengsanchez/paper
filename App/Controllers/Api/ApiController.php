@@ -6,6 +6,7 @@ use Core\Auth;
 use Core\Database;
 use App\Models\Structure;
 use App\UserProjects;
+use App\NotificationService;
 
 class ApiController extends Controller
 {
@@ -105,6 +106,29 @@ class ApiController extends Controller
                 'other_details' => $s->other_details,
                 'tagging_images' => $s->tagging_images,
                 'structure_images' => $s->structure_images,
+            ];
+        }
+        $this->json($out);
+    }
+
+    public function notifications(): void
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            $this->json([]);
+            return;
+        }
+        $list = NotificationService::getForUser($userId, 30);
+        $out = [];
+        foreach ($list as $n) {
+            $out[] = [
+                'id' => (int) $n->id,
+                'type' => $n->type,
+                'related_type' => $n->related_type,
+                'related_id' => (int) $n->related_id,
+                'message' => $n->message ?? '',
+                'created_at' => $n->created_at ?? '',
+                'url' => '/notifications/click/' . (int) $n->id,
             ];
         }
         $this->json($out);

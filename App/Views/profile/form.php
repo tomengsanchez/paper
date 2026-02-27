@@ -319,7 +319,7 @@ $(function(){
     $(document).on('click', '.structure-delete', function() {
         if (!confirm('Delete this structure?')) return;
         var id = $(this).data('id');
-        var token = $('meta[name="csrf-token"]').attr('content');
+        var token = $('meta[name=csrf-token]').attr('content');
         $.post('/api/structure/delete/' + id, { csrf_token: token }).done(function() { loadStructures(); });
     });
     $(document).on('click', '.struct-img-thumb', function(e) {
@@ -340,7 +340,7 @@ $(function(){
         var fid = $('input[name=structure_id]').val();
         var url = fid ? '/api/structure/update/' + fid : '/api/structure/store';
         var fd = new FormData(this);
-        fd.append('csrf_token', $('meta[name="csrf-token"]').attr('content') || '');
+        fd.append('csrf_token', $('meta[name=csrf-token]').attr('content') || '');
         removedTagging.forEach(function(p){ fd.append('tagging_images_remove[]', p); });
         removedStructure.forEach(function(p){ fd.append('structure_images_remove[]', p); });
         $.ajax({ url: url, type: 'POST', data: fd, processData: false, contentType: false })
