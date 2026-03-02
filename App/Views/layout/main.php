@@ -128,10 +128,11 @@ $currentPage = $currentPage ?? '';
         </div>
         <?php endif; ?>
         <?php if (\Core\Auth::isAdmin()): ?>
-        <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail', 'development']); ?>
+        <?php $systemActive = in_array($currentPage, ['general', 'email-settings', 'debug-log', 'audit-trail', 'development']); ?>
         <div class="dropdown">
             <a href="#" class="nav-link dropdown-toggle <?= $systemActive ? 'active' : '' ?>" data-bs-toggle="dropdown">System</a>
             <ul class="dropdown-menu">
+                <li><a class="dropdown-item <?= $currentPage === 'general' ? 'active' : '' ?>" href="/system/general">General</a></li>
                 <li><a class="dropdown-item <?= $currentPage === 'email-settings' ? 'active' : '' ?>" href="/settings/email">SMTP settings</a></li>
                 <li><a class="dropdown-item <?= $currentPage === 'debug-log' ? 'active' : '' ?>" href="/system/debug-log">Debug log</a></li>
                 <li><a class="dropdown-item <?= $currentPage === 'audit-trail' ? 'active' : '' ?>" href="/system/audit-trail">Audit Trail</a></li>
@@ -229,9 +230,10 @@ $currentPage = $currentPage ?? '';
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::isAdmin()): ?>
-            <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail', 'development']); ?>
+            <?php $systemActive = in_array($currentPage, ['general', 'email-settings', 'debug-log', 'audit-trail', 'development']); ?>
             <div class="nav-parent <?= $systemActive ? 'open' : '' ?>">System</div>
             <div class="nav-sub">
+                <a href="/system/general" class="<?= $currentPage === 'general' ? 'active' : '' ?>">General</a>
                 <a href="/settings/email" class="<?= $currentPage === 'email-settings' ? 'active' : '' ?>">SMTP settings</a>
                 <a href="/system/debug-log" class="<?= $currentPage === 'debug-log' ? 'active' : '' ?>">Debug log</a>
                 <a href="/system/audit-trail" class="<?= $currentPage === 'audit-trail' ? 'active' : '' ?>">Audit Trail</a>
