@@ -19,7 +19,8 @@ $currentPage = $currentPage ?? '';
             --nav-bg: #1e293b; --nav-border: #334155; --nav-text: #94a3b8; --nav-text-hover: #f8fafc; --nav-active-bg: #334155; --nav-sub-bg: #0f172a; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f6fa; }
         .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: var(--nav-bg); color: var(--nav-text); z-index: 1000; }
-        .sidebar .brand { padding: 1rem 1.25rem; font-weight: 700; color: var(--nav-text-hover); border-bottom: 1px solid var(--nav-border); }
+        .sidebar .brand { display: block; padding: 1rem 1.25rem; font-weight: 700; color: var(--nav-text-hover); border-bottom: 1px solid var(--nav-border); text-decoration: none; transition: opacity 0.2s; }
+.sidebar .brand:hover { color: var(--nav-text-hover); opacity: 0.9; }
         .sidebar nav a { display: block; padding: 0.75rem 1.25rem; color: var(--nav-text); text-decoration: none; transition: all 0.2s; }
         .sidebar nav a:hover, .sidebar nav a.active { background: var(--nav-active-bg); color: var(--nav-text-hover); }
         .sidebar .nav-parent { padding: 0.75rem 1.25rem; color: var(--nav-text); cursor: pointer; transition: all 0.2s; user-select: none; }
@@ -175,7 +176,7 @@ $currentPage = $currentPage ?? '';
     </nav>
 <?php else: ?>
     <aside class="sidebar">
-        <div class="brand">PAPeR</div>
+        <a href="/" class="brand">PAPeR</a>
         <nav class="py-2">
             <?php if (\Core\Auth::can('view_profiles')): ?>
             <a href="/profile" class="<?= $currentPage === 'profile' ? 'active' : '' ?>">Profile</a>
