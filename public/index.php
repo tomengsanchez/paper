@@ -127,6 +127,8 @@ $router->get('/api/projects', 'Api\ApiController@projects');
 $router->get('/api/profiles', 'Api\ApiController@profiles');
 $router->get('/api/profile/{id}/structures', 'Api\ApiController@profileStructures');
 $router->get('/api/notifications', 'Api\ApiController@notifications');
+// API for main dashboard aggregates (Profile, Structure, Grievance, Users)
+$router->get('/api/dashboard', 'Api\DashboardController@index');
 // API for grievance dashboard aggregates (AJAX)
 $router->get('/api/grievance/dashboard', 'Api\GrievanceController@dashboard');
 
