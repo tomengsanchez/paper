@@ -234,14 +234,14 @@ class GrievanceController extends Controller
         $inProgressLevels = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
         // Count grievances that have exceeded days_to_address based on when they
-        // entered the current in-progress level (not the original date_recorded).
+        // entered the current in-progress level (not the original date_recorded). Uses DevClock for testing.
         $needsEscalationWhere = [
             "g.status = 'in_progress'",
             "pl.days_to_address IS NOT NULL",
             "pl.days_to_address > 0",
-            "DATEDIFF(CURDATE(), DATE(l.level_started_at)) > pl.days_to_address",
+            "DATEDIFF(?, DATE(l.level_started_at)) > pl.days_to_address",
         ];
-        $needsEscalationParams = [];
+        $needsEscalationParams = [\App\DevClock::today()];
         if ($selectedProjectId > 0) {
             $needsEscalationWhere[] = 'g.project_id = ?';
             $needsEscalationParams[] = $selectedProjectId;

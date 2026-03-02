@@ -121,11 +121,12 @@ class DashboardController extends Controller
             ) l ON l.grievance_id = g.id AND l.progress_level = g.progress_level
             WHERE g.status = 'in_progress'
               AND pl.days_to_address IS NOT NULL AND pl.days_to_address > 0
-              AND DATEDIFF(CURDATE(), DATE(l.level_started_at)) > pl.days_to_address
+              AND DATEDIFF(?, DATE(l.level_started_at)) > pl.days_to_address
               {$where}
         ";
+        $escParams = array_merge([\App\DevClock::today()], $params);
         $stmt = $db->prepare($escSql);
-        $stmt->execute($params);
+        $stmt->execute($escParams);
         $escalations = (int) $stmt->fetchColumn();
 
         return [

@@ -1,8 +1,13 @@
 <?php
 $settings = $settings ?? ['status_check' => false];
+$simulatedOverride = $simulatedOverride ?? null;
 $saved = !empty($_SESSION['development_saved']);
+$message = $_SESSION['development_message'] ?? null;
 if ($saved) {
     unset($_SESSION['development_saved']);
+}
+if ($message !== null) {
+    unset($_SESSION['development_message']);
 }
 ob_start();
 ?>
@@ -11,8 +16,39 @@ ob_start();
 </div>
 
 <?php if ($saved): ?>
-<div class="alert alert-success alert-dismissible fade show">Development preferences saved.</div>
+<div class="alert alert-success alert-dismissible fade show"><?= $message !== null ? htmlspecialchars($message) : 'Development preferences saved.' ?></div>
 <?php endif; ?>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Simulated date</h5>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted mb-3">Makakatulong ito para sa pag-check kung nasusunod ba ang escalation kapag umaandar na ang days na kailangan ito ma-escalate, at makakatulong din sa future modules na gagawin.</p>
+        <?php if ($simulatedOverride !== null): ?>
+        <div class="alert alert-info py-2 mb-3">
+            <strong>Current simulated date:</strong> <?= htmlspecialchars($simulatedOverride) ?>
+        </div>
+        <form method="post" action="/system/development/clear-simulated-time" class="d-inline">
+            <?= \Core\Csrf::field() ?>
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Use real date</button>
+        </form>
+        <?php endif; ?>
+        <form method="post" action="/system/development/set-simulated-time" class="mt-2">
+            <?= \Core\Csrf::field() ?>
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label for="simulated_date" class="form-label small mb-0">Set simulated date</label>
+                    <input type="date" name="simulated_date" id="simulated_date" class="form-control form-control-sm" value="<?= $simulatedOverride ?? '' ?>">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">Set</button>
+                </div>
+            </div>
+            <p class="small text-muted mb-0 mt-1">Leave empty and click Set to clear. Escalation and other date-based logic will use this date as "today".</p>
+        </form>
+    </div>
+</div>
 
 <div class="card">
     <div class="card-header">

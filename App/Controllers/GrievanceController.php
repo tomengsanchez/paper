@@ -837,7 +837,7 @@ class GrievanceController extends Controller
             return null;
         }
 
-        $now = new \DateTimeImmutable('now');
+        $now = \App\DevClock::now();
         $daysOpen = (int) $started->diff($now)->format('%a');
         if ($daysOpen <= $daysTarget) {
             return null;

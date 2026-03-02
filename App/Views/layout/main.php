@@ -3,6 +3,8 @@ $ui = \App\UserUiSettings::get();
 $uiTheme = $ui['theme'] ?? \App\UserUiSettings::THEME_DEFAULT;
 $uiLayout = $ui['layout'] ?? \App\UserUiSettings::LAYOUT_SIDEBAR;
 $currentPage = $currentPage ?? '';
+$devClockSimulated = \Core\Auth::id() && \App\DevClock::isOverridden();
+$devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,7 +18,7 @@ $currentPage = $currentPage ?? '';
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
         :root { --sidebar-width: 240px; --header-height: 56px; font-size: 13px;
-            --nav-bg: #1e293b; --nav-border: #334155; --nav-text: #94a3b8; --nav-text-hover: #f8fafc; --nav-active-bg: #334155; --nav-sub-bg: #0f172a; }
+            --nav-bg: #1e293b; --nav-border: #334155; --nav-text: #cbd5f5; --nav-text-hover: #f9fafb; --nav-active-bg: #334155; --nav-sub-bg: #0f172a; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f6fa; }
         .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: var(--nav-bg); color: var(--nav-text); z-index: 1000; }
         .sidebar .brand { display: block; padding: 1rem 1.25rem; font-weight: 700; color: var(--nav-text-hover); border-bottom: 1px solid var(--nav-border); text-decoration: none; transition: opacity 0.2s; }
@@ -61,6 +63,11 @@ $currentPage = $currentPage ?? '';
         .notification-dropdown .dropdown-menu { min-width: 280px; max-height: 360px; overflow-y: auto; }
         .notification-dropdown .dropdown-header { font-size: 0.8rem; font-weight: 600; }
         .notification-badge { position: absolute; top: 4px; right: 3px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; border-radius: 999px; background: #ef4444; color: #f9fafb; text-align: center; display: none; }
+        .nav-datetime { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--nav-text-hover); white-space: nowrap; }
+        .nav-datetime .nav-live-datetime { font-variant-numeric: tabular-nums; }
+        .nav-datetime-simulated { font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px; background: #fbbf24; color: #111827; box-shadow: 0 0 0 1px rgba(15,23,42,0.35); }
+        .header .header-datetime { font-size: 0.8rem; color: #6b7280; margin-right: 0.5rem; }
+        .header .header-datetime .nav-datetime-simulated { background: #fef3c7; color: #92400e; }
         /* Theme overrides */
         body.ui-theme-green { --nav-bg: #064e3b; --nav-border: #047857; --nav-active-bg: #047857; --nav-sub-bg: #022c22; }
         body.ui-theme-violet { --nav-bg: #4c1d95; --nav-border: #6d28d9; --nav-active-bg: #6d28d9; --nav-sub-bg: #2e1065; }
@@ -155,6 +162,12 @@ $currentPage = $currentPage ?? '';
         </div>
         <?php endif; ?>
         <span class="nav-spacer"></span>
+        <span class="nav-datetime" id="nav-datetime-wrap">
+            <span class="nav-live-datetime" id="nav-live-datetime" aria-live="polite"></span>
+            <?php if ($devClockSimulated && $devClockDate): ?>
+            <span class="nav-datetime-simulated" title="App date is simulated for testing">Simulated: <?= htmlspecialchars($devClockDate) ?></span>
+            <?php endif; ?>
+        </span>
         <div class="dropdown notification-dropdown">
             <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/></svg>
@@ -258,7 +271,12 @@ $currentPage = $currentPage ?? '';
     <div class="main-wrap <?= $uiLayout === 'top' ? 'ui-layout-top' : '' ?>">
         <?php if ($uiLayout !== 'top'): ?>
         <header class="header">
-            <span class="text-muted"></span>
+            <span class="header-datetime text-muted" id="header-datetime-wrap">
+                <span class="nav-live-datetime" id="header-live-datetime" aria-live="polite"></span>
+                <?php if ($devClockSimulated && $devClockDate): ?>
+                <span class="nav-datetime-simulated" title="App date is simulated for testing">Simulated: <?= htmlspecialchars($devClockDate) ?></span>
+                <?php endif; ?>
+            </span>
             <div class="d-flex align-items-center gap-1">
                 <div class="dropdown notification-dropdown">
                     <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
@@ -320,6 +338,24 @@ $currentPage = $currentPage ?? '';
     </div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>
+    (function(){
+        function formatNavDateTime() {
+            var d = new Date();
+            var day = d.getDate(), m = d.getMonth(), y = d.getFullYear();
+            var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m];
+            var h = d.getHours(), min = d.getMinutes(), sec = d.getSeconds();
+            var hh = h < 10 ? '0' + h : h;
+            var mm = min < 10 ? '0' + min : min;
+            var ss = sec < 10 ? '0' + sec : sec;
+            return day + ' ' + mon + ' ' + y + ', ' + hh + ':' + mm + ':' + ss;
+        }
+        function updateNavClocks() {
+            var s = formatNavDateTime();
+            document.querySelectorAll('.nav-live-datetime').forEach(function(el){ el.textContent = s; });
+        }
+        updateNavClocks();
+        setInterval(updateNavClocks, 1000);
+    })();
     $(function(){
         $('.nav-parent').on('click', function(){ $(this).toggleClass('open'); });
 
