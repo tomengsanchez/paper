@@ -99,8 +99,11 @@ $router->post('/settings/email/test', 'EmailSettingsController@testMail');
 $router->get('/settings/security', 'SecuritySettingsController@index');
 $router->post('/settings/security/update', 'SecuritySettingsController@update');
 
-// System (Admin) — Audit Trail
+// System (Admin) — Audit Trail, Debug Log, Development
 $router->get('/system/audit-trail', 'AuditTrailController@index');
+$router->get('/system/debug-log', 'DebugLogController@index');
+$router->get('/system/development', 'DevelopmentController@index');
+$router->post('/system/development/save', 'DevelopmentController@save');
 
 // User Management (Admin) — User Profile merged into Users
 $router->get('/users', 'UserController@index');

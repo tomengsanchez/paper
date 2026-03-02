@@ -66,6 +66,11 @@ $currentPage = $currentPage ?? '';
         body.ui-theme-violet { --nav-bg: #4c1d95; --nav-border: #6d28d9; --nav-active-bg: #6d28d9; --nav-sub-bg: #2e1065; }
         body.ui-theme-amber { --nav-bg: #78350f; --nav-border: #b45309; --nav-active-bg: #b45309; --nav-sub-bg: #451a03; }
         body.ui-theme-slate { --nav-bg: #334155; --nav-border: #475569; --nav-active-bg: #475569; --nav-sub-bg: #1e293b; }
+        /* Development: system status footer */
+        .dev-status-footer { font-size: 11px; color: #64748b; background: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 0.35rem 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+        .dev-status-footer a { color: #475569; }
+        .dev-status-footer .dev-stat { white-space: nowrap; }
+        .dev-status-footer .dev-stat strong { color: #475569; }
     </style>
 </head>
 <body class="ui-theme-<?= htmlspecialchars($uiTheme) ?> ui-layout-<?= htmlspecialchars($uiLayout) ?>">
@@ -123,13 +128,14 @@ $currentPage = $currentPage ?? '';
         </div>
         <?php endif; ?>
         <?php if (\Core\Auth::isAdmin()): ?>
-        <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail']); ?>
+        <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail', 'development']); ?>
         <div class="dropdown">
             <a href="#" class="nav-link dropdown-toggle <?= $systemActive ? 'active' : '' ?>" data-bs-toggle="dropdown">System</a>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item <?= $currentPage === 'email-settings' ? 'active' : '' ?>" href="/settings/email">SMTP settings</a></li>
-                <li><a class="dropdown-item <?= $currentPage === 'debug-log' ? 'active' : '' ?>" href="#">Debug log</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'debug-log' ? 'active' : '' ?>" href="/system/debug-log">Debug log</a></li>
                 <li><a class="dropdown-item <?= $currentPage === 'audit-trail' ? 'active' : '' ?>" href="/system/audit-trail">Audit Trail</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'development' ? 'active' : '' ?>" href="/system/development">Development</a></li>
             </ul>
         </div>
         <?php endif; ?>
@@ -223,12 +229,13 @@ $currentPage = $currentPage ?? '';
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::isAdmin()): ?>
-            <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail']); ?>
+            <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail', 'development']); ?>
             <div class="nav-parent <?= $systemActive ? 'open' : '' ?>">System</div>
             <div class="nav-sub">
                 <a href="/settings/email" class="<?= $currentPage === 'email-settings' ? 'active' : '' ?>">SMTP settings</a>
-                <a href="#" class="<?= $currentPage === 'debug-log' ? 'active' : '' ?>">Debug log</a>
+                <a href="/system/debug-log" class="<?= $currentPage === 'debug-log' ? 'active' : '' ?>">Debug log</a>
                 <a href="/system/audit-trail" class="<?= $currentPage === 'audit-trail' ? 'active' : '' ?>">Audit Trail</a>
+                <a href="/system/development" class="<?= $currentPage === 'development' ? 'active' : '' ?>">Development</a>
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
@@ -286,6 +293,28 @@ $currentPage = $currentPage ?? '';
             <?php endif; ?>
             <?= $content ?? '' ?>
         </main>
+        <?php
+        if (\Core\Auth::id() && \App\DevelopmentSettings::isStatusCheckEnabled()) {
+            $queries = \Core\SystemDebug::getQueries();
+            $queryCount = count($queries);
+            $queryTimeMs = 0;
+            foreach ($queries as $q) { $queryTimeMs += (float)($q['duration'] ?? 0); }
+            $loadTimeMs = \Core\SystemDebug::getLoadTimeMs();
+            $classesCount = count(\Core\SystemDebug::getClassesLoaded());
+            $functionsCount = count(\Core\SystemDebug::getDefinedFunctions());
+            $memPeak = function_exists('memory_get_peak_usage') ? memory_get_peak_usage(true) : 0;
+            $memStr = $memPeak >= 1048576 ? round($memPeak / 1048576, 2) . ' MB' : round($memPeak / 1024, 1) . ' KB';
+        ?>
+        <footer class="dev-status-footer" aria-label="Development system status">
+            <span class="dev-stat"><strong>DB:</strong> <?= (int)$queryCount ?> query(ies), <?= number_format($queryTimeMs, 1) ?> ms</span>
+            <span class="dev-stat"><strong>Load:</strong> <?= number_format($loadTimeMs, 1) ?> ms</span>
+            <span class="dev-stat"><strong>Classes:</strong> <?= (int)$classesCount ?></span>
+            <span class="dev-stat"><strong>Functions (user):</strong> <?= (int)$functionsCount ?></span>
+            <span class="dev-stat"><strong>PHP:</strong> <?= htmlspecialchars(PHP_VERSION) ?></span>
+            <span class="dev-stat"><strong>Memory peak:</strong> <?= $memStr ?></span>
+            <a href="/system/development">Development</a>
+        </footer>
+        <?php } ?>
     </div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>

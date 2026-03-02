@@ -23,16 +23,26 @@ class Database
                     self::$config['dbname'],
                     self::$config['charset']
                 );
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ];
             try {
-                self::$instance = new PDO(
-                    $dsn,
-                    self::$config['username'],
-                    self::$config['password'],
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    ]
-                );
+                if (SystemDebug::isCollecting()) {
+                    self::$instance = new LoggingPDO(
+                        $dsn,
+                        self::$config['username'],
+                        self::$config['password'],
+                        $options
+                    );
+                } else {
+                    self::$instance = new PDO(
+                        $dsn,
+                        self::$config['username'],
+                        self::$config['password'],
+                        $options
+                    );
+                }
             } catch (PDOException $e) {
                 Logger::database($e->getMessage(), [
                     'dsn' => $dsn ?? '',
