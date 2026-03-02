@@ -78,6 +78,7 @@ class UserController extends Controller
         $stmt->execute([$username, $email ?: null, $displayName ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId]);
         $userId = (int) $db->lastInsertId();
         $this->saveUserProjects($db, $userId, $projectIds);
+        \App\AuditLog::record('user', $userId, 'created');
         $this->redirect('/users/view/' . $userId);
     }
 
@@ -93,6 +94,7 @@ class UserController extends Controller
             return;
         }
         $linkedProjects = $this->getLinkedProjects($db, $id);
+        \App\AuditLog::record('user', (int) $id, 'viewed');
         $this->view('users/view', ['user' => $user, 'linkedProjects' => $linkedProjects]);
     }
 
@@ -125,6 +127,13 @@ class UserController extends Controller
             ? array_map('intval', array_filter($_POST['project_ids'])) : [];
 
         $db = Database::getInstance();
+        $stmt = $db->prepare('SELECT username, email, display_name, role_id FROM users WHERE id = ?');
+        $stmt->execute([$id]);
+        $old = $stmt->fetch(\PDO::FETCH_OBJ);
+        if (!$old) {
+            $this->redirect('/users');
+            return;
+        }
         if (!empty($password)) {
             $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, password_hash = ?, role_id = ? WHERE id = ?');
             $stmt->execute([$username, $email ?: null, $displayName ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId, $id]);
@@ -133,6 +142,22 @@ class UserController extends Controller
             $stmt->execute([$username, $email ?: null, $displayName ?: null, $roleId, $id]);
         }
         $this->saveUserProjects($db, $id, $projectIds);
+        $changes = [];
+        if ((string)($old->username ?? '') !== (string)$username) {
+            $changes['username'] = ['from' => $old->username, 'to' => $username];
+        }
+        if ((string)($old->email ?? '') !== (string)$email) {
+            $changes['email'] = ['from' => $old->email, 'to' => $email];
+        }
+        if ((string)($old->display_name ?? '') !== (string)$displayName) {
+            $changes['display_name'] = ['from' => $old->display_name, 'to' => $displayName];
+        }
+        if ((int)($old->role_id ?? 0) !== $roleId) {
+            $changes['role_id'] = ['from' => $old->role_id, 'to' => $roleId];
+        }
+        if (!empty($changes)) {
+            \App\AuditLog::record('user', (int) $id, 'updated', $changes);
+        }
         $this->redirect('/users/view/' . $id);
     }
 

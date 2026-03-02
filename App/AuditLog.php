@@ -52,5 +52,74 @@ class AuditLog
         }
         return $rows;
     }
+
+    /**
+     * Paginated list for Audit Trail (all modules: user, profile, structure, grievance).
+     *
+     * @param array $filters ['module' => entity_type, 'from' => date, 'to' => date, 'user_id' => created_by]
+     * @return array{items: array, total: int, page: int, per_page: int, total_pages: int}
+     */
+    public static function listForTrail(array $filters, int $page = 1, int $perPage = 25): array
+    {
+        $db = self::db();
+        $page = max(1, (int) $page);
+        $perPage = max(1, min(100, (int) $perPage));
+
+        $where = ['1=1'];
+        $params = [];
+
+        $module = $filters['module'] ?? '';
+        if (in_array($module, ['user', 'profile', 'structure', 'grievance'], true)) {
+            $where[] = 'a.entity_type = :entity_type';
+            $params['entity_type'] = $module;
+        }
+
+        if (!empty($filters['from'])) {
+            $where[] = 'a.created_at >= :from';
+            $params['from'] = $filters['from'] . ' 00:00:00';
+        }
+        if (!empty($filters['to'])) {
+            $where[] = 'a.created_at <= :to';
+            $params['to'] = $filters['to'] . ' 23:59:59';
+        }
+        if (!empty($filters['user_id'])) {
+            $where[] = 'a.created_by = :created_by';
+            $params['created_by'] = (int) $filters['user_id'];
+        }
+
+        $whereSql = implode(' AND ', $where);
+        $offset = ($page - 1) * $perPage;
+
+        $sql = "
+            SELECT a.id, a.entity_type, a.entity_id, a.action, a.changes, a.created_at, a.created_by,
+                   u.username AS created_by_name, u.display_name AS created_by_display_name
+            FROM audit_log a
+            LEFT JOIN users u ON u.id = a.created_by
+            WHERE {$whereSql}
+            ORDER BY a.created_at DESC, a.id DESC
+            LIMIT {$perPage} OFFSET {$offset}
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
+
+        $countSql = "SELECT COUNT(*) FROM audit_log a WHERE {$whereSql}";
+        $stmtCount = $db->prepare($countSql);
+        $stmtCount->execute($params);
+        $total = (int) $stmtCount->fetchColumn();
+        $totalPages = (int) ceil($total / $perPage);
+
+        foreach ($items as $row) {
+            $row->changes = $row->changes ? (json_decode($row->changes, true) ?: []) : [];
+        }
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => $totalPages,
+        ];
+    }
 }
 

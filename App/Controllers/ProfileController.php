@@ -147,6 +147,17 @@ class ProfileController extends Controller
             \App\NotificationService::notifyNewProfile($id, $projectId, $msg);
         }
         AuditLog::record('profile', $id, 'created');
+        $attachKeys = ['residing_in_project_affected_attachments', 'structure_owners_attachments', 'if_not_structure_owner_attachments', 'own_property_elsewhere_attachments', 'availed_government_housing_attachments'];
+        $sections = [];
+        $labels = ['residing_in_project_affected_attachments' => 'residing_in_project_affected', 'structure_owners_attachments' => 'structure_owners', 'if_not_structure_owner_attachments' => 'if_not_structure_owner', 'own_property_elsewhere_attachments' => 'own_property_elsewhere', 'availed_government_housing_attachments' => 'availed_government_housing'];
+        foreach ($attachKeys as $k) {
+            if (!empty(Profile::parseAttachments($data[$k] ?? '[]'))) {
+                $sections[] = $labels[$k];
+            }
+        }
+        if (!empty($sections)) {
+            AuditLog::record('profile', $id, 'attachments_uploaded', ['sections' => $sections]);
+        }
         $this->redirect('/profile/view/' . $id);
     }
 
@@ -160,6 +171,7 @@ class ProfileController extends Controller
         }
         $structures = \Core\Auth::can('view_structure') ? Structure::byOwner($profile->id) : [];
         $history = \App\AuditLog::for('profile', $profile->id);
+        AuditLog::record('profile', $profile->id, 'viewed');
         $this->view('profile/view', ['profile' => $profile, 'structures' => $structures, 'history' => $history]);
     }
 
@@ -223,6 +235,24 @@ class ProfileController extends Controller
                 continue;
             }
             $changes[$field] = ['from' => $old, 'to' => $new];
+        }
+        $attachmentFields = [
+            'residing_in_project_affected_attachments' => 'residing_in_project_affected',
+            'structure_owners_attachments' => 'structure_owners',
+            'if_not_structure_owner_attachments' => 'if_not_structure_owner',
+            'own_property_elsewhere_attachments' => 'own_property_elsewhere',
+            'availed_government_housing_attachments' => 'availed_government_housing',
+        ];
+        $uploadedSections = [];
+        foreach ($attachmentFields as $jsonKey => $label) {
+            $oldPaths = Profile::parseAttachments($profile->$jsonKey ?? '[]');
+            $newPaths = Profile::parseAttachments($data[$jsonKey] ?? '[]');
+            if (count($newPaths) > count($oldPaths)) {
+                $uploadedSections[] = $label;
+            }
+        }
+        if (!empty($uploadedSections)) {
+            AuditLog::record('profile', $id, 'attachments_uploaded', ['sections' => $uploadedSections]);
         }
         if (!empty($changes)) {
             AuditLog::record('profile', $id, 'updated', $changes);

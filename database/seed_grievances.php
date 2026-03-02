@@ -217,6 +217,8 @@ if ($u) $firstUserId = (int) $u->id;
 $statuses = ['open', 'in_progress', 'closed'];
 $genders = ['Male', 'Female', 'Others', 'Prefer not to say'];
 
+$auditStmt = $db->prepare('INSERT INTO audit_log (entity_type, entity_id, action, changes, created_by) VALUES (?, ?, ?, ?, ?)');
+
 echo "Projects: " . count($projectIds) . " | Profiles: " . count($profiles) . "\n";
 echo "Options: Vuln=" . count($vulnerabilities) . " Resp=" . count($respondentTypes) . " GRM=" . count($grmChannels) . " Lang=" . count($preferredLanguages) . " Types=" . count($grievanceTypes) . " Cat=" . count($grievanceCategories) . " Levels=" . count($progressLevels) . "\n\n";
 
@@ -311,6 +313,12 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
     $gid = Grievance::create($data);
     $created++;
 
+    // Audit log: created
+    $auditStmt->execute(['grievance', $gid, 'created', null, $firstUserId]);
+    if (random_int(0, 3) === 0) {
+        $auditStmt->execute(['grievance', $gid, 'viewed', null, $firstUserId]);
+    }
+
     // Status history: first entry "open" at date_recorded
     $stmtLog = $db->prepare('INSERT INTO grievance_status_log (grievance_id, status, progress_level, note, attachments, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
     $stmtLog->execute([$gid, 'open', null, randomElement(STATUS_NOTES), json_encode([]), $firstUserId, $dateRecorded]);
@@ -341,6 +349,9 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
             $firstUserId,
             $logAt,
         ]);
+        // Audit log: status_changed
+        $statusChanges = json_encode(['status' => ['from' => $currentStatus, 'to' => $nextStatus]]);
+        $auditStmt->execute(['grievance', $gid, 'status_changed', $statusChanges, $firstUserId]);
         $currentStatus = $nextStatus;
     }
 
@@ -357,10 +368,21 @@ for ($i = 0; $i < $SEED_GRIEVANCE_COUNT; $i++) {
             GrievanceAttachment::create($gid, $title, $desc, $seedPlaceholderPath, $a);
             $attachmentsCreated++;
         }
+        $auditStmt->execute(['grievance', $gid, 'attachments_uploaded', json_encode(['count' => $numAttachments]), $firstUserId]);
     }
 
     if (($i + 1) % 100 === 0) {
         echo "  " . ($i + 1) . " / " . $SEED_GRIEVANCE_COUNT . " grievances created.\n";
+    }
+}
+
+// Add some "updated" audit entries for grievances (sample)
+$grievanceIds = $db->query('SELECT id FROM grievances ORDER BY id DESC LIMIT ' . min(50, $created))->fetchAll(\PDO::FETCH_COLUMN);
+$auditUpd = $db->prepare('INSERT INTO audit_log (entity_type, entity_id, action, changes, created_by) VALUES (?, ?, ?, ?, ?)');
+foreach ($grievanceIds as $gid) {
+    if (random_int(0, 2) === 0) {
+        $ch = json_encode(['respondent_full_name' => ['from' => 'Juan Dela Cruz', 'to' => 'Juan dela Cruz'], 'mobile_number' => ['from' => '09120000000', 'to' => '09181234567']]);
+        $auditUpd->execute(['grievance', (int)$gid, 'updated', $ch, $firstUserId]);
     }
 }
 
