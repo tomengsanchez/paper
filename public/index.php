@@ -99,8 +99,15 @@ $router->post('/settings/email/test', 'EmailSettingsController@testMail');
 $router->get('/settings/security', 'SecuritySettingsController@index');
 $router->post('/settings/security/update', 'SecuritySettingsController@update');
 
-// System (Admin) — Audit Trail
+// System (Admin) — General, Audit Trail, Debug Log, Development
+$router->get('/system/general', 'GeneralController@index');
+$router->post('/system/general/save', 'GeneralController@save');
 $router->get('/system/audit-trail', 'AuditTrailController@index');
+$router->get('/system/debug-log', 'DebugLogController@index');
+$router->get('/system/development', 'DevelopmentController@index');
+$router->post('/system/development/save', 'DevelopmentController@save');
+$router->post('/system/development/set-simulated-time', 'DevelopmentController@setSimulatedTime');
+$router->post('/system/development/clear-simulated-time', 'DevelopmentController@clearSimulatedTime');
 
 // User Management (Admin) — User Profile merged into Users
 $router->get('/users', 'UserController@index');

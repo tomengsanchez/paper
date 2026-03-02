@@ -1,5 +1,14 @@
 <?php
 define('ROOT', __DIR__);
+
+// System debug: start request and register class-load logger (prepended)
+require_once ROOT . '/Core/SystemDebug.php';
+\Core\SystemDebug::startRequest();
+spl_autoload_register(function ($class) {
+    \Core\SystemDebug::logClass($class);
+    return false; // let next autoloader load the class
+}, true, true);
+
 spl_autoload_register(function ($class) {
     $file = ROOT . '/' . str_replace('\\', '/', $class) . '.php';
     if (file_exists($file)) {

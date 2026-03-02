@@ -3,6 +3,8 @@ $ui = \App\UserUiSettings::get();
 $uiTheme = $ui['theme'] ?? \App\UserUiSettings::THEME_DEFAULT;
 $uiLayout = $ui['layout'] ?? \App\UserUiSettings::LAYOUT_SIDEBAR;
 $currentPage = $currentPage ?? '';
+$devClockSimulated = \Core\Auth::id() && \App\DevClock::isOverridden();
+$devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,7 +18,7 @@ $currentPage = $currentPage ?? '';
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
         :root { --sidebar-width: 240px; --header-height: 56px; font-size: 13px;
-            --nav-bg: #1e293b; --nav-border: #334155; --nav-text: #94a3b8; --nav-text-hover: #f8fafc; --nav-active-bg: #334155; --nav-sub-bg: #0f172a; }
+            --nav-bg: #1e293b; --nav-border: #334155; --nav-text: #cbd5f5; --nav-text-hover: #f9fafb; --nav-active-bg: #334155; --nav-sub-bg: #0f172a; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f6fa; }
         .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: var(--nav-bg); color: var(--nav-text); z-index: 1000; }
         .sidebar .brand { display: block; padding: 1rem 1.25rem; font-weight: 700; color: var(--nav-text-hover); border-bottom: 1px solid var(--nav-border); text-decoration: none; transition: opacity 0.2s; }
@@ -61,11 +63,21 @@ $currentPage = $currentPage ?? '';
         .notification-dropdown .dropdown-menu { min-width: 280px; max-height: 360px; overflow-y: auto; }
         .notification-dropdown .dropdown-header { font-size: 0.8rem; font-weight: 600; }
         .notification-badge { position: absolute; top: 4px; right: 3px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; border-radius: 999px; background: #ef4444; color: #f9fafb; text-align: center; display: none; }
+        .nav-datetime { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--nav-text-hover); white-space: nowrap; }
+        .nav-datetime .nav-live-datetime { font-variant-numeric: tabular-nums; }
+        .nav-datetime-simulated { font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px; background: #fbbf24; color: #111827; box-shadow: 0 0 0 1px rgba(15,23,42,0.35); }
+        .header .header-datetime { font-size: 0.8rem; color: #6b7280; margin-right: 0.5rem; }
+        .header .header-datetime .nav-datetime-simulated { background: #fef3c7; color: #92400e; }
         /* Theme overrides */
         body.ui-theme-green { --nav-bg: #064e3b; --nav-border: #047857; --nav-active-bg: #047857; --nav-sub-bg: #022c22; }
         body.ui-theme-violet { --nav-bg: #4c1d95; --nav-border: #6d28d9; --nav-active-bg: #6d28d9; --nav-sub-bg: #2e1065; }
         body.ui-theme-amber { --nav-bg: #78350f; --nav-border: #b45309; --nav-active-bg: #b45309; --nav-sub-bg: #451a03; }
         body.ui-theme-slate { --nav-bg: #334155; --nav-border: #475569; --nav-active-bg: #475569; --nav-sub-bg: #1e293b; }
+        /* Development: system status footer */
+        .dev-status-footer { font-size: 11px; color: #64748b; background: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 0.35rem 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+        .dev-status-footer a { color: #475569; }
+        .dev-status-footer .dev-stat { white-space: nowrap; }
+        .dev-status-footer .dev-stat strong { color: #475569; }
     </style>
 </head>
 <body class="ui-theme-<?= htmlspecialchars($uiTheme) ?> ui-layout-<?= htmlspecialchars($uiLayout) ?>">
@@ -123,13 +135,15 @@ $currentPage = $currentPage ?? '';
         </div>
         <?php endif; ?>
         <?php if (\Core\Auth::isAdmin()): ?>
-        <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail']); ?>
+        <?php $systemActive = in_array($currentPage, ['general', 'email-settings', 'debug-log', 'audit-trail', 'development']); ?>
         <div class="dropdown">
             <a href="#" class="nav-link dropdown-toggle <?= $systemActive ? 'active' : '' ?>" data-bs-toggle="dropdown">System</a>
             <ul class="dropdown-menu">
+                <li><a class="dropdown-item <?= $currentPage === 'general' ? 'active' : '' ?>" href="/system/general">General</a></li>
                 <li><a class="dropdown-item <?= $currentPage === 'email-settings' ? 'active' : '' ?>" href="/settings/email">SMTP settings</a></li>
-                <li><a class="dropdown-item <?= $currentPage === 'debug-log' ? 'active' : '' ?>" href="#">Debug log</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'debug-log' ? 'active' : '' ?>" href="/system/debug-log">Debug log</a></li>
                 <li><a class="dropdown-item <?= $currentPage === 'audit-trail' ? 'active' : '' ?>" href="/system/audit-trail">Audit Trail</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'development' ? 'active' : '' ?>" href="/system/development">Development</a></li>
             </ul>
         </div>
         <?php endif; ?>
@@ -148,6 +162,12 @@ $currentPage = $currentPage ?? '';
         </div>
         <?php endif; ?>
         <span class="nav-spacer"></span>
+        <span class="nav-datetime" id="nav-datetime-wrap">
+            <span class="nav-live-datetime" id="nav-live-datetime" aria-live="polite"></span>
+            <?php if ($devClockSimulated && $devClockDate): ?>
+            <span class="nav-datetime-simulated" title="App date is simulated for testing">Simulated: <?= htmlspecialchars($devClockDate) ?></span>
+            <?php endif; ?>
+        </span>
         <div class="dropdown notification-dropdown">
             <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/></svg>
@@ -223,12 +243,14 @@ $currentPage = $currentPage ?? '';
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::isAdmin()): ?>
-            <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail']); ?>
+            <?php $systemActive = in_array($currentPage, ['general', 'email-settings', 'debug-log', 'audit-trail', 'development']); ?>
             <div class="nav-parent <?= $systemActive ? 'open' : '' ?>">System</div>
             <div class="nav-sub">
+                <a href="/system/general" class="<?= $currentPage === 'general' ? 'active' : '' ?>">General</a>
                 <a href="/settings/email" class="<?= $currentPage === 'email-settings' ? 'active' : '' ?>">SMTP settings</a>
-                <a href="#" class="<?= $currentPage === 'debug-log' ? 'active' : '' ?>">Debug log</a>
+                <a href="/system/debug-log" class="<?= $currentPage === 'debug-log' ? 'active' : '' ?>">Debug log</a>
                 <a href="/system/audit-trail" class="<?= $currentPage === 'audit-trail' ? 'active' : '' ?>">Audit Trail</a>
+                <a href="/system/development" class="<?= $currentPage === 'development' ? 'active' : '' ?>">Development</a>
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>
@@ -249,7 +271,12 @@ $currentPage = $currentPage ?? '';
     <div class="main-wrap <?= $uiLayout === 'top' ? 'ui-layout-top' : '' ?>">
         <?php if ($uiLayout !== 'top'): ?>
         <header class="header">
-            <span class="text-muted"></span>
+            <span class="header-datetime text-muted" id="header-datetime-wrap">
+                <span class="nav-live-datetime" id="header-live-datetime" aria-live="polite"></span>
+                <?php if ($devClockSimulated && $devClockDate): ?>
+                <span class="nav-datetime-simulated" title="App date is simulated for testing">Simulated: <?= htmlspecialchars($devClockDate) ?></span>
+                <?php endif; ?>
+            </span>
             <div class="d-flex align-items-center gap-1">
                 <div class="dropdown notification-dropdown">
                     <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
@@ -286,9 +313,49 @@ $currentPage = $currentPage ?? '';
             <?php endif; ?>
             <?= $content ?? '' ?>
         </main>
+        <?php
+        if (\Core\Auth::id() && \App\DevelopmentSettings::isStatusCheckEnabled()) {
+            $queries = \Core\SystemDebug::getQueries();
+            $queryCount = count($queries);
+            $queryTimeMs = 0;
+            foreach ($queries as $q) { $queryTimeMs += (float)($q['duration'] ?? 0); }
+            $loadTimeMs = \Core\SystemDebug::getLoadTimeMs();
+            $classesCount = count(\Core\SystemDebug::getClassesLoaded());
+            $functionsCount = count(\Core\SystemDebug::getDefinedFunctions());
+            $memPeak = function_exists('memory_get_peak_usage') ? memory_get_peak_usage(true) : 0;
+            $memStr = $memPeak >= 1048576 ? round($memPeak / 1048576, 2) . ' MB' : round($memPeak / 1024, 1) . ' KB';
+        ?>
+        <footer class="dev-status-footer" aria-label="Development system status">
+            <span class="dev-stat"><strong>DB:</strong> <?= (int)$queryCount ?> query(ies), <?= number_format($queryTimeMs, 1) ?> ms</span>
+            <span class="dev-stat"><strong>Load:</strong> <?= number_format($loadTimeMs, 1) ?> ms</span>
+            <span class="dev-stat"><strong>Classes:</strong> <?= (int)$classesCount ?></span>
+            <span class="dev-stat"><strong>Functions (user):</strong> <?= (int)$functionsCount ?></span>
+            <span class="dev-stat"><strong>PHP:</strong> <?= htmlspecialchars(PHP_VERSION) ?></span>
+            <span class="dev-stat"><strong>Memory peak:</strong> <?= $memStr ?></span>
+            <a href="/system/development">Development</a>
+        </footer>
+        <?php } ?>
     </div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script>
+    (function(){
+        function formatNavDateTime() {
+            var d = new Date();
+            var day = d.getDate(), m = d.getMonth(), y = d.getFullYear();
+            var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m];
+            var h = d.getHours(), min = d.getMinutes(), sec = d.getSeconds();
+            var hh = h < 10 ? '0' + h : h;
+            var mm = min < 10 ? '0' + min : min;
+            var ss = sec < 10 ? '0' + sec : sec;
+            return day + ' ' + mon + ' ' + y + ', ' + hh + ':' + mm + ':' + ss;
+        }
+        function updateNavClocks() {
+            var s = formatNavDateTime();
+            document.querySelectorAll('.nav-live-datetime').forEach(function(el){ el.textContent = s; });
+        }
+        updateNavClocks();
+        setInterval(updateNavClocks, 1000);
+    })();
     $(function(){
         $('.nav-parent').on('click', function(){ $(this).toggleClass('open'); });
 

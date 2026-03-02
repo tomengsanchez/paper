@@ -97,7 +97,7 @@ class Grievance
 
         $needsEscalationFilter = $filters['needs_escalation'] ?? null;
         if ($needsEscalationFilter === '1') {
-            // Only grievances that currently need escalation/closure based on days_to_address
+            // Only grievances that currently need escalation/closure based on days_to_address (uses DevClock for testing)
             $whereCond .= "
                 AND g.status = 'in_progress'
                 AND EXISTS (
@@ -112,9 +112,10 @@ class Grievance
                     WHERE pl.id = g.progress_level
                       AND pl.days_to_address IS NOT NULL
                       AND pl.days_to_address > 0
-                      AND DATEDIFF(CURDATE(), DATE(l.level_started_at)) > pl.days_to_address
+                      AND DATEDIFF(?, DATE(l.level_started_at)) > pl.days_to_address
                 )
             ";
+            $params[] = \App\DevClock::today();
         }
 
         $limit = max(1, min(100, $perPage));
