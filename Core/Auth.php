@@ -29,8 +29,10 @@ class Auth
         }
         session_start();
         if (isset($_SESSION['user_id'])) {
+            $uri = $_SERVER['REQUEST_URI'] ?? '';
+            $isApi = strpos($uri, '/api/') !== false;
             $logoutMins = (int) \App\Models\AppSettings::get('user_logout_after_minutes', 30);
-            if ($logoutMins > 0) {
+            if ($logoutMins > 0 && !$isApi) {
                 $lastActivity = (int) ($_SESSION['last_activity'] ?? 0);
                 if ($lastActivity && (time() - $lastActivity) > $logoutMins * 60) {
                     session_unset();
@@ -47,6 +49,21 @@ class Auth
                 WHERE u.id = ?');
             $stmt->execute([$_SESSION['user_id']]);
             self::$user = $stmt->fetch(\PDO::FETCH_OBJ);
+        }
+        // Bearer token for REST API (when no session)
+        if (self::$user === null) {
+            $bearer = \App\ApiToken::getBearerToken();
+            if ($bearer !== null) {
+                $userId = \App\ApiToken::validate($bearer);
+                if ($userId !== null) {
+                    $db = Database::getInstance();
+                    $stmt = $db->prepare('SELECT u.*, r.name as role_name FROM users u 
+                        LEFT JOIN roles r ON u.role_id = r.id 
+                        WHERE u.id = ?');
+                    $stmt->execute([$userId]);
+                    self::$user = $stmt->fetch(\PDO::FETCH_OBJ);
+                }
+            }
         }
     }
 
@@ -73,7 +90,7 @@ class Auth
 
     public static function check(): bool
     {
-        return isset($_SESSION['user_id']);
+        return isset($_SESSION['user_id']) || self::$user !== null;
     }
 
     public static function user(): ?object
@@ -83,7 +100,11 @@ class Auth
 
     public static function id(): ?int
     {
-        return $_SESSION['user_id'] ?? null;
+        $sid = $_SESSION['user_id'] ?? null;
+        if ($sid !== null) {
+            return (int) $sid;
+        }
+        return self::$user ? (int) self::$user->id : null;
     }
 
     public static function login(int $userId): void

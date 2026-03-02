@@ -129,6 +129,10 @@ $router->get('/serve/profile', 'ProfileController@serveProfileFile');
 $router->get('/serve/grievance', 'GrievanceController@serveGrievanceAttachment');
 $router->get('/serve/grievance-card-attachment', 'GrievanceController@serveGrievanceCardAttachment');
 
+// REST API Auth (token-based)
+$router->post('/api/auth/login', 'Api\AuthController@login');
+$router->get('/api/auth/me', 'Api\AuthController@me');
+$router->post('/api/auth/logout', 'Api\AuthController@logout');
 // API for dropdown search (AJAX)
 $router->get('/api/projects', 'Api\ApiController@projects');
 $router->get('/api/profiles', 'Api\ApiController@profiles');
