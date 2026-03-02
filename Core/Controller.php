@@ -39,6 +39,17 @@ abstract class Controller
         }
     }
 
+    /** API variant: return 401 JSON instead of redirect. Use for REST endpoints. */
+    protected function requireAuthApi(): bool
+    {
+        if (!Auth::check()) {
+            http_response_code(401);
+            $this->json(['error' => 'Unauthorized', 'message' => 'Authentication required']);
+            return false;
+        }
+        return true;
+    }
+
     protected function requireCapability(string $capability): void
     {
         $this->requireAuth();
