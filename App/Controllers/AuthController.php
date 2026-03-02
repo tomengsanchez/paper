@@ -103,6 +103,7 @@ class AuthController extends Controller
 
             LoginThrottle::clear($ip);
             Auth::login((int) $user->id);
+            \App\AuditLog::record('user', (int) $user->id, 'login');
             Logger::auth('Login success', ['username' => $username, 'user_id' => $user->id]);
             $this->redirect('/');
         } catch (\Throwable $e) {
@@ -119,6 +120,10 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        $userId = Auth::id();
+        if ($userId) {
+            \App\AuditLog::record('user', (int) $userId, 'logout');
+        }
         Auth::logout();
         $this->redirect('/login');
     }
@@ -166,6 +171,7 @@ class AuthController extends Controller
 
         unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_code'], $_SESSION['pending_2fa_expires']);
         Auth::login((int) $userId);
+        \App\AuditLog::record('user', (int) $userId, 'login');
         Logger::auth('2FA verification success', ['user_id' => $userId]);
         $this->redirect('/');
     }

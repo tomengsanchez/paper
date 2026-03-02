@@ -236,6 +236,10 @@ class GrievanceController extends Controller
         \App\NotificationService::notifyNewGrievance($id, $projectId ?: null, $msg);
         $this->processAttachmentCards($id, false);
         AuditLog::record('grievance', $id, 'created');
+        $initialAttachCount = count(GrievanceAttachment::byGrievance($id));
+        if ($initialAttachCount > 0) {
+            AuditLog::record('grievance', $id, 'attachments_uploaded', ['count' => $initialAttachCount]);
+        }
         $this->redirect('/grievance/view/' . $id);
     }
 
@@ -277,6 +281,7 @@ class GrievanceController extends Controller
 
         $attachments = GrievanceAttachment::byGrievance($id);
         $history = \App\AuditLog::for('grievance', $id);
+        AuditLog::record('grievance', $id, 'viewed');
         $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels', 'history'));
     }
 
@@ -336,7 +341,12 @@ class GrievanceController extends Controller
         if (!empty($changes)) {
             AuditLog::record('grievance', $id, 'updated', $changes);
         }
+        $attachCountBefore = count(GrievanceAttachment::byGrievance($id));
         $this->processAttachmentCards($id, true);
+        $attachCountAfter = count(GrievanceAttachment::byGrievance($id));
+        if ($attachCountAfter > $attachCountBefore) {
+            AuditLog::record('grievance', $id, 'attachments_uploaded', ['count' => $attachCountAfter - $attachCountBefore]);
+        }
         $this->redirect('/grievance/view/' . $id);
     }
 

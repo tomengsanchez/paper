@@ -107,20 +107,28 @@ $currentPage = $currentPage ?? '';
             </ul>
         </div>
         <?php endif; ?>
-        <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_email_settings') || \Core\Auth::can('view_security_settings')): ?>
-        <?php $settingsActive = in_array($currentPage, ['settings', 'email-settings', 'security-settings']); ?>
+        <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
+        <?php $settingsActive = in_array($currentPage, ['settings', 'security-settings']); ?>
         <div class="dropdown">
             <a href="#" class="nav-link dropdown-toggle <?= $settingsActive ? 'active' : '' ?>" data-bs-toggle="dropdown">Settings</a>
             <ul class="dropdown-menu">
                 <?php if (\Core\Auth::can('view_settings')): ?>
                 <li><a class="dropdown-item <?= $currentPage === 'settings' ? 'active' : '' ?>" href="/settings">General</a></li>
                 <?php endif; ?>
-                <?php if (\Core\Auth::can('view_email_settings')): ?>
-                <li><a class="dropdown-item <?= $currentPage === 'email-settings' ? 'active' : '' ?>" href="/settings/email">Email Settings</a></li>
-                <?php endif; ?>
                 <?php if (\Core\Auth::can('view_security_settings')): ?>
                 <li><a class="dropdown-item <?= $currentPage === 'security-settings' ? 'active' : '' ?>" href="/settings/security">Security</a></li>
                 <?php endif; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+        <?php if (\Core\Auth::isAdmin()): ?>
+        <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail']); ?>
+        <div class="dropdown">
+            <a href="#" class="nav-link dropdown-toggle <?= $systemActive ? 'active' : '' ?>" data-bs-toggle="dropdown">System</a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item <?= $currentPage === 'email-settings' ? 'active' : '' ?>" href="/settings/email">SMTP settings</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'debug-log' ? 'active' : '' ?>" href="#">Debug log</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'audit-trail' ? 'active' : '' ?>" href="/system/audit-trail">Audit Trail</a></li>
             </ul>
         </div>
         <?php endif; ?>
@@ -201,19 +209,25 @@ $currentPage = $currentPage ?? '';
                 <a href="/library" class="<?= $currentPage === 'library' ? 'active' : '' ?>">Project</a>
             </div>
             <?php endif; ?>
-            <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_email_settings') || \Core\Auth::can('view_security_settings')): ?>
-            <?php $settingsActive = in_array($currentPage, ['settings', 'email-settings', 'security-settings']); ?>
+            <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
+            <?php $settingsActive = in_array($currentPage, ['settings', 'security-settings']); ?>
             <div class="nav-parent <?= $settingsActive ? 'open' : '' ?>">Settings</div>
             <div class="nav-sub">
                 <?php if (\Core\Auth::can('view_settings')): ?>
                 <a href="/settings" class="<?= $currentPage === 'settings' ? 'active' : '' ?>">General</a>
                 <?php endif; ?>
-                <?php if (\Core\Auth::can('view_email_settings')): ?>
-                <a href="/settings/email" class="<?= $currentPage === 'email-settings' ? 'active' : '' ?>">Email Settings</a>
-                <?php endif; ?>
                 <?php if (\Core\Auth::can('view_security_settings')): ?>
                 <a href="/settings/security" class="<?= $currentPage === 'security-settings' ? 'active' : '' ?>">Security</a>
                 <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php if (\Core\Auth::isAdmin()): ?>
+            <?php $systemActive = in_array($currentPage, ['email-settings', 'debug-log', 'audit-trail']); ?>
+            <div class="nav-parent <?= $systemActive ? 'open' : '' ?>">System</div>
+            <div class="nav-sub">
+                <a href="/settings/email" class="<?= $currentPage === 'email-settings' ? 'active' : '' ?>">SMTP settings</a>
+                <a href="#" class="<?= $currentPage === 'debug-log' ? 'active' : '' ?>">Debug log</a>
+                <a href="/system/audit-trail" class="<?= $currentPage === 'audit-trail' ? 'active' : '' ?>">Audit Trail</a>
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_users') || \Core\Auth::can('view_roles')): ?>

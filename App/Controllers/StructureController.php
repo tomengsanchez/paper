@@ -104,6 +104,7 @@ class StructureController extends Controller
             return;
         }
         $history = \App\AuditLog::for('structure', $structure->id);
+        AuditLog::record('structure', $structure->id, 'viewed');
         $this->view('structure/view', ['structure' => $structure, 'history' => $history]);
     }
 
@@ -133,8 +134,14 @@ class StructureController extends Controller
         $removeStructure = (array) ($_POST['structure_images_remove'] ?? []);
         $taggingPaths = array_values(array_diff($taggingPaths, $removeTagging));
         $structurePaths = array_values(array_diff($structurePaths, $removeStructure));
-        $taggingPaths = array_merge($taggingPaths, $this->handleUpload('tagging_images', 'tagging'));
-        $structurePaths = array_merge($structurePaths, $this->handleUpload('structure_images', 'images'));
+        $newTagging = $this->handleUpload('tagging_images', 'tagging');
+        $newStructure = $this->handleUpload('structure_images', 'images');
+        $taggingPaths = array_merge($taggingPaths, $newTagging);
+        $structurePaths = array_merge($structurePaths, $newStructure);
+        if (!empty($newTagging) || !empty($newStructure)) {
+            $sections = array_filter(['tagging_images' => !empty($newTagging), 'structure_images' => !empty($newStructure)]);
+            AuditLog::record('structure', $id, 'attachments_uploaded', ['sections' => array_keys($sections)]);
+        }
         $data = [
             'strid' => trim($_POST['strid'] ?? $structure->strid),
             'owner_id' => (int) ($_POST['owner_id'] ?? 0) ?: null,
