@@ -10,3 +10,5 @@ config/app.php
 public/uploads/*
 
 dbdump/*
+
+flutter_app/*
