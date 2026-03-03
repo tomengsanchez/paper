@@ -322,22 +322,7 @@ class GrievanceController extends Controller
         }
         $data = $this->gatherGrievanceData($grievance);
         Grievance::update($id, $data);
-        $changes = [];
-        $fields = [
-            'project_id',
-            'profile_id',
-            'grievance_case_number',
-            'respondent_full_name',
-            'gender',
-            'valid_id_philippines',
-            'id_number',
-        ];
-        foreach ($fields as $field) {
-            $old = $grievance->$field ?? null;
-            $new = $data[$field] ?? null;
-            if ((string)($old ?? '') === (string)($new ?? '')) continue;
-            $changes[$field] = ['from' => $old, 'to' => $new];
-        }
+        $changes = $this->buildGrievanceChanges($grievance, $data);
         if (!empty($changes)) {
             AuditLog::record('grievance', $id, 'updated', $changes);
         }
@@ -384,6 +369,70 @@ class GrievanceController extends Controller
             return 'Please select at least one Category of Grievance.';
         }
         return null;
+    }
+
+    private function buildGrievanceChanges(object $grievance, array $data): array
+    {
+        $changes = [];
+        $boolFields = [
+            'is_paps', 'location_same_as_address', 'incident_one_time', 'incident_multiple', 'incident_ongoing',
+        ];
+        $arrayFields = [
+            'vulnerability_ids' => GrievanceVulnerability::class,
+            'respondent_type_ids' => GrievanceRespondentType::class,
+            'grm_channel_ids' => GrievanceGrmChannel::class,
+            'preferred_language_ids' => GrievancePreferredLanguage::class,
+            'grievance_type_ids' => GrievanceType::class,
+            'grievance_category_ids' => GrievanceCategory::class,
+        ];
+        $textFields = [
+            'project_id', 'profile_id', 'grievance_case_number', 'respondent_full_name', 'gender', 'gender_specify',
+            'valid_id_philippines', 'id_number', 'respondent_type_other_specify',
+            'home_business_address', 'mobile_number', 'email', 'contact_others_specify',
+            'preferred_language_other_specify', 'location_specify', 'incident_date', 'incident_dates',
+            'description_complaint', 'desired_resolution', 'date_recorded',
+        ];
+        foreach ($boolFields as $field) {
+            $oldVal = !empty($grievance->$field ?? null);
+            $newVal = !empty($data[$field] ?? null);
+            if ($oldVal === $newVal) continue;
+            $changes[$field] = ['from' => $oldVal ? 'Yes' : 'No', 'to' => $newVal ? 'Yes' : 'No'];
+        }
+        foreach ($arrayFields as $field => $modelClass) {
+            $oldIds = Grievance::parseJson($grievance->$field ?? '[]');
+            $newIds = $data[$field] ?? [];
+            $newIds = is_array($newIds) ? array_map('intval', array_filter($newIds)) : [];
+            sort($oldIds);
+            sort($newIds);
+            if ($oldIds === $newIds) continue;
+            $lookup = $modelClass::all();
+            $oldNames = $this->resolveIdsToNames($oldIds, $lookup);
+            $newNames = $this->resolveIdsToNames($newIds, $lookup);
+            $changes[$field] = ['from' => $oldNames ?: '-', 'to' => $newNames ?: '-'];
+        }
+        foreach ($textFields as $field) {
+            $old = $grievance->$field ?? null;
+            $new = $data[$field] ?? null;
+            $oldStr = $old instanceof \DateTimeInterface ? $old->format('Y-m-d H:i:s') : (string)($old ?? '');
+            $newStr = $new instanceof \DateTimeInterface ? $new->format('Y-m-d H:i:s') : (string)($new ?? '');
+            if ($oldStr === $newStr) continue;
+            $changes[$field] = ['from' => $old ?? '-', 'to' => $new ?? '-'];
+        }
+        return $changes;
+    }
+
+    private function resolveIdsToNames(array $ids, array $lookup): string
+    {
+        $names = [];
+        foreach ($ids as $id) {
+            foreach ($lookup as $item) {
+                if ((int)($item->id ?? 0) === (int)$id) {
+                    $names[] = $item->name ?? (string)$id;
+                    break;
+                }
+            }
+        }
+        return implode(', ', $names);
     }
 
     private function gatherGrievanceData(?object $grievance): array
