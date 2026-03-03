@@ -4,6 +4,7 @@ namespace App\Controllers;
 use Core\Controller;
 use App\AuditLog;
 use App\Models\Profile;
+use App\Models\Project;
 use App\Models\Structure;
 use App\ListConfig;
 
@@ -239,7 +240,16 @@ class ProfileController extends Controller
             if ((string)($old ?? '') === (string)($new ?? '')) {
                 continue;
             }
-            $changes[$field] = ['from' => $old, 'to' => $new];
+            if ($field === 'project_id') {
+                $oldProj = $old ? Project::find((int)$old) : null;
+                $newProj = $new ? Project::find((int)$new) : null;
+                $changes[$field] = [
+                    'from' => $oldProj ? $oldProj->name : ($profile->project_name ?? (string)$old),
+                    'to'   => $newProj ? $newProj->name : (string)$new,
+                ];
+            } else {
+                $changes[$field] = ['from' => $old, 'to' => $new];
+            }
         }
         $attachmentFields = [
             'residing_in_project_affected_attachments' => 'residing_in_project_affected',
