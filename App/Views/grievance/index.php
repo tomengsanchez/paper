@@ -113,6 +113,8 @@ ob_start();
                         }
                         if ($key === 'respondent_name' && \Core\Auth::can('view_grievance')) {
                             echo '<a href="/grievance/view/' . (int)$g->id . '" class="text-decoration-none">' . htmlspecialchars($v ?? '-') . '</a>';
+                        } elseif ($key === 'profile_name' && !empty($g->profile_id)) {
+                            echo '<a href="/profile/view/' . (int)$g->profile_id . '" class="text-decoration-none" target="_blank" rel="noopener noreferrer">' . htmlspecialchars($v ?? $g->papsid ?? '-') . '</a>';
                         } else {
                             echo htmlspecialchars($v ?? '-');
                         }
