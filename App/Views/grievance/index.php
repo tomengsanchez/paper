@@ -86,6 +86,7 @@ ob_start();
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    <th style="width: 52px;">New</th>
                     <?php foreach ($listColumns as $key): $col = \App\ListConfig::getColumnByKey('grievance', $key); if (!$col) continue; ?>
                     <th>
                         <?php if (!empty($col['sortable'])): ?><a href="<?= htmlspecialchars($listBaseUrl . $baseQuery . '&sort=' . urlencode($key) . '&order=' . (($listSort === $key && $listOrder === 'asc') ? 'desc' : 'asc')) ?>" class="text-decoration-none"><?php endif; ?>
@@ -101,6 +102,11 @@ ob_start();
             <tbody>
                 <?php foreach ($grievances as $g): ?>
                 <tr>
+                    <td>
+                        <?php if (!empty($g->is_new_for_user)): ?>
+                            <span class="badge bg-primary rounded-pill">New</span>
+                        <?php endif; ?>
+                    </td>
                     <?php foreach ($listColumns as $key): ?>
                     <td><?php
                         $v = \App\ListHelper::getValue($g, $key);
@@ -142,7 +148,7 @@ ob_start();
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($grievances)): ?>
-                <tr><td colspan="<?= count($listColumns) + 2 ?>" class="text-muted text-center py-4">No grievances yet.</td></tr>
+                <tr><td colspan="<?= count($listColumns) + 3 ?>" class="text-muted text-center py-4">No grievances yet.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

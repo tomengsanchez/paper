@@ -99,7 +99,7 @@ ob_start();
                 <div class="row g-3 mb-3">
                     <div class="col-6 col-md-3">
                         <div class="p-3 rounded bg-success bg-opacity-10 border border-success border-opacity-25">
-                            <div class="text-muted small text-uppercase">New grievances</div>
+                            <div class="text-muted small text-uppercase">New grievances (unread)</div>
                             <div class="h4 mb-0" id="grievance-created">—</div>
                         </div>
                     </div>
@@ -222,7 +222,7 @@ if ($needsCharts) {
             updateChartStructure(s);
         }
         if (document.getElementById("grievance-created")) {
-            document.getElementById("grievance-created").textContent = (g.created || 0).toLocaleString();
+            document.getElementById("grievance-created").textContent = (g.unread_new || 0).toLocaleString();
             document.getElementById("grievance-updated").textContent = (g.updated || 0).toLocaleString();
             document.getElementById("grievance-status-changed").textContent = (g.status_changed || 0).toLocaleString();
             document.getElementById("grievance-escalations").textContent = (g.escalations || 0).toLocaleString();

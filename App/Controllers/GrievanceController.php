@@ -141,13 +141,17 @@ class GrievanceController extends Controller
         $projects = \App\Models\Project::all();
         $progressLevelMap = $this->buildProgressLevelMap($progressLevels);
 
-        // Determine when each grievance entered its current in-progress level.
+        // Determine when each grievance entered its current in-progress level,
+        // and which grievances are still marked as \"new\" for the current user.
         $levelStartedAt = [];
+        $unreadById = [];
         $items = $pagination['items'] ?? [];
         $ids = array_map(fn($it) => (int) ($it->id ?? 0), $items);
         $ids = array_values(array_filter($ids));
         if (!empty($ids)) {
             $db = \Core\Database::getInstance();
+
+            // Level started at per grievance/progress level
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $sql = "
                 SELECT grievance_id, progress_level, MAX(created_at) AS level_started_at
@@ -168,6 +172,35 @@ class GrievanceController extends Controller
                 }
                 $levelStartedAt[$gId . '_' . $plId] = $row->level_started_at;
             }
+
+            // Unread \"new grievance\" notifications per grievance for current user
+            $userId = \Core\Auth::id();
+            if ($userId) {
+                $notifPlaceholders = implode(',', array_fill(0, count($ids), '?'));
+                $sqlNotif = "
+                    SELECT DISTINCT related_id
+                    FROM notifications n
+                    WHERE n.user_id = ?
+                      AND n.type = ?
+                      AND n.related_type = ?
+                      AND n.clicked_at IS NULL
+                      AND n.related_id IN ($notifPlaceholders)
+                ";
+                $params = array_merge(
+                    [
+                        (int)$userId,
+                        \App\NotificationService::TYPE_NEW_GRIEVANCE,
+                        \App\NotificationService::RELATED_GRIEVANCE,
+                    ],
+                    $ids
+                );
+                $stmt = $db->prepare($sqlNotif);
+                $stmt->execute($params);
+                $unreadIds = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+                foreach ($unreadIds as $rid) {
+                    $unreadById[(int)$rid] = true;
+                }
+            }
         }
 
         foreach ($pagination['items'] as $item) {
@@ -179,6 +212,7 @@ class GrievanceController extends Controller
             $startedAt = $gId && $plId ? ($levelStartedAt[$gId . '_' . $plId] ?? null) : null;
             $item->level_started_at = $startedAt;
             $item->escalation_message = $this->computeEscalationMessageForGrievance($item, $progressLevelMap, $startedAt);
+            $item->is_new_for_user = !empty($unreadById[$gId]);
         }
 
         $this->view('grievance/index', [
@@ -280,6 +314,27 @@ class GrievanceController extends Controller
         }
 
         $grievance->escalation_message = $this->computeEscalationMessageForGrievance($grievance, $progressLevelMap, $levelStartedAt);
+
+        // Mark any \"new grievance\" notifications for this grievance as read for the current user.
+        $userId = \Core\Auth::id();
+        if ($userId) {
+            $db = \Core\Database::getInstance();
+            $stmt = $db->prepare("
+                UPDATE notifications
+                SET clicked_at = NOW()
+                WHERE user_id = ?
+                  AND related_type = ?
+                  AND type = ?
+                  AND related_id = ?
+                  AND clicked_at IS NULL
+            ");
+            $stmt->execute([
+                (int) $userId,
+                \App\NotificationService::RELATED_GRIEVANCE,
+                \App\NotificationService::TYPE_NEW_GRIEVANCE,
+                $id,
+            ]);
+        }
 
         $attachments = GrievanceAttachment::byGrievance($id);
         $history = \App\AuditLog::for('grievance', $id);

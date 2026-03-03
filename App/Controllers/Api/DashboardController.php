@@ -5,6 +5,7 @@ use Core\Controller;
 use Core\Auth;
 use Core\Database;
 use App\UserProjects;
+use App\NotificationService;
 
 class DashboardController extends Controller
 {
@@ -21,11 +22,12 @@ class DashboardController extends Controller
     {
         $db = Database::getInstance();
         $allowedProjects = UserProjects::allowedProjectIds();
+        $userId = (int) (Auth::id() ?? 0);
 
         $result = [
             'profile' => $this->profileStats($db, $allowedProjects),
             'structure' => $this->structureStats($db, $allowedProjects),
-            'grievance' => $this->grievanceStats($db, $allowedProjects),
+            'grievance' => $this->grievanceStats($db, $allowedProjects, $userId),
             'users' => $this->usersByRole($db, $allowedProjects),
         ];
 
@@ -84,7 +86,7 @@ class DashboardController extends Controller
         ];
     }
 
-    private function grievanceStats(\PDO $db, ?array $allowedProjects): array
+    private function grievanceStats(\PDO $db, ?array $allowedProjects, int $userId): array
     {
         $where = $this->projectCondition('g.project_id', $allowedProjects);
         $params = $allowedProjects ?? [];
@@ -129,12 +131,35 @@ class DashboardController extends Controller
         $stmt->execute($escParams);
         $escalations = (int) $stmt->fetchColumn();
 
+        // Unread \"new grievance\" notifications for current user (per projects)
+        $unreadNew = 0;
+        if ($userId > 0) {
+            $notifWhere = $this->projectCondition('n.project_id', $allowedProjects);
+            $sqlUnread = "
+                SELECT COUNT(*)
+                FROM notifications n
+                WHERE n.user_id = ?
+                  AND n.type = ?
+                  AND n.related_type = ?
+                  AND n.clicked_at IS NULL
+                  {$notifWhere}
+            ";
+            $notifParams = [$userId, NotificationService::TYPE_NEW_GRIEVANCE, NotificationService::RELATED_GRIEVANCE];
+            if ($allowedProjects !== null) {
+                $notifParams = array_merge($notifParams, $allowedProjects);
+            }
+            $stmt = $db->prepare($sqlUnread);
+            $stmt->execute($notifParams);
+            $unreadNew = (int) $stmt->fetchColumn();
+        }
+
         return [
             'created' => $created,
             'updated' => $updated,
             'status_changed' => $status_changed,
             'by_status' => $byStatus,
             'escalations' => $escalations,
+            'unread_new' => $unreadNew,
         ];
     }
 
