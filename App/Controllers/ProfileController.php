@@ -205,9 +205,14 @@ class ProfileController extends Controller
             'contact_number',
             'project_id',
             'residing_in_project_affected',
+            'residing_in_project_affected_note',
             'structure_owners',
+            'structure_owners_note',
+            'if_not_structure_owner_what',
             'own_property_elsewhere',
+            'own_property_elsewhere_note',
             'availed_government_housing',
+            'availed_government_housing_note',
             'hh_income',
         ];
         $booleanFields = [
