@@ -59,12 +59,13 @@ $catIds = $g ? \App\Models\Grievance::parseJson($g->grievance_category_ids ?? ''
                 <label class="form-label">Full Name</label>
                 <input type="text" name="respondent_full_name" class="form-control" value="<?= htmlspecialchars($fv('respondent_full_name')) ?>">
             </div>
-            <div class="mb-3">
+            <div class="mb-3" id="projectBlock">
                 <label class="form-label">Project</label>
                 <select name="project_id" id="projectSelect" class="form-select" style="width:100%">
                     <option value="">-- Search Project --</option>
                     <?php if (!empty($g->project_id)): ?><option value="<?= (int)$g->project_id ?>" selected><?= htmlspecialchars($g->project_name ?? '') ?></option><?php endif; ?>
                 </select>
+                <small id="projectFromProfileNote" class="text-muted" style="display:none">Project is set from the selected Profile (PAPS) and cannot be changed.</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Gender</label>
@@ -369,10 +370,21 @@ $(function(){
         if (err.length) { e.preventDefault(); alert(err.join('\\n')); return false; }
     });
     // Is PAPS toggle
+    function updateProjectFieldState() {
+        var isPaps = $('#isPaps').is(':checked');
+        if (isPaps) {
+            $('#projectSelect').prop('disabled', true).trigger('change.select2');
+            $('#projectFromProfileNote').show();
+        } else {
+            $('#projectSelect').prop('disabled', false).trigger('change.select2');
+            $('#projectFromProfileNote').hide();
+        }
+    }
     $('#isPaps').on('change', function(){
         var checked = $(this).is(':checked');
         $('#papsProfileBlock').toggle(checked);
         $('#fullNameBlock').toggle(!checked);
+        updateProjectFieldState();
         if (!checked) {
             $('#profileSelect').val(null).trigger('change');
             $('#projectSelect').empty().append(new Option('-- Search Project --', '', true, true)).trigger('change');
@@ -431,6 +443,7 @@ $(function(){
     $('#profileSelect').on('select2:clear', function(){
         $('#projectSelect').empty().append(new Option('-- Search Project --', '', true, true)).trigger('change');
     });
+    updateProjectFieldState();
     // Attachment cards: add
     $('#addAttachmentCard').on('click', function(){
         var t = document.getElementById('attachmentCardTemplate');

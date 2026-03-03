@@ -158,7 +158,16 @@ class StructureController extends Controller
             $old = $structure->$field ?? null;
             $new = $data[$field] ?? null;
             if ((string)($old ?? '') === (string)($new ?? '')) continue;
-            $changes[$field] = ['from' => $old, 'to' => $new];
+            if ($field === 'owner_id') {
+                $oldOwner = $old ? \App\Models\Profile::find((int)$old) : null;
+                $newOwner = $new ? \App\Models\Profile::find((int)$new) : null;
+                $changes[$field] = [
+                    'from' => $oldOwner ? ($oldOwner->full_name ?: $oldOwner->papsid) : ($structure->owner_name ?? '-'),
+                    'to'   => $newOwner ? ($newOwner->full_name ?: $newOwner->papsid) : '-',
+                ];
+            } else {
+                $changes[$field] = ['from' => $old, 'to' => $new];
+            }
         }
         if (!empty($changes)) {
             AuditLog::record('structure', $id, 'updated', $changes);

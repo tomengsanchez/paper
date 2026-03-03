@@ -13,6 +13,8 @@ use App\Models\GrievanceCategory;
 use App\Models\GrievanceProgressLevel;
 use App\Models\GrievanceStatusLog;
 use App\Models\GrievanceAttachment;
+use App\Models\Project;
+use App\Models\Profile as ProfileModel;
 use App\ListConfig;
 use App\DashboardConfig;
 use Core\Logger;
@@ -386,12 +388,48 @@ class GrievanceController extends Controller
             'grievance_category_ids' => GrievanceCategory::class,
         ];
         $textFields = [
-            'project_id', 'profile_id', 'grievance_case_number', 'respondent_full_name', 'gender', 'gender_specify',
+            'grievance_case_number', 'respondent_full_name', 'gender', 'gender_specify',
             'valid_id_philippines', 'id_number', 'respondent_type_other_specify',
             'home_business_address', 'mobile_number', 'email', 'contact_others_specify',
-            'preferred_language_other_specify', 'location_specify', 'incident_date', 'incident_dates',
-            'description_complaint', 'desired_resolution', 'date_recorded',
+            'preferred_language_other_specify', 'location_specify', 'incident_dates',
+            'description_complaint', 'desired_resolution',
         ];
+        $dropdownIdFields = [
+            'project_id' => ['oldLabel' => $grievance->project_name ?? null, 'newId' => $data['project_id'] ?? null, 'resolve' => function ($id) { $p = Project::find((int)$id); return $p ? $p->name : (string)$id; }],
+            'profile_id' => ['oldLabel' => $grievance->profile_name ?? $grievance->papsid ?? null, 'newId' => $data['profile_id'] ?? null, 'resolve' => function ($id) { $p = ProfileModel::find((int)$id); return $p ? ($p->full_name ?: $p->papsid) : (string)$id; }],
+        ];
+        $dateFields = [
+            'date_recorded' => ['old' => $grievance->date_recorded ?? null, 'new' => $data['date_recorded'] ?? null],
+            'incident_date' => ['old' => $grievance->incident_date ?? null, 'new' => $data['incident_date'] ?? null],
+        ];
+        foreach ($dropdownIdFields as $field => $cfg) {
+            $oldId = $field === 'project_id' ? ($grievance->project_id ?? null) : ($grievance->profile_id ?? null);
+            $newId = $cfg['newId'];
+            $oldId = $oldId !== null && $oldId !== '' ? (int)$oldId : null;
+            $newId = $newId !== null && $newId !== '' ? (int)$newId : null;
+            if ($oldId === $newId) continue;
+            $oldLabel = $cfg['oldLabel'];
+            if ($oldLabel === null && $oldId !== null) $oldLabel = $cfg['resolve']($oldId);
+            $newLabel = $newId !== null ? $cfg['resolve']($newId) : '-';
+            $changes[$field] = ['from' => $oldLabel ?? '-', 'to' => $newLabel];
+        }
+        foreach ($dateFields as $field => $vals) {
+            $old = $vals['old'];
+            $new = $vals['new'];
+            $oldStr = $old ? (is_object($old) && method_exists($old, 'format') ? $old->format('Y-m-d H:i') : date('Y-m-d H:i', strtotime($old))) : '';
+            $newRaw = $new;
+            if ($newRaw !== null && $newRaw !== '') {
+                if (is_string($newRaw) && strpos($newRaw, 'T') !== false) {
+                    $newStr = date('Y-m-d H:i', strtotime($newRaw));
+                } else {
+                    $newStr = is_object($newRaw) && method_exists($newRaw, 'format') ? $newRaw->format('Y-m-d H:i') : date('Y-m-d H:i', strtotime($newRaw));
+                }
+            } else {
+                $newStr = '';
+            }
+            if ($oldStr === $newStr) continue;
+            $changes[$field] = ['from' => $oldStr ?: '-', 'to' => $newStr ?: '-'];
+        }
         foreach ($boolFields as $field) {
             $oldVal = !empty($grievance->$field ?? null);
             $newVal = !empty($data[$field] ?? null);
@@ -448,12 +486,19 @@ class GrievanceController extends Controller
         if (!is_array($langIds)) $langIds = [];
         if (!is_array($typeIds)) $typeIds = [];
         if (!is_array($catIds)) $catIds = [];
+        $isPaps = !empty($_POST['is_paps']);
+        $profileId = (int) ($_POST['profile_id'] ?? 0) ?: null;
+        $projectId = (int) ($_POST['project_id'] ?? 0) ?: null;
+        if ($isPaps && $profileId) {
+            $profile = ProfileModel::find($profileId);
+            $projectId = $profile && $profile->project_id ? (int) $profile->project_id : $projectId;
+        }
         return [
             'date_recorded' => $_POST['date_recorded'] ?? null,
             'grievance_case_number' => trim($_POST['grievance_case_number'] ?? ''),
-            'project_id' => (int) ($_POST['project_id'] ?? 0) ?: null,
-            'is_paps' => !empty($_POST['is_paps']),
-            'profile_id' => (int) ($_POST['profile_id'] ?? 0) ?: null,
+            'project_id' => $projectId,
+            'is_paps' => $isPaps,
+            'profile_id' => $profileId,
             'respondent_full_name' => trim($_POST['respondent_full_name'] ?? ''),
             'gender' => trim($_POST['gender'] ?? ''),
             'gender_specify' => trim($_POST['gender_specify'] ?? ''),
