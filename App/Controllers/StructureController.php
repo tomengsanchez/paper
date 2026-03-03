@@ -103,9 +103,17 @@ class StructureController extends Controller
             $this->redirect('/structure');
             return;
         }
-        $history = \App\AuditLog::for('structure', $structure->id);
+        $historyPage = \App\AuditLog::forPaginated('structure', $structure->id, 1, 20);
+        $history = $historyPage['items'];
         AuditLog::record('structure', $structure->id, 'viewed');
-        $this->view('structure/view', ['structure' => $structure, 'history' => $history]);
+        $this->view('structure/view', [
+            'structure' => $structure,
+            'history' => $history,
+            'historyEntityType' => 'structure',
+            'historyEntityId' => $structure->id,
+            'historyHasMore' => $historyPage['has_more'],
+            'historyPageSize' => $historyPage['per_page'],
+        ]);
     }
 
     public function edit(int $id): void

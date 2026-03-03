@@ -4,6 +4,11 @@
 $history = $history ?? [];
 $statusLog = $statusLog ?? [];
 $currentUserId = (int) (\Core\Auth::id() ?? 0);
+$historyEntityType = $historyEntityType ?? null;
+$historyEntityId = $historyEntityId ?? null;
+$historyPageSize = $historyPageSize ?? 20;
+$historyHasMore = !empty($historyHasMore);
+// Filter out self \"viewed\" actions for initial page
 $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
     return !(($e->action ?? '') === 'viewed' && (int)($e->created_by ?? 0) === $currentUserId);
 });
@@ -12,11 +17,18 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
     <div class="card-header py-2">
         <h6 class="mb-0 small text-uppercase text-muted">Activity History</h6>
     </div>
-    <div class="card-body p-2" style="max-height: 360px; overflow-y: auto;">
+    <div class="card-body p-2 history-scroll"
+         style="max-height: 360px; overflow-y: auto;"
+         data-entity-type="<?= htmlspecialchars((string) $historyEntityType) ?>"
+         data-entity-id="<?= (int) $historyEntityId ?>"
+         data-page="1"
+         data-page-size="<?= (int) $historyPageSize ?>"
+         data-has-more="<?= $historyHasMore ? '1' : '0' ?>"
+         data-current-user-id="<?= $currentUserId ?>">
         <?php if (empty($historyFiltered)): ?>
-        <p class="text-muted small mb-0">No activity recorded yet.</p>
+        <p class="text-muted small mb-0 history-empty-message">No activity recorded yet.</p>
         <?php else: ?>
-        <ul class="list-unstyled mb-0 small">
+        <ul class="list-unstyled mb-0 small history-list">
             <?php foreach ($historyFiltered as $entry): ?>
             <li class="mb-2">
                 <div><strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $entry->action ?? ''))) ?></strong></div>
@@ -31,6 +43,9 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
             </li>
             <?php endforeach; ?>
         </ul>
+        <?php endif; ?>
+        <?php if ($historyHasMore): ?>
+        <div class="text-center small text-muted mt-2 history-loading" style="display:none;">Loading more…</div>
         <?php endif; ?>
     </div>
 </div>
@@ -56,4 +71,120 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
     </div>
 </div>
 <?php endif; ?>
+
+<script>
+// Lazy-load Activity History on scroll
+(function(){
+    if (window.__historySidebarInit) return;
+    window.__historySidebarInit = true;
+
+    function shouldLoadMore(container) {
+        if (!container) return false;
+        var hasMore = container.getAttribute('data-has-more') === '1';
+        var loading = container.getAttribute('data-loading') === '1';
+        if (!hasMore || loading) return false;
+        return container.scrollTop + container.clientHeight >= container.scrollHeight - 40;
+    }
+
+    function attachScroll(container) {
+        if (!container) return;
+        container.addEventListener('scroll', function () {
+            if (!shouldLoadMore(container)) return;
+            loadNextPage(container);
+        });
+    }
+
+    function loadNextPage(container) {
+        var entityType = container.getAttribute('data-entity-type') || '';
+        var entityId = parseInt(container.getAttribute('data-entity-id') || '0', 10);
+        var page = parseInt(container.getAttribute('data-page') || '1', 10);
+        var pageSize = parseInt(container.getAttribute('data-page-size') || '20', 10);
+        var currentUserId = parseInt(container.getAttribute('data-current-user-id') || '0', 10);
+        if (!entityType || !entityId) return;
+
+        container.setAttribute('data-loading', '1');
+        var loadingEl = container.querySelector('.history-loading');
+        if (loadingEl) loadingEl.style.display = 'block';
+
+        var nextPage = page + 1;
+        var url = '/api/history?entity_type=' + encodeURIComponent(entityType)
+            + '&entity_id=' + encodeURIComponent(entityId)
+            + '&page=' + encodeURIComponent(nextPage)
+            + '&per_page=' + encodeURIComponent(pageSize);
+
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (data) {
+                var list = container.querySelector('.history-list');
+                if (!list) {
+                    list = document.createElement('ul');
+                    list.className = 'list-unstyled mb-0 small history-list';
+                    var emptyMsg = container.querySelector('.history-empty-message');
+                    if (emptyMsg) emptyMsg.remove();
+                    container.insertBefore(list, loadingEl || null);
+                }
+                (data.items || []).forEach(function (entry) {
+                    // Skip current-user \"viewed\" events as in initial render
+                    if ((entry.action || '') === 'viewed' && parseInt(entry.created_by || 0, 10) === currentUserId) {
+                        return;
+                    }
+                    var li = document.createElement('li');
+                    li.className = 'mb-2';
+                    var title = document.createElement('div');
+                    var action = (entry.action || '').replace(/_/g, ' ');
+                    action = action.charAt(0).toUpperCase() + action.slice(1);
+                    title.innerHTML = '<strong>' + escapeHtml(action) + '</strong>';
+                    var meta = document.createElement('div');
+                    var metaText = entry.created_at || '';
+                    if (entry.created_by_name) {
+                        metaText += (metaText ? ' · ' : '') + entry.created_by_name;
+                    }
+                    meta.className = 'text-muted';
+                    meta.textContent = metaText;
+                    li.appendChild(title);
+                    li.appendChild(meta);
+                    if (entry.changes && typeof entry.changes === 'object') {
+                        var changesList = document.createElement('ul');
+                        changesList.className = 'mb-0 mt-1 ps-3';
+                        Object.keys(entry.changes).forEach(function (field) {
+                            var change = entry.changes[field] || {};
+                            var fromVal = String(change.from !== undefined ? change.from : '');
+                            var toVal = String(change.to !== undefined ? change.to : '');
+                            var cli = document.createElement('li');
+                            cli.innerHTML = escapeHtml(field) + ': <span class="text-muted">' + escapeHtml(fromVal) + '</span> \u2192 <span class="text-success">' + escapeHtml(toVal) + '</span>';
+                            changesList.appendChild(cli);
+                        });
+                        li.appendChild(changesList);
+                    }
+                    list.appendChild(li);
+                });
+
+                container.setAttribute('data-page', String(nextPage));
+                container.setAttribute('data-has-more', data.has_more ? '1' : '0');
+            })
+            .catch(function () {
+                // Ignore errors for now; user can scroll again to retry.
+            })
+            .finally(function () {
+                container.removeAttribute('data-loading');
+                if (loadingEl) loadingEl.style.display = 'none';
+            });
+    }
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var containers = document.querySelectorAll('.history-scroll');
+        containers.forEach(attachScroll);
+    });
+})();
+</script>
 

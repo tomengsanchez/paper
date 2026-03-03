@@ -171,9 +171,18 @@ class ProfileController extends Controller
             return;
         }
         $structures = \Core\Auth::can('view_structure') ? Structure::byOwner($profile->id) : [];
-        $history = \App\AuditLog::for('profile', $profile->id);
+        $historyPage = \App\AuditLog::forPaginated('profile', $profile->id, 1, 20);
+        $history = $historyPage['items'];
         AuditLog::record('profile', $profile->id, 'viewed');
-        $this->view('profile/view', ['profile' => $profile, 'structures' => $structures, 'history' => $history]);
+        $this->view('profile/view', [
+            'profile' => $profile,
+            'structures' => $structures,
+            'history' => $history,
+            'historyEntityType' => 'profile',
+            'historyEntityId' => $profile->id,
+            'historyHasMore' => $historyPage['has_more'],
+            'historyPageSize' => $historyPage['per_page'],
+        ]);
     }
 
     public function edit(int $id): void
