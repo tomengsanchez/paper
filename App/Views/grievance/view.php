@@ -18,6 +18,10 @@ $langNames = array_filter(array_map(function($id) use ($preferredLanguages) { fo
 $typeNames = array_filter(array_map(function($id) use ($grievanceTypes) { foreach ($grievanceTypes as $t) if ($t->id == $id) return $t->name; return null; }, $typeIds));
 $catNames = array_filter(array_map(function($id) use ($grievanceCategories) { foreach ($grievanceCategories as $c) if ($c->id == $id) return $c->name; return null; }, $catIds));
 $history = $history ?? [];
+$historyEntityType = $historyEntityType ?? 'grievance';
+$historyEntityId = $historyEntityId ?? $g->id;
+$historyHasMore = $historyHasMore ?? false;
+$historyPageSize = $historyPageSize ?? 20;
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Grievance <?= htmlspecialchars($g->grievance_case_number ?: '#' . $g->id) ?></h2>

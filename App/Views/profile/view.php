@@ -1,6 +1,10 @@
 <?php ob_start();
 $structures = $structures ?? [];
 $history = $history ?? [];
+$historyEntityType = $historyEntityType ?? 'profile';
+$historyEntityId = $historyEntityId ?? $profile->id;
+$historyHasMore = $historyHasMore ?? false;
+$historyPageSize = $historyPageSize ?? 20;
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>View Profile</h2>

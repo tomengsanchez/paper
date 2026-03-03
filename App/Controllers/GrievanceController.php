@@ -337,9 +337,26 @@ class GrievanceController extends Controller
         }
 
         $attachments = GrievanceAttachment::byGrievance($id);
-        $history = \App\AuditLog::for('grievance', $id);
+        $historyPage = \App\AuditLog::forPaginated('grievance', $id, 1, 20);
+        $history = $historyPage['items'];
         AuditLog::record('grievance', $id, 'viewed');
-        $this->view('grievance/view', compact('grievance', 'attachments', 'vulnerabilities', 'respondentTypes', 'grmChannels', 'preferredLanguages', 'grievanceTypes', 'grievanceCategories', 'statusLog', 'progressLevels', 'history'));
+        $this->view('grievance/view', [
+            'grievance' => $grievance,
+            'attachments' => $attachments,
+            'vulnerabilities' => $vulnerabilities,
+            'respondentTypes' => $respondentTypes,
+            'grmChannels' => $grmChannels,
+            'preferredLanguages' => $preferredLanguages,
+            'grievanceTypes' => $grievanceTypes,
+            'grievanceCategories' => $grievanceCategories,
+            'statusLog' => $statusLog,
+            'progressLevels' => $progressLevels,
+            'history' => $history,
+            'historyEntityType' => 'grievance',
+            'historyEntityId' => $id,
+            'historyHasMore' => $historyPage['has_more'],
+            'historyPageSize' => $historyPage['per_page'],
+        ]);
     }
 
     public function edit(int $id): void

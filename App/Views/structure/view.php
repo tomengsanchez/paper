@@ -4,6 +4,10 @@ $structureImages = \App\Models\Structure::parseImages($structure->structure_imag
 $allImageUrls = array_map(function($img) { return \App\Controllers\StructureController::imageUrl($img); }, array_merge($taggingImages, $structureImages));
 $imgIdx = 0;
 $history = $history ?? [];
+$historyEntityType = $historyEntityType ?? 'structure';
+$historyEntityId = $historyEntityId ?? $structure->id;
+$historyHasMore = $historyHasMore ?? false;
+$historyPageSize = $historyPageSize ?? 20;
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>View Structure</h2>

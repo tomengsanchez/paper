@@ -54,6 +54,47 @@ class AuditLog
     }
 
     /**
+     * Paginated history for a given entity, newest first.
+     *
+     * @return array{items: array<int,object>, page: int, per_page: int, has_more: bool}
+     */
+    public static function forPaginated(string $entityType, int $entityId, int $page = 1, int $perPage = 20): array
+    {
+        $db = self::db();
+        $page = max(1, (int) $page);
+        $perPage = max(1, min(100, (int) $perPage));
+        $offset = ($page - 1) * $perPage;
+
+        $sql = "
+            SELECT a.id, a.entity_type, a.entity_id, a.action, a.changes, a.created_at, a.created_by,
+                   u.username AS created_by_name
+            FROM audit_log a
+            LEFT JOIN users u ON u.id = a.created_by
+            WHERE a.entity_type = :etype AND a.entity_id = :eid
+            ORDER BY a.created_at DESC, a.id DESC
+            LIMIT {$perPage} OFFSET {$offset}
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([
+            'etype' => $entityType,
+            'eid'   => $entityId,
+        ]);
+        $items = $stmt->fetchAll(\PDO::FETCH_OBJ);
+        foreach ($items as $row) {
+            $row->changes = $row->changes ? (json_decode($row->changes, true) ?: []) : [];
+        }
+
+        $hasMore = count($items) === $perPage;
+
+        return [
+            'items'    => $items,
+            'page'     => $page,
+            'per_page' => $perPage,
+            'has_more' => $hasMore,
+        ];
+    }
+
+    /**
      * Paginated list for Audit Trail (all modules: user, profile, structure, grievance).
      *
      * @param array $filters ['module' => entity_type, 'from' => date, 'to' => date, 'user_id' => created_by]
