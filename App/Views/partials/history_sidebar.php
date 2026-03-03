@@ -3,17 +3,21 @@
 /** @var array<int,object>|null $statusLog */
 $history = $history ?? [];
 $statusLog = $statusLog ?? [];
+$currentUserId = (int) (\Core\Auth::id() ?? 0);
+$historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
+    return !(($e->action ?? '') === 'viewed' && (int)($e->created_by ?? 0) === $currentUserId);
+});
 ?>
 <div class="card mb-3">
     <div class="card-header py-2">
         <h6 class="mb-0 small text-uppercase text-muted">Activity History</h6>
     </div>
     <div class="card-body p-2" style="max-height: 360px; overflow-y: auto;">
-        <?php if (empty($history)): ?>
+        <?php if (empty($historyFiltered)): ?>
         <p class="text-muted small mb-0">No activity recorded yet.</p>
         <?php else: ?>
         <ul class="list-unstyled mb-0 small">
-            <?php foreach ($history as $entry): ?>
+            <?php foreach ($historyFiltered as $entry): ?>
             <li class="mb-2">
                 <div><strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $entry->action ?? ''))) ?></strong></div>
                 <div class="text-muted"><?= htmlspecialchars($entry->created_at ?? '') ?><?= $entry->created_by_name ? ' · ' . htmlspecialchars($entry->created_by_name) : '' ?></div>

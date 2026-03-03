@@ -204,8 +204,11 @@ $history = $history ?? [];
         </script>
         <?php endif; ?>
     </div>
-    <div class="col-lg-4 col-xl-3">
-        <?php $statusLogForSidebar = $statusLog ?? []; $historyForSidebar = $history; $history = $historyForSidebar; $statusLog = $statusLogForSidebar; require __DIR__ . '/../partials/history_sidebar.php'; ?>
-    </div>
+</div><!-- end Status card -->
+
+</div><!-- end col-lg-8 -->
+<div class="col-lg-4 col-xl-3">
+    <?php $statusLogForSidebar = $statusLog ?? []; $historyForSidebar = $history; $history = $historyForSidebar; $statusLog = $statusLogForSidebar; require __DIR__ . '/../partials/history_sidebar.php'; ?>
 </div>
+</div><!-- end row -->
 <?php $content = ob_get_clean(); $pageTitle = 'Grievance ' . ($g->grievance_case_number ?: '#' . $g->id); $currentPage = 'grievance-list'; require __DIR__ . '/../layout/main.php'; ?>
