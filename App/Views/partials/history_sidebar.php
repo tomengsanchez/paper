@@ -3,15 +3,10 @@
 /** @var array<int,object>|null $statusLog */
 $history = $history ?? [];
 $statusLog = $statusLog ?? [];
-$currentUserId = (int) (\Core\Auth::id() ?? 0);
 $historyEntityType = $historyEntityType ?? null;
 $historyEntityId = $historyEntityId ?? null;
 $historyPageSize = $historyPageSize ?? 20;
 $historyHasMore = !empty($historyHasMore);
-// Filter out self \"viewed\" actions for initial page
-$historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
-    return !(($e->action ?? '') === 'viewed' && (int)($e->created_by ?? 0) === $currentUserId);
-});
 ?>
 <div class="card mb-3">
     <div class="card-header py-2">
@@ -23,13 +18,12 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
          data-entity-id="<?= (int) $historyEntityId ?>"
          data-page="1"
          data-page-size="<?= (int) $historyPageSize ?>"
-         data-has-more="<?= $historyHasMore ? '1' : '0' ?>"
-         data-current-user-id="<?= $currentUserId ?>">
-        <?php if (empty($historyFiltered)): ?>
+         data-has-more="<?= $historyHasMore ? '1' : '0' ?>">
+        <?php if (empty($history)): ?>
         <p class="text-muted small mb-0 history-empty-message">No activity recorded yet.</p>
         <?php else: ?>
         <ul class="list-unstyled mb-0 small history-list">
-            <?php foreach ($historyFiltered as $entry): ?>
+            <?php foreach ($history as $entry): ?>
             <li class="mb-2">
                 <div><strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $entry->action ?? ''))) ?></strong></div>
                 <div class="text-muted"><?= htmlspecialchars($entry->created_at ?? '') ?><?= $entry->created_by_name ? ' · ' . htmlspecialchars($entry->created_by_name) : '' ?></div>
@@ -75,9 +69,6 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
 <script>
 // Lazy-load Activity History on scroll
 (function(){
-    if (window.__historySidebarInit) return;
-    window.__historySidebarInit = true;
-
     function shouldLoadMore(container) {
         if (!container) return false;
         var hasMore = container.getAttribute('data-has-more') === '1';
@@ -99,7 +90,6 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
         var entityId = parseInt(container.getAttribute('data-entity-id') || '0', 10);
         var page = parseInt(container.getAttribute('data-page') || '1', 10);
         var pageSize = parseInt(container.getAttribute('data-page-size') || '20', 10);
-        var currentUserId = parseInt(container.getAttribute('data-current-user-id') || '0', 10);
         if (!entityType || !entityId) return;
 
         container.setAttribute('data-loading', '1');
@@ -124,10 +114,6 @@ $historyFiltered = array_filter($history, function ($e) use ($currentUserId) {
                     container.insertBefore(list, loadingEl || null);
                 }
                 (data.items || []).forEach(function (entry) {
-                    // Skip current-user \"viewed\" events as in initial render
-                    if ((entry.action || '') === 'viewed' && parseInt(entry.created_by || 0, 10) === currentUserId) {
-                        return;
-                    }
                     var li = document.createElement('li');
                     li.className = 'mb-2';
                     var title = document.createElement('div');
