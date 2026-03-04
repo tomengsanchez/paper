@@ -1,0 +1,16 @@
+Backend stack
+Custom PHP MVC framework, not Laravel/CodeIgniter.
+Core framework lives under Core/ (router, base controller, DB, auth, CSRF, logger, mail, migrations).
+Requests enter through public/index.php (front controller) and are routed via Core\Router to App\Controllers\... methods.
+Frontend stack
+Server-rendered PHP views, no SPA framework.
+Uses Bootstrap 5, jQuery, and Select2 (with a Bootstrap 5 theme) for UI and enhanced form controls.
+Application structure
+App\Controllers\ – HTTP and API controllers (e.g. dashboard, profile, structure, grievance, users, settings, security, notifications, etc.).
+App\Models\ – PDO-based models, no heavy ORM; mostly one model per table/domain.
+App\Views\ – module-based PHP templates with a shared layout (layout/main.php) and partials (pagination, toolbars, sidebars).
+Clear MVC pattern with role/capability-based access checks in controllers and menus.
+Database layer & schema
+DB config via config/database.php, used by Core\Database (PDO singleton).
+Schema defined by PHP migration scripts under database/migration_*.php and seeders under database/seed_*.php.
+Main domains: users/roles/capabilities, projects, profiles, structures, grievances + grievance status/history, app/user settings, notifications, audit log, API tokens.
