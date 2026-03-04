@@ -182,17 +182,18 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
             </ul>
         </div>
         <div class="dropdown user-dropdown">
-            <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                <?= htmlspecialchars(\Core\Auth::user()->display_name ?: \Core\Auth::user()->username ?? '') ?>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="/account">My Profile</a></li>
-                <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/logout">Logout</a></li>
-            </ul>
-        </div>
+        <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <?= htmlspecialchars(\Core\Auth::user()->display_name ?: \Core\Auth::user()->username ?? '') ?>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/account">My Profile</a></li>
+            <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/help<?= $currentPage !== '' ? ('?from=' . urlencode($currentPage)) : '' ?>">Help</a></li>
+            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+        </ul>
+    </div>
     </nav>
 <?php else: ?>
     <aside class="sidebar">
@@ -301,6 +302,7 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
                     <li><a class="dropdown-item" href="/account">My Profile</a></li>
                     <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
                     <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/help<?= $currentPage !== '' ? ('?from=' . urlencode($currentPage)) : '' ?>">Help</a></li>
                     <li><a class="dropdown-item" href="/logout">Logout</a></li>
                 </ul>
             </div>
