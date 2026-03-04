@@ -15,6 +15,7 @@ $router->get('/', 'DashboardController@index');
 $router->get('/account', 'AccountController@index');
 $router->get('/notifications', 'NotificationController@index');
 $router->get('/notifications/click/{id}', 'NotificationController@click');
+$router->get('/help', 'HelpController@index');
 $router->get('/profile', 'ProfileController@index');
 $router->get('/profile/view/{id}', 'ProfileController@show');
 $router->get('/profile/create', 'ProfileController@create');
