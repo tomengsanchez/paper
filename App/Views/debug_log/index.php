@@ -4,6 +4,7 @@ $loadTimeMs = $loadTimeMs ?? 0;
 $queries = $queries ?? [];
 $classesLoaded = $classesLoaded ?? [];
 $functions = $functions ?? [];
+$logFiles = $logFiles ?? [];
 
 ob_start();
 ?>
@@ -26,6 +27,63 @@ ob_start();
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header bg-transparent border-bottom">
+        <h5 class="mb-0">Application log files</h5>
+        <small class="text-muted">Logs under the <code>logs/</code> directory. Contents are loaded on demand.</small>
+    </div>
+    <div class="card-body p-0">
+        <?php if (empty($logFiles)): ?>
+            <p class="text-muted mb-0 p-3">No log files found in the logs directory.</p>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                    <tr>
+                        <th>Log file</th>
+                        <th style="width: 10rem;" class="text-end">Size</th>
+                        <th style="width: 14rem;">Last modified</th>
+                        <th style="width: 7rem;"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($logFiles as $log): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($log['name'] ?? '') ?></td>
+                            <td class="text-end small text-muted">
+                                <?php
+                                $size = (int)($log['size'] ?? 0);
+                                if ($size >= 1048576) {
+                                    echo number_format($size / 1048576, 2) . ' MB';
+                                } elseif ($size >= 1024) {
+                                    echo number_format($size / 1024, 1) . ' KB';
+                                } else {
+                                    echo $size . ' B';
+                                }
+                                ?>
+                            </td>
+                            <td class="small text-muted">
+                                <?php
+                                $modified = $log['modified'] ?? null;
+                                echo $modified ? htmlspecialchars(date('Y-m-d H:i:s', (int)$modified)) : '—';
+                                ?>
+                            </td>
+                            <td class="text-end">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary js-view-log"
+                                        data-log-name="<?= htmlspecialchars($log['name'] ?? '') ?>">
+                                    View
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
@@ -40,15 +98,15 @@ ob_start();
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
                             <thead>
-                                <tr>
-                                    <th style="width: 3rem;">#</th>
-                                    <th>Query</th>
-                                    <th class="text-end" style="width: 7rem;">Duration (ms)</th>
-                                    <th class="text-end" style="width: 7rem;">Time (ms)</th>
-                                </tr>
+                            <tr>
+                                <th style="width: 3rem;">#</th>
+                                <th>Query</th>
+                                <th class="text-end" style="width: 7rem;">Duration (ms)</th>
+                                <th class="text-end" style="width: 7rem;">Time (ms)</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($queries as $i => $q): ?>
+                            <?php foreach ($queries as $i => $q): ?>
                                 <tr>
                                     <td class="text-muted"><?= $i + 1 ?></td>
                                     <td>
@@ -60,7 +118,7 @@ ob_start();
                                     <td class="text-end"><?= number_format($q['duration'] ?? 0, 2) ?></td>
                                     <td class="text-end text-muted"><?= number_format($q['time'] ?? 0, 2) ?></td>
                                 </tr>
-                                <?php endforeach; ?>
+                            <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
@@ -82,22 +140,22 @@ ob_start();
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
                             <thead>
-                                <tr>
-                                    <th style="width: 3rem;">#</th>
-                                    <th>Function</th>
-                                    <th>File</th>
-                                    <th class="text-end" style="width: 5rem;">Line</th>
-                                </tr>
+                            <tr>
+                                <th style="width: 3rem;">#</th>
+                                <th>Function</th>
+                                <th>File</th>
+                                <th class="text-end" style="width: 5rem;">Line</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($functions as $i => $f): ?>
+                            <?php foreach ($functions as $i => $f): ?>
                                 <tr>
                                     <td class="text-muted"><?= $i + 1 ?></td>
                                     <td><code><?= htmlspecialchars($f['function'] ?? '') ?></code></td>
                                     <td class="small text-break"><?= htmlspecialchars($f['file'] ?? '') ?></td>
                                     <td class="text-end"><?= (int)($f['line'] ?? 0) ?></td>
                                 </tr>
-                                <?php endforeach; ?>
+                            <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
@@ -119,20 +177,20 @@ ob_start();
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
                             <thead>
-                                <tr>
-                                    <th style="width: 3rem;">#</th>
-                                    <th>Class</th>
-                                    <th class="text-end" style="width: 8rem;">Loaded at (ms)</th>
-                                </tr>
+                            <tr>
+                                <th style="width: 3rem;">#</th>
+                                <th>Class</th>
+                                <th class="text-end" style="width: 8rem;">Loaded at (ms)</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($classesLoaded as $i => $c): ?>
+                            <?php foreach ($classesLoaded as $i => $c): ?>
                                 <tr>
                                     <td class="text-muted"><?= $i + 1 ?></td>
                                     <td><code><?= htmlspecialchars($c['class'] ?? '') ?></code></td>
                                     <td class="text-end"><?= number_format($c['time'] ?? 0, 2) ?></td>
                                 </tr>
-                                <?php endforeach; ?>
+                            <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
@@ -142,8 +200,86 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logModalLabel">Log file</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="log-modal-loading" class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status" aria-hidden="true"></div>
+                    <div class="mt-2 small text-muted">Loading log contents...</div>
+                </div>
+                <div id="log-modal-content" class="d-none">
+                    <div class="small text-muted mb-2" id="log-modal-meta"></div>
+                    <pre id="log-modal-text" class="small mb-0" style="white-space: pre-wrap; background:#0f172a; color:#e5e7eb; padding:0.75rem; border-radius:4px; max-height:60vh; overflow:auto;"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php ob_start(); ?>
+<script>
+    $(function () {
+        var $logModal = $('#logModal');
+        var logModal = null;
+        if (window.bootstrap && window.bootstrap.Modal) {
+            logModal = new bootstrap.Modal($logModal[0]);
+        }
+
+        $('.js-view-log').on('click', function () {
+            var name = $(this).data('log-name');
+            if (!name) {
+                return;
+            }
+            $('#logModalLabel').text('Log: ' + name);
+            $('#log-modal-loading').removeClass('d-none');
+            $('#log-modal-content').addClass('d-none');
+            if (logModal) {
+                logModal.show();
+            } else {
+                $logModal.modal('show');
+            }
+
+            $.getJSON('/api/system/log', {name: name})
+                .done(function (data) {
+                    var meta = [];
+                    if (data.size !== undefined) {
+                        meta.push('Size: ' + data.size + ' bytes');
+                    }
+                    if (data.modified) {
+                        var d = new Date(data.modified * 1000);
+                        meta.push('Last modified: ' + d.toISOString().replace('T', ' ').substring(0, 19));
+                    }
+                    if (data.truncated) {
+                        meta.push('Showing last portion of the file (latest entries).');
+                    }
+                    $('#log-modal-meta').text(meta.join(' \u2022 '));
+                    $('#log-modal-text').text(data.content || '');
+                    $('#log-modal-loading').addClass('d-none');
+                    $('#log-modal-content').removeClass('d-none');
+                })
+                .fail(function () {
+                    $('#log-modal-meta').text('');
+                    $('#log-modal-text').text('Unable to load log file. Please check that the log exists and try again.');
+                    $('#log-modal-loading').addClass('d-none');
+                    $('#log-modal-content').removeClass('d-none');
+                });
+        });
+    });
+</script>
+<?php $scripts = ($scripts ?? '') . ob_get_clean(); ?>
+
 <?php
 $content = ob_get_clean();
 $pageTitle = 'System Debug Log';
 $currentPage = 'debug-log';
 require __DIR__ . '/../layout/main.php';
+?>
+

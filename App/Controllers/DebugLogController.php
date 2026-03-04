@@ -25,12 +25,65 @@ class DebugLogController extends Controller
         $classesLoaded = SystemDebug::getClassesLoaded();
         $functions = SystemDebug::getDefinedFunctions();
 
+        $logsDir = dirname(__DIR__, 2) . '/logs';
+        $logFiles = [];
+        if (is_dir($logsDir)) {
+            foreach (glob($logsDir . '/*.log') as $file) {
+                $logFiles[] = [
+                    'name' => basename($file),
+                    'size' => @filesize($file) ?: 0,
+                    'modified' => @filemtime($file) ?: null,
+                ];
+            }
+        }
+
         $this->view('debug_log/index', [
             'timestamp'      => $timestamp,
             'loadTimeMs'     => $loadTimeMs,
             'queries'        => $queries,
             'classesLoaded'  => $classesLoaded,
             'functions'      => $functions,
+            'logFiles'       => $logFiles,
+        ]);
+    }
+
+    public function log(): void
+    {
+        $this->requireAuth();
+        if (!Auth::isAdmin()) {
+            $this->redirect('/');
+        }
+        $name = isset($_GET['name']) ? (string) $_GET['name'] : '';
+        $name = basename($name);
+        if ($name === '' || !preg_match('/^[A-Za-z0-9_.-]+$/', $name)) {
+            http_response_code(400);
+            $this->json(['error' => 'Bad Request', 'message' => 'Invalid log name']);
+        }
+        $logsDir = dirname(__DIR__, 2) . '/logs';
+        $path = $logsDir . '/' . $name;
+        if (!is_file($path)) {
+            http_response_code(404);
+            $this->json(['error' => 'Not Found', 'message' => 'Log file not found']);
+        }
+        $size = @filesize($path) ?: 0;
+        $maxBytes = 200000;
+        $truncated = false;
+        $content = '';
+        $fh = @fopen($path, 'rb');
+        if ($fh !== false) {
+            if ($size > $maxBytes) {
+                $truncated = true;
+                fseek($fh, -$maxBytes, SEEK_END);
+            }
+            $content = stream_get_contents($fh) ?: '';
+            fclose($fh);
+        }
+        $this->json([
+            'name'      => $name,
+            'size'      => $size,
+            'modified'  => @filemtime($path) ?: null,
+            'truncated' => $truncated,
+            'content'   => $content,
         ]);
     }
 }

@@ -190,6 +190,9 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
             <li><a class="dropdown-item" href="/account">My Profile</a></li>
             <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
             <li><hr class="dropdown-divider"></li>
+            <?php if (\Core\Auth::isAdmin()): ?>
+            <li><a class="dropdown-item" href="/admin-guide">Admin Guide</a></li>
+            <?php endif; ?>
             <li><a class="dropdown-item" href="/help<?= $currentPage !== '' ? ('?from=' . urlencode($currentPage)) : '' ?>">Help</a></li>
             <li><a class="dropdown-item" href="/logout">Logout</a></li>
         </ul>
@@ -302,6 +305,9 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
                     <li><a class="dropdown-item" href="/account">My Profile</a></li>
                     <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
                     <li><hr class="dropdown-divider"></li>
+                    <?php if (\Core\Auth::isAdmin()): ?>
+                    <li><a class="dropdown-item" href="/admin-guide">Admin Guide</a></li>
+                    <?php endif; ?>
                     <li><a class="dropdown-item" href="/help<?= $currentPage !== '' ? ('?from=' . urlencode($currentPage)) : '' ?>">Help</a></li>
                     <li><a class="dropdown-item" href="/logout">Logout</a></li>
                 </ul>
