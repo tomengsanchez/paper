@@ -40,7 +40,7 @@ class AuditLog
             SELECT a.*, u.username AS created_by_name
             FROM audit_log a
             LEFT JOIN users u ON u.id = a.created_by
-            WHERE a.entity_type = ? AND a.entity_id = ?
+            WHERE a.entity_type = ? AND a.entity_id = ? AND a.action <> 'viewed'
             ORDER BY a.created_at DESC
             LIMIT {$limit}
         ";
@@ -70,7 +70,7 @@ class AuditLog
                    u.username AS created_by_name
             FROM audit_log a
             LEFT JOIN users u ON u.id = a.created_by
-            WHERE a.entity_type = :etype AND a.entity_id = :eid
+            WHERE a.entity_type = :etype AND a.entity_id = :eid AND a.action <> 'viewed'
             ORDER BY a.created_at DESC, a.id DESC
             LIMIT {$perPage} OFFSET {$offset}
         ";
