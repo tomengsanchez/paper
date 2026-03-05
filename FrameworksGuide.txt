@@ -5,6 +5,12 @@ Requests enter through public/index.php (front controller) and are routed via Co
 Frontend stack
 Server-rendered PHP views, no SPA framework.
 Uses Bootstrap 5, jQuery, and Select2 (with a Bootstrap 5 theme) for UI and enhanced form controls.
+Main layout supports:
+- Sidebar or top-navigation layouts (per-user via UserUiSettings).
+- Optional “super mobile-friendly” mode, which on small screens:
+  - Stacks Bootstrap grid columns vertically.
+  - Makes tables more compact with horizontal scrolling.
+  - Turns the sidebar into an overlay drawer with a hamburger toggle and backdrop.
 Application structure
 App\Controllers\ – HTTP and API controllers (e.g. dashboard, profile, structure, grievance, users, settings, security, notifications, etc.).
 App\Models\ – PDO-based models, no heavy ORM; mostly one model per table/domain.
@@ -14,3 +20,7 @@ Database layer & schema
 DB config via config/database.php, used by Core\Database (PDO singleton).
 Schema defined by PHP migration scripts under database/migration_*.php and seeders under database/seed_*.php.
 Main domains: users/roles/capabilities, projects, profiles, structures, grievances + grievance status/history, app/user settings, notifications, audit log, API tokens.
+Security-related schema additions:
+- app_settings: stores security and UI configuration (2FA, login throttling, password policy, email settings, UI preferences, etc.).
+- users.password_changed_at: used for password expiry checks.
+- user_password_history: per-user history of password hashes for enforcing “last N passwords” reuse rules.

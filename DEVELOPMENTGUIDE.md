@@ -16,7 +16,7 @@ paper/
 │   │   ├── layout/        # main.php (master layout: sidebar or top nav)
 │   │   └── partials/      # list_pagination.php, list_toolbar.php, history_sidebar.php
 │   ├── Capabilities.php   # Central registry of role capabilities and menu visibility
-│   ├── UserUiSettings.php # Per-user UI (theme, sidebar vs top layout) – stored in user_dashboard_config
+│   ├── UserUiSettings.php # Per-user UI (theme, sidebar vs top vs mobile-friendly layout) – stored in user_dashboard_config
 │   ├── UserNotificationSettings.php # Per-user notification preferences – user_dashboard_config
 │   ├── NotificationService.php # Create/fetch notifications; list history with filters
 │   ├── AuditLog.php       # Generic entity history (created/updated/status_changed)
@@ -33,7 +33,7 @@ paper/
 │   ├── MigrationRunner.php # Runs database/migration_*.php
 │   ├── Logger.php         # Error logging
 │   ├── Mailer.php         # SMTP mail
-│   └── LoginThrottle.php  # Login attempt throttling
+│   └── LoginThrottle.php  # Login attempt throttling (configurable via Security Settings)
 ├── config/
 │   ├── database.php       # DB credentials (copy from database-sample.php)
 │   └── app.php            # Optional base_url (copy from app-sample.php)
@@ -77,10 +77,10 @@ paper/
 
 ## 4. Database structure
 
-### 4.1 Core tables (migration_000)
+### 4.1 Core tables (migration_000 and later)
 
 - **roles** – id, name (e.g. Administrator, Standard User, Coordinator)
-- **users** – id, username, email, password_hash, role_id, display_name (migration_015), created_at, updated_at
+- **users** – id, username, email, password_hash, password_changed_at (migration_022), role_id, display_name (migration_015), created_at, updated_at
 - **app_settings** – setting_key, setting_value, updated_at
 - **role_capabilities** – id, role_id, capability (e.g. view_profiles, add_profiles); UNIQUE(role_id, capability)
 - **migrations** – id, name, ran_at (used by MigrationRunner)
@@ -105,7 +105,11 @@ paper/
 - **notifications** – id, user_id, type, related_type, related_id, project_id (migration_019), message, created_at, clicked_at (migration_019). Used for in-app notifications; bell shows unread (clicked_at IS NULL); history page shows all with filters.
 - **email_queue** – id, to_email, subject, body, created_at, sent_at, status (pending/sent/failed), error_message (migration_021). Notification emails are enqueued here; sent in background by `php cli/send_queued_emails.php` (run via cron every 1–5 min).
 
-### 4.5 Audit and history
+### 4.5 User password history (migration_022)
+
+- **user_password_history** – id, user_id, password_hash, changed_at. Used to enforce password history (prevent reuse of last N passwords) via `App\PasswordPolicy`.
+
+### 4.6 Audit and history
 
 - **audit_log** – id, entity_type, entity_id, action (e.g. created, updated, status_changed), changes (JSON), created_at, created_by. Used for Activity History on profile/structure/grievance view pages (partials/history_sidebar.php).
 
@@ -116,7 +120,7 @@ paper/
 - Format: PHP file returning `['name' => 'migration_XXX_description', 'up' => function (\PDO $db): void { ... }, 'down' => function (\PDO $db): void { ... }]`.
 - Run: `php cli/migrate.php`. Status: `php cli/migrate.php --status`.
 - Migrations run in filename order; applied names stored in `migrations` table.
-- List (as of this guide): 000 (initial), 001 (EAV→flat), 002–014 (scalability, profile fields, list columns, grievance, status, progress levels, dashboard config, grievance attachments, indexes, etc.), 015 (display_name, user_projects), 016 (notifications), 017 (notification defaults for all users), 018 (audit_log), 019 (notifications project_id, clicked_at), 020 (api_tokens), 021 (email_queue).
+- List (as of this guide): 000 (initial), 001 (EAV→flat), 002–014 (scalability, profile fields, list columns, grievance, status, progress levels, dashboard config, grievance attachments, indexes, etc.), 015 (display_name, user_projects), 016 (notifications), 017 (notification defaults for all users), 018 (audit_log), 019 (notifications project_id, clicked_at), 020 (api_tokens), 021 (email_queue), 022 (password policy: password_changed_at, user_password_history).
 
 ---
 
@@ -126,6 +130,8 @@ paper/
 - **User projects:** `App\UserProjects::allowedProjectIds()` – null = all projects (e.g. admin), empty array = none, else list of project IDs. Used to restrict profile/structure/grievance/list and notification project filter.
 - **Notifications:** `App\NotificationService` – notifyNewProfile, notifyProfileUpdated, notifyNewGrievance, notifyGrievanceStatusChange, notifyNewStructure. Preferences in UserNotificationSettings; stored in user_dashboard_config. When "Send email for project notifications" is on (Email settings), emails are queued in email_queue and sent by `php cli/send_queued_emails.php` (schedule via cron so save/update responses stay fast).
 - **Audit log:** `App\AuditLog::record($entityType, $entityId, $action, $changes)`. Used in Profile, Structure, Grievance controllers for create/update/status. View via `AuditLog::for($entityType, $entityId)` and `partials/history_sidebar.php`.
+- **Login throttling:** `Core\LoginThrottle` reads settings from `App\Models\AppSettings::getSecurityConfig()` (login_throttle_enabled, login_throttle_max_attempts, login_throttle_lockout_minutes). Throttling can be enabled/disabled and tuned via Security Settings. When disabled, LoginThrottle is a no-op.
+- **Password policy:** `App\PasswordPolicy` enforces admin-configured rules on new/changed passwords: minimum length, required character classes, optional expiry (`password_expiry_days`), and history (`password_history_limit`). UserController uses this when creating/updating users; Auth controllers enforce expiry on login (web and API).
 - **Views:** Layout in `App/Views/layout/main.php`; `$currentPage` and `$pageTitle` for nav/title; `$content` for main body (views often use ob_start() and then require main.php).
 - **List pages:** Use list_pagination.php and list_toolbar.php; pass listPagination, listBaseUrl, listExtraParams for filters (e.g. notifications page).
 - **Truncate scripts:** `truncate_seed_tables.php` truncates notifications, audit_log, structures, profiles, projects (with FOREIGN_KEY_CHECKS). `truncate_grievances.php` truncates grievance_status_log, grievances. After truncate, re-seed as needed; migrations and user/preference data remain.
