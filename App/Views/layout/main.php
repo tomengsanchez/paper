@@ -2,6 +2,7 @@
 $ui = \App\UserUiSettings::get();
 $uiTheme = $ui['theme'] ?? \App\UserUiSettings::THEME_DEFAULT;
 $uiLayout = $ui['layout'] ?? \App\UserUiSettings::LAYOUT_SIDEBAR;
+$uiMobileFriendly = !empty($ui['mobile_friendly']);
 $currentPage = $currentPage ?? '';
 $devClockSimulated = \Core\Auth::id() && \App\DevClock::isOverridden();
 $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
@@ -78,9 +79,35 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
         .dev-status-footer a { color: #475569; }
         .dev-status-footer .dev-stat { white-space: nowrap; }
         .dev-status-footer .dev-stat strong { color: #475569; }
+        /* Super mobile-friendly: responsive columns, tables, sidebar drawer */
+        @media (max-width: 768px) {
+            body.ui-mobile-friendly .main-wrap { margin-left: 0 !important; }
+            body.ui-mobile-friendly .content { padding: 0.75rem; }
+            body.ui-mobile-friendly .row > [class*="col-"] { flex: 0 0 100%; max-width: 100%; }
+            body.ui-mobile-friendly .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            body.ui-mobile-friendly .table { font-size: 0.9rem; }
+            body.ui-mobile-friendly .table th, body.ui-mobile-friendly .table td { padding: 0.5rem 0.35rem; white-space: nowrap; }
+            body.ui-mobile-friendly .list-toolbar { flex-direction: column; align-items: stretch; }
+            body.ui-mobile-friendly .list-toolbar .form-control { max-width: none; }
+            body.ui-mobile-friendly .card .card-header { font-size: 0.95rem; }
+            body.ui-mobile-friendly .btn-group .btn { padding: 0.35rem 0.5rem; font-size: 0.875rem; }
+        }
+        @media (max-width: 576px) {
+            body.ui-mobile-friendly .content { padding: 0.5rem; }
+            body.ui-mobile-friendly .d-flex.gap-2 { flex-wrap: wrap; gap: 0.5rem !important; }
+        }
+        /* Sidebar as overlay on mobile when mobile-friendly + sidebar layout */
+        @media (max-width: 768px) {
+            body.ui-mobile-friendly.ui-layout-sidebar .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; width: 260px; }
+            body.ui-mobile-friendly.ui-layout-sidebar.body-sidebar-open .sidebar { transform: translateX(0); }
+            body.ui-mobile-friendly.ui-layout-sidebar .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; }
+            body.ui-mobile-friendly.ui-layout-sidebar.body-sidebar-open .sidebar-overlay { display: block; }
+            body.ui-mobile-friendly.ui-layout-sidebar .sidebar-toggle { display: inline-flex !important; }
+        }
+        body.ui-mobile-friendly.ui-layout-sidebar .sidebar-toggle { display: none; }
     </style>
 </head>
-<body class="ui-theme-<?= htmlspecialchars($uiTheme) ?> ui-layout-<?= htmlspecialchars($uiLayout) ?>">
+<body class="ui-theme-<?= htmlspecialchars($uiTheme) ?> ui-layout-<?= htmlspecialchars($uiLayout) ?><?= $uiMobileFriendly ? ' ui-mobile-friendly' : '' ?>">
 <?php if ($uiLayout === 'top'): ?>
     <nav class="topnav">
         <a href="/" class="brand">PAPeR</a>
@@ -199,7 +226,8 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
     </div>
     </nav>
 <?php else: ?>
-    <aside class="sidebar">
+    <?php if ($uiMobileFriendly): ?><div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div><?php endif; ?>
+    <aside class="sidebar" id="main-sidebar">
         <a href="/" class="brand">PAPeR</a>
         <nav class="py-2">
             <?php if (\Core\Auth::can('view_profiles')): ?>
@@ -275,6 +303,9 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
     <div class="main-wrap <?= $uiLayout === 'top' ? 'ui-layout-top' : '' ?>">
         <?php if ($uiLayout !== 'top'): ?>
         <header class="header">
+            <?php if ($uiMobileFriendly): ?>
+            <button type="button" class="sidebar-toggle btn btn-link p-2 me-2 text-secondary" id="sidebar-toggle" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg></button>
+            <?php endif; ?>
             <span class="header-datetime text-muted" id="header-datetime-wrap">
                 <span class="nav-live-datetime" id="header-live-datetime" aria-live="polite"></span>
                 <?php if ($devClockSimulated && $devClockDate): ?>
@@ -366,6 +397,9 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
     })();
     $(function(){
         $('.nav-parent').on('click', function(){ $(this).toggleClass('open'); });
+        var $body = $('body');
+        $('#sidebar-toggle').on('click', function(){ $body.toggleClass('body-sidebar-open'); });
+        $('#sidebar-overlay').on('click', function(){ $body.removeClass('body-sidebar-open'); });
 
         function updateNotificationBadge(count) {
             var $badge = $('#notification-count');
