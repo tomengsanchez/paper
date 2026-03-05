@@ -3,9 +3,11 @@ namespace App;
 
 use Core\Auth;
 use Core\Database;
+use App\Models\AppSettings;
 
 /**
  * Creates and manages user notifications for profile/grievance events.
+ * When admin enables "notification emails", users linked to the project receive an email for each in-app notification.
  */
 class NotificationService
 {
@@ -101,24 +103,35 @@ class NotificationService
     ): void {
         $db = Database::getInstance();
 
-        // Get users who have this project linked
-        $stmt = $db->prepare('SELECT DISTINCT user_id FROM user_projects WHERE project_id = ?');
+        // Get users who have this project linked, with email for notification delivery
+        $stmt = $db->prepare('SELECT DISTINCT u.id, u.email FROM users u INNER JOIN user_projects up ON up.user_id = u.id WHERE up.project_id = ?');
         $stmt->execute([$projectId]);
-        $userIds = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+        $users = $stmt->fetchAll(\PDO::FETCH_OBJ);
 
-        if (empty($userIds)) {
+        if (empty($users)) {
             return;
         }
 
         $ins = $db->prepare('INSERT INTO notifications (user_id, type, related_type, related_id, project_id, message) VALUES (?, ?, ?, ?, ?, ?)');
+        $emailConfig = AppSettings::getEmailConfig();
+        $sendNotificationEmail = !empty($emailConfig->enable_notification_emails);
+        $baseUrl = defined('BASE_URL') && BASE_URL ? rtrim(BASE_URL, '/') : '';
 
-        foreach ($userIds as $uid) {
-            $uid = (int) $uid;
+        foreach ($users as $u) {
+            $uid = (int) $u->id;
             $prefs = self::getPrefsForUser($db, $uid);
             if (empty($prefs[$prefKey])) {
                 continue;
             }
             $ins->execute([$uid, $type, $relatedType, $relatedId, $projectId, $message]);
+            $notificationId = (int) $db->lastInsertId();
+
+            if ($sendNotificationEmail && $notificationId && !empty(trim($u->email ?? ''))) {
+                $clickUrl = $baseUrl . '/notifications/click/' . $notificationId;
+                $subject = 'PAPeR: ' . $message;
+                $body = $message . "\n\nView notification: " . $clickUrl;
+                \Core\Mailer::send(trim($u->email), $subject, $body);
+            }
         }
     }
 

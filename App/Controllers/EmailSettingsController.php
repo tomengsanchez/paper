@@ -30,6 +30,7 @@ class EmailSettingsController extends Controller
             'smtp_encryption' => trim($_POST['smtp_encryption'] ?? 'tls'),
             'from_email'    => trim($_POST['from_email'] ?? ''),
             'from_name'     => trim($_POST['from_name'] ?? ''),
+            'enable_notification_emails' => isset($_POST['enable_notification_emails']),
         ]);
         $this->redirect('/settings/email?success=1');
     }
