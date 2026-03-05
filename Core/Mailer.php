@@ -5,7 +5,13 @@ use App\Models\AppSettings;
 
 class Mailer
 {
-    public static function send(string $to, string $subject, string $body): array
+    /**
+     * @param string $to
+     * @param string $subject
+     * @param string $body Plain text or HTML depending on $isHtml
+     * @param bool $isHtml If true, send as text/html for rich formatting (e.g. highlighted changes).
+     */
+    public static function send(string $to, string $subject, string $body, bool $isHtml = false): array
     {
         $config = AppSettings::getEmailConfig();
         if (empty($config->smtp_host)) {
@@ -76,8 +82,9 @@ class Mailer
         $read();
         $write('DATA');
         $read();
+        $contentType = $isHtml ? 'text/html' : 'text/plain';
         $headers = "From: " . ($fromName ? "\"$fromName\" <$from>" : $from) . "\r\n";
-        $headers .= "To: $to\r\nSubject: $subject\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n";
+        $headers .= "To: $to\r\nSubject: $subject\r\nMIME-Version: 1.0\r\nContent-Type: {$contentType}; charset=UTF-8\r\n\r\n";
         $write($headers . $body . "\r\n.");
         $resp = $read();
         $write('QUIT');

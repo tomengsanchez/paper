@@ -31,6 +31,7 @@ class AppSettings
             'smtp_encryption' => self::get('smtp_encryption', 'tls'),
             'from_email'    => self::get('from_email', ''),
             'from_name'     => self::get('from_name', ''),
+            'enable_notification_emails' => self::get('enable_notification_emails', '0') === '1',
         ];
     }
 
@@ -45,6 +46,8 @@ class AppSettings
         if (($data['smtp_password'] ?? '') !== '') {
             self::set('smtp_password', $data['smtp_password']);
         }
+        $enableNotificationEmails = !empty($data['enable_notification_emails']);
+        self::set('enable_notification_emails', $enableNotificationEmails ? '1' : '0');
     }
 
     public static function getSecurityConfig(): object

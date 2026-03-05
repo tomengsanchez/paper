@@ -16,6 +16,7 @@ class UserNotificationSettings
     public const NOTIFY_PROFILE_UPDATED = 'notify_profile_updated';
     public const NOTIFY_NEW_GRIEVANCE = 'notify_new_grievance';
     public const NOTIFY_GRIEVANCE_STATUS_CHANGE = 'notify_grievance_status_change';
+    public const NOTIFY_GRIEVANCE_UPDATED = 'notify_grievance_updated';
 
     public static function defaultConfig(): array
     {
@@ -24,6 +25,7 @@ class UserNotificationSettings
             self::NOTIFY_PROFILE_UPDATED        => true,
             self::NOTIFY_NEW_GRIEVANCE          => true,
             self::NOTIFY_GRIEVANCE_STATUS_CHANGE => true,
+            self::NOTIFY_GRIEVANCE_UPDATED      => true,
         ];
     }
 
@@ -49,6 +51,7 @@ class UserNotificationSettings
             self::NOTIFY_PROFILE_UPDATED        => !empty($decoded[self::NOTIFY_PROFILE_UPDATED] ?? true),
             self::NOTIFY_NEW_GRIEVANCE          => !empty($decoded[self::NOTIFY_NEW_GRIEVANCE]),
             self::NOTIFY_GRIEVANCE_STATUS_CHANGE => !empty($decoded[self::NOTIFY_GRIEVANCE_STATUS_CHANGE]),
+            self::NOTIFY_GRIEVANCE_UPDATED      => !empty($decoded[self::NOTIFY_GRIEVANCE_UPDATED] ?? true),
         ]);
     }
 
@@ -63,6 +66,7 @@ class UserNotificationSettings
             self::NOTIFY_PROFILE_UPDATED        => !empty($config[self::NOTIFY_PROFILE_UPDATED]),
             self::NOTIFY_NEW_GRIEVANCE          => !empty($config[self::NOTIFY_NEW_GRIEVANCE]),
             self::NOTIFY_GRIEVANCE_STATUS_CHANGE => !empty($config[self::NOTIFY_GRIEVANCE_STATUS_CHANGE]),
+            self::NOTIFY_GRIEVANCE_UPDATED      => !empty($config[self::NOTIFY_GRIEVANCE_UPDATED]),
         ]);
         $db = Database::getInstance();
         $stmt = $db->prepare('INSERT INTO user_dashboard_config (user_id, module, config) VALUES (?, ?, ?)

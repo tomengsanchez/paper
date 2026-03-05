@@ -105,7 +105,10 @@ ob_start();
             <li><strong>General settings</strong> – Under <strong>System &rarr; General</strong>, set the application
                 region and timezone to match the deployment country.</li>
             <li><strong>Email (SMTP)</strong> – Under <strong>Settings &rarr; Email</strong>, configure SMTP so that
-                system emails (notifications, password-related messages) are delivered reliably.</li>
+                system emails (notifications, password-related messages) are delivered reliably. If you enable
+                &ldquo;Send email for project notifications&rdquo;, schedule <code>php cli/send_queued_emails.php</code>
+                (e.g. every 2–5 minutes via cron or Task Scheduler) so queued emails are sent in the background and
+                save/update pages stay fast.</li>
             <li><strong>Security settings</strong> – Under <strong>Settings &rarr; Security</strong>, review password
                 and login-related options, including optional 2FA.</li>
             <li><strong>Projects library</strong> – Under <strong>Library &rarr; Project</strong>, create and maintain

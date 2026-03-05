@@ -57,6 +57,14 @@
                         <label class="form-label">From Name</label>
                         <input type="text" name="from_name" class="form-control" value="<?= htmlspecialchars($config->from_name) ?>" placeholder="PAPeR">
                     </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="enable_notification_emails" value="1" class="form-check-input" id="enable_notification_emails"
+                                <?= !empty($config->enable_notification_emails) ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="enable_notification_emails">Send email for project notifications</label>
+                        </div>
+                        <small class="text-muted">When enabled, users linked to a project receive an email when they get in-app notifications (new profile, profile updated, new grievance, grievance status change, new structure).</small>
+                    </div>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save Email Settings</button>
@@ -74,6 +82,8 @@
         <?php else: ?>
         <div class="alert alert-info">You do not have permission to manage email settings.</div>
         <dl class="row mb-0">
+            <dt class="col-sm-3">Send email for project notifications</dt>
+            <dd class="col-sm-9"><?= !empty($config->enable_notification_emails) ? 'Yes' : 'No' ?></dd>
             <dt class="col-sm-3">SMTP Host</dt>
             <dd class="col-sm-9"><?= htmlspecialchars($config->smtp_host ?: '-') ?></dd>
             <dt class="col-sm-3">SMTP Port</dt>

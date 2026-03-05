@@ -33,6 +33,7 @@ class SettingsController extends Controller
             'notify_profile_updated'         => !empty($_POST['notify_profile_updated']),
             'notify_new_grievance'           => !empty($_POST['notify_new_grievance']),
             'notify_grievance_status_change' => !empty($_POST['notify_grievance_status_change']),
+            'notify_grievance_updated'       => !empty($_POST['notify_grievance_updated']),
         ]);
         $_SESSION['settings_notifications_saved'] = true;
         $this->redirect('/settings');
