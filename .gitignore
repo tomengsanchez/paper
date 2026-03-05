@@ -3,6 +3,7 @@ php_error.log
 
 # Application logs
 logs/*.log
+logs/*
 
 config/database.php
 config/app.php
