@@ -84,10 +84,19 @@ class UserController extends Controller
             return;
         }
 
+        $policyError = \App\PasswordPolicy::validate($password);
+        if ($policyError !== null) {
+            $_SESSION['user_password_error'] = $policyError;
+            $this->redirect('/users/create?error=policy');
+            return;
+        }
+
         $db = Database::getInstance();
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $db->prepare('INSERT INTO users (username, email, display_name, password_hash, role_id) VALUES (?, ?, ?, ?, ?)');
-        $stmt->execute([$username, $email ?: null, $displayName ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId]);
+        $stmt->execute([$username, $email ?: null, $displayName ?: null, $passwordHash, $roleId]);
         $userId = (int) $db->lastInsertId();
+        \App\PasswordPolicy::recordPasswordChange($userId, $passwordHash);
         $this->saveUserProjects($db, $userId, $projectIds);
         \App\AuditLog::record('user', $userId, 'created');
         $this->redirect('/users/view/' . $userId);
@@ -146,8 +155,16 @@ class UserController extends Controller
             return;
         }
         if (!empty($password)) {
-            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, password_hash = ?, role_id = ? WHERE id = ?');
-            $stmt->execute([$username, $email ?: null, $displayName ?: null, password_hash($password, PASSWORD_DEFAULT), $roleId, $id]);
+            $policyError = \App\PasswordPolicy::validateForUser($password, (int) $id);
+            if ($policyError !== null) {
+                $_SESSION['user_password_error'] = $policyError;
+                $this->redirect('/users/edit/' . $id . '?error=policy');
+                return;
+            }
+            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, password_hash = ?, role_id = ?, password_changed_at = NOW() WHERE id = ?');
+            $stmt->execute([$username, $email ?: null, $displayName ?: null, $passwordHash, $roleId, $id]);
+            \App\PasswordPolicy::recordPasswordChange((int) $id, $passwordHash);
         } else {
             $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, role_id = ? WHERE id = ?');
             $stmt->execute([$username, $email ?: null, $displayName ?: null, $roleId, $id]);

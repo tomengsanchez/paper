@@ -27,7 +27,14 @@ class AuthController extends Controller
         }
         $ip = LoginThrottle::getClientIp();
         if (LoginThrottle::isBlocked($ip)) {
-            $this->view('auth/login', ['error' => 'Too many login attempts. Please try again in 15 minutes.']);
+            $security = AppSettings::getSecurityConfig();
+            $lockoutMinutes = (int) ($security->login_throttle_lockout_minutes ?? 15);
+            if ($lockoutMinutes < 1) {
+                $lockoutMinutes = 15;
+            }
+            $this->view('auth/login', [
+                'error' => 'Too many login attempts. Please try again in ' . $lockoutMinutes . ' minute' . ($lockoutMinutes === 1 ? '' : 's') . '.',
+            ]);
             return;
         }
         $username = trim($_POST['username'] ?? '');
@@ -46,7 +53,7 @@ class AuthController extends Controller
 
         try {
             $db = Database::getInstance();
-            $stmt = $db->prepare('SELECT id, username, password_hash, email FROM users WHERE username = ?');
+            $stmt = $db->prepare('SELECT id, username, password_hash, email, password_changed_at, created_at FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch(\PDO::FETCH_OBJ);
 
@@ -77,6 +84,22 @@ class AuthController extends Controller
             }
 
             $security = AppSettings::getSecurityConfig();
+            $expiryDays = (int) ($security->password_expiry_days ?? 0);
+            if ($expiryDays > 0) {
+                $changedAt = $user->password_changed_at ?? $user->created_at ?? null;
+                if ($changedAt) {
+                    $changedTs = strtotime($changedAt);
+                    if ($changedTs !== false) {
+                        $expirySeconds = $expiryDays * 86400;
+                        if (time() - $changedTs > $expirySeconds) {
+                            Logger::auth('Login blocked: password expired', ['user_id' => $user->id, 'expiry_days' => $expiryDays]);
+                            $this->view('auth/login', ['error' => 'Your password has expired. Please contact your administrator to set a new password.']);
+                            return;
+                        }
+                    }
+                }
+            }
+
             if ($security->enable_email_2fa) {
                 $email = trim($user->email ?? '');
                 if (empty($email)) {
