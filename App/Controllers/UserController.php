@@ -29,7 +29,18 @@ class UserController extends Controller
         $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
 
         $db = Database::getInstance();
-        $stmt = $db->query('SELECT u.*, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.id');
+        $stmt = $db->query('
+            SELECT u.*, r.name AS role_name,
+                   COALESCE(link_counts.cnt, 0) AS linked_projects_count
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            LEFT JOIN (
+                SELECT up.user_id, COUNT(*) AS cnt
+                FROM user_projects up
+                GROUP BY up.user_id
+            ) AS link_counts ON link_counts.user_id = u.id
+            ORDER BY u.id
+        ');
         $rows = $stmt->fetchAll(\PDO::FETCH_OBJ);
         $rows = ListHelper::search($rows, $search, $columns, self::LIST_MODULE);
         $rows = ListHelper::sort($rows, $sort ?: ($columns[0] ?? 'id'), $order, $columns, self::LIST_MODULE);

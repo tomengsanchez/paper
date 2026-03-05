@@ -19,6 +19,7 @@ class Project
         $sortCol = match ($sortBy) {
             'name' => 'pr.name',
             'description' => 'pr.description',
+            'linked_users_count' => 'linked_users_count',
             default => 'pr.id',
         };
         $dir = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
@@ -53,8 +54,14 @@ class Project
         $offset = ($page - 1) * $perPage;
         $limit = max(1, min(100, $perPage));
 
-        $sql = "SELECT pr.id, pr.name, pr.description
+        $sql = "SELECT pr.id, pr.name, pr.description,
+                COALESCE(up_cnt.cnt, 0) AS linked_users_count
             FROM projects pr
+            LEFT JOIN (
+                SELECT project_id, COUNT(*) AS cnt
+                FROM user_projects
+                GROUP BY project_id
+            ) up_cnt ON up_cnt.project_id = pr.id
             WHERE 1=1 $searchCond $projectFilter
             ORDER BY $sortCol $dir
             LIMIT $limit OFFSET $offset";

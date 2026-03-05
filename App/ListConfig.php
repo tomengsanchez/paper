@@ -32,10 +32,12 @@ class ListConfig
             ['key' => 'display_name', 'label' => 'Display name', 'sortable' => true],
             ['key' => 'email', 'label' => 'Email', 'sortable' => true],
             ['key' => 'role_name', 'label' => 'Role', 'sortable' => true],
+            ['key' => 'linked_projects_count', 'label' => 'Linked Projects', 'sortable' => true],
         ],
         'library' => [
             ['key' => 'name', 'label' => 'Project Name', 'sortable' => true],
             ['key' => 'description', 'label' => 'Description', 'sortable' => true],
+            ['key' => 'linked_users_count', 'label' => 'Linked Users', 'sortable' => true],
         ],
         'roles' => [
             ['key' => 'name', 'label' => 'Role', 'sortable' => true],

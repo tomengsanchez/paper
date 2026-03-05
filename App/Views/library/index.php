@@ -33,8 +33,32 @@ ob_start();
                     <?php foreach ($listColumns as $key): ?>
                     <td><?php
                         $v = \App\ListHelper::getValue($p, $key);
-                        if ($key === 'description') echo htmlspecialchars(\mb_substr((string)$v, 0, 80)) . (\mb_strlen((string)$v) > 80 ? '...' : '');
-                        else echo htmlspecialchars($v ?? '-');
+                        if ($key === 'description') {
+                            echo htmlspecialchars(\mb_substr((string)$v, 0, 80)) . (\mb_strlen((string)$v) > 80 ? '...' : '');
+                        } elseif ($key === 'linked_users_count') {
+                            $count = (int) $v;
+                            if ($count > 0) {
+                                ?>
+                                <button type="button"
+                                        class="btn btn-link btn-sm p-0 js-project-users"
+                                        data-project-id="<?= (int)$p->id ?>"
+                                        data-project-name="<?= htmlspecialchars($p->name ?? '') ?>">
+                                    <?= $count ?> user<?= $count !== 1 ? 's' : '' ?>
+                                </button>
+                                <?php
+                            } else {
+                                ?>
+                                <button type="button"
+                                        class="btn btn-link btn-sm p-0 text-muted js-project-users"
+                                        data-project-id="<?= (int)$p->id ?>"
+                                        data-project-name="<?= htmlspecialchars($p->name ?? '') ?>">
+                                    0 users
+                                </button>
+                                <?php
+                            }
+                        } else {
+                            echo htmlspecialchars($v ?? '-');
+                        }
                     ?></td>
                     <?php endforeach; ?>
                     <td>
@@ -54,6 +78,107 @@ ob_start();
     </div>
 </div>
 <?php require __DIR__ . '/../partials/list_pagination.php'; ?>
+
+<div class="modal fade" id="projectUsersModal" tabindex="-1" aria-labelledby="projectUsersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="projectUsersModalLabel">Linked users</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="project-users-loading" class="text-center py-4">
+                    <div class="spinner-border text-secondary" role="status" aria-hidden="true"></div>
+                    <div class="mt-2 small text-muted">Loading linked users...</div>
+                </div>
+                <div id="project-users-content" class="d-none">
+                    <div id="project-users-empty" class="text-muted small d-none">
+                        No users are currently linked to this project.
+                    </div>
+                    <ul id="project-users-list" class="list-group list-group-flush small d-none"></ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php ob_start(); ?>
+<script>
+    $(function () {
+        var $modal = $('#projectUsersModal');
+        var modal = null;
+        if (window.bootstrap && window.bootstrap.Modal) {
+            modal = new bootstrap.Modal($modal[0]);
+        }
+
+        function openProjectUsersModal(projectId, projectName) {
+            if (!projectId) {
+                return;
+            }
+            $('#projectUsersModalLabel').text('Linked users for: ' + (projectName || ('Project #' + projectId)));
+            $('#project-users-loading').removeClass('d-none');
+            $('#project-users-content').addClass('d-none');
+            $('#project-users-empty').addClass('d-none');
+            $('#project-users-list').empty().addClass('d-none');
+
+            if (modal) {
+                modal.show();
+            } else {
+                $modal.modal('show');
+            }
+
+            $.getJSON('/api/projects/' + projectId + '/users')
+                .done(function (data) {
+                    data = data || [];
+                    $('#project-users-loading').addClass('d-none');
+                    $('#project-users-content').removeClass('d-none');
+                    if (!data.length) {
+                        $('#project-users-empty').removeClass('d-none');
+                        $('#project-users-list').addClass('d-none');
+                        return;
+                    }
+                    var $list = $('#project-users-list');
+                    data.forEach(function (u) {
+                        var name = u.display_name || u.username || ('User #' + (u.id || ''));
+                        var email = u.email || '';
+                        var role = u.role_name || '';
+                        var meta = [];
+                        if (email) meta.push(email);
+                        if (role) meta.push(role);
+                        var $item = $('<li class="list-group-item d-flex justify-content-between align-items-start"></li>');
+                        var $body = $('<div class="me-3"></div>');
+                        $('<div class="fw-semibold"></div>').text(name).appendTo($body);
+                        if (meta.length) {
+                            $('<div class="small text-muted"></div>').text(meta.join(' \u2022 ')).appendTo($body);
+                        }
+                        $item.append($body);
+                        $list.append($item);
+                    });
+                    $list.removeClass('d-none');
+                })
+                .fail(function () {
+                    $('#project-users-loading').addClass('d-none');
+                    $('#project-users-content').removeClass('d-none');
+                    $('#project-users-empty')
+                        .removeClass('d-none')
+                        .text('Unable to load linked users. Please try again.');
+                    $('#project-users-list').addClass('d-none');
+                });
+        }
+
+        $(document).on('click', '.js-project-users', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var projectId = $btn.data('project-id');
+            var projectName = $btn.data('project-name') || '';
+            openProjectUsersModal(projectId, projectName);
+        });
+    });
+</script>
+<?php $scripts = ($scripts ?? '') . ob_get_clean(); ?>
 <?php
 $content = ob_get_clean();
 $pageTitle = 'Library';
