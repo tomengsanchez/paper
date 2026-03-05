@@ -18,9 +18,10 @@ class SettingsController extends Controller
         $ui = UserUiSettings::get();
         $notifyPrefs = UserNotificationSettings::get();
         $this->view('settings/index', [
-            'uiTheme'     => $ui['theme'],
-            'uiLayout'    => $ui['layout'],
-            'notifyPrefs' => $notifyPrefs,
+            'uiTheme'         => $ui['theme'],
+            'uiLayout'        => $ui['layout'],
+            'uiMobileFriendly' => !empty($ui['mobile_friendly']),
+            'notifyPrefs'     => $notifyPrefs,
         ]);
     }
 
@@ -44,8 +45,9 @@ class SettingsController extends Controller
         $this->validateCsrf();
         $this->requireCapability('view_settings');
         UserUiSettings::save([
-            'theme'  => trim($_POST['ui_theme'] ?? ''),
-            'layout' => trim($_POST['ui_layout'] ?? ''),
+            'theme'          => trim($_POST['ui_theme'] ?? ''),
+            'layout'         => trim($_POST['ui_layout'] ?? ''),
+            'mobile_friendly' => !empty($_POST['ui_mobile_friendly']),
         ]);
         $_SESSION['settings_ui_saved'] = true;
         $this->redirect('/settings');

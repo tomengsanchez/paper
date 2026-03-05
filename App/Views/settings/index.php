@@ -1,6 +1,7 @@
 <?php
 $uiTheme = $uiTheme ?? \App\UserUiSettings::THEME_DEFAULT;
 $uiLayout = $uiLayout ?? \App\UserUiSettings::LAYOUT_SIDEBAR;
+$uiMobileFriendly = $uiMobileFriendly ?? false;
 $notifyPrefs = $notifyPrefs ?? \App\UserNotificationSettings::get();
 $themes = \App\UserUiSettings::themes();
 $layouts = \App\UserUiSettings::layouts();
@@ -48,6 +49,13 @@ ob_start();
                             <span><?= htmlspecialchars($label) ?></span>
                         </label>
                         <?php endforeach; ?>
+                    </div>
+                    <div class="mt-3">
+                        <label class="d-flex align-items-center gap-2">
+                            <input type="checkbox" name="ui_mobile_friendly" value="1" class="form-check-input" <?= $uiMobileFriendly ? 'checked' : '' ?>>
+                            <span>Super mobile-friendly interface</span>
+                        </label>
+                        <small class="text-muted d-block mt-1">Columns and layout adjust on small screens; sidebar becomes a drawer on mobile.</small>
                     </div>
                 </div>
             </div>

@@ -21,6 +21,9 @@ class UserUiSettings
     public const LAYOUT_SIDEBAR = 'sidebar';
     public const LAYOUT_TOP = 'top';
 
+    /** When true, enables super mobile-friendly UI: columns stack on small screens, responsive tables, optional sidebar drawer on mobile. */
+    public const MOBILE_FRIENDLY_DEFAULT = false;
+
     /** All theme keys for validation */
     public static function themes(): array
     {
@@ -45,8 +48,9 @@ class UserUiSettings
     public static function defaultConfig(): array
     {
         return [
-            'theme'  => self::THEME_DEFAULT,
-            'layout' => self::LAYOUT_SIDEBAR,
+            'theme'          => self::THEME_DEFAULT,
+            'layout'         => self::LAYOUT_SIDEBAR,
+            'mobile_friendly' => self::MOBILE_FRIENDLY_DEFAULT,
         ];
     }
 
@@ -75,6 +79,7 @@ class UserUiSettings
         }
         $theme = $config['theme'] ?? self::THEME_DEFAULT;
         $layout = $config['layout'] ?? self::LAYOUT_SIDEBAR;
+        $mobileFriendly = !empty($config['mobile_friendly']);
         $themes = array_keys(self::themes());
         $layouts = array_keys(self::layouts());
         if (!in_array($theme, $themes, true)) {
@@ -84,7 +89,7 @@ class UserUiSettings
             $layout = self::LAYOUT_SIDEBAR;
         }
         $db = Database::getInstance();
-        $json = json_encode(['theme' => $theme, 'layout' => $layout]);
+        $json = json_encode(['theme' => $theme, 'layout' => $layout, 'mobile_friendly' => $mobileFriendly]);
         $stmt = $db->prepare('INSERT INTO user_dashboard_config (user_id, module, config) VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE config = VALUES(config)');
         $stmt->execute([$userId, self::MODULE_UI, $json]);
