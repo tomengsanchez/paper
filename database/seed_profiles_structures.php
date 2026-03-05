@@ -323,6 +323,7 @@ function seedDemoUsersWithProjects(\PDO $db, array $projectIds): void
 
     $findUser = $db->prepare('SELECT id FROM users WHERE username = ?');
     $insertUser = $db->prepare('INSERT INTO users (username, email, display_name, password_hash, role_id) VALUES (?, ?, ?, ?, ?)');
+    $updateUserEmail = $db->prepare('UPDATE users SET email = ? WHERE id = ?');
     $countLinks = $db->prepare('SELECT COUNT(*) FROM user_projects WHERE user_id = ?');
     $insertLink = $db->prepare('INSERT IGNORE INTO user_projects (user_id, project_id) VALUES (?, ?)');
 
@@ -330,17 +331,19 @@ function seedDemoUsersWithProjects(\PDO $db, array $projectIds): void
         $username = $def['username'];
         $displayName = $def['display_name'];
         $roleId = (int) $def['role_id'];
+        $defaultEmail = $username . '@mailinator.com';
 
         // Find or create user
         $findUser->execute([$username]);
         $userId = (int) ($findUser->fetchColumn() ?: 0);
         if (!$userId) {
             $passwordHash = password_hash('password123', PASSWORD_DEFAULT);
-            $insertUser->execute([$username, null, $displayName, $passwordHash, $roleId]);
+            $insertUser->execute([$username, $defaultEmail, $displayName, $passwordHash, $roleId]);
             $userId = (int) $db->lastInsertId();
-            echo "  Created user {$username} (id {$userId})\n";
+            echo "  Created user {$username} (id {$userId}) with {$defaultEmail}\n";
         } else {
-            echo "  User {$username} already exists (id {$userId})\n";
+            $updateUserEmail->execute([$defaultEmail, $userId]);
+            echo "  User {$username} already exists (id {$userId}), updated email to {$defaultEmail}\n";
         }
 
         // If user already has linked projects, do not modify them
