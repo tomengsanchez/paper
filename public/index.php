@@ -138,6 +138,8 @@ $router->get('/api/auth/me', 'Api\AuthController@me');
 $router->post('/api/auth/logout', 'Api\AuthController@logout');
 // API for dropdown search (AJAX)
 $router->get('/api/projects', 'Api\ApiController@projects');
+$router->get('/api/projects/{id}/users', 'Api\ApiController@projectUsers');
+$router->get('/api/users/{id}/projects', 'Api\ApiController@userProjects');
 $router->get('/api/profiles', 'Api\ApiController@profiles');
 $router->get('/api/profile/{id}/structures', 'Api\ApiController@profileStructures');
 $router->get('/api/notifications', 'Api\ApiController@notifications');
