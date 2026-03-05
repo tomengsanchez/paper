@@ -70,6 +70,7 @@ ob_start();
                             \App\NotificationService::TYPE_PROFILE_UPDATED => 'Profile Updated',
                             \App\NotificationService::TYPE_NEW_GRIEVANCE => 'New Grievance',
                             \App\NotificationService::TYPE_GRIEVANCE_STATUS_CHANGE => 'Grievance Status Change',
+                            \App\NotificationService::TYPE_GRIEVANCE_UPDATED => 'Grievance Updated',
                             \App\NotificationService::TYPE_NEW_STRUCTURE => 'New Structure',
                             default => ucfirst((string)($n->type ?? '')),
                         };

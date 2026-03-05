@@ -399,6 +399,26 @@ class GrievanceController extends Controller
         $changes = $this->buildGrievanceChanges($grievance, $data);
         if (!empty($changes)) {
             AuditLog::record('grievance', $id, 'updated', $changes);
+            // Use project from form or existing grievance so notification runs even if form omits project_id
+            $projectId = (int) ($data['project_id'] ?? $grievance->project_id ?? 0);
+            if ($projectId <= 0 && isset($grievance->project_id) && (int) $grievance->project_id > 0) {
+                $projectId = (int) $grievance->project_id;
+            }
+            if ($projectId > 0) {
+                $caseNum = trim($grievance->grievance_case_number ?? '') ?: ('#' . $id);
+                $parts = [];
+                foreach ($changes as $field => $change) {
+                    $from = (string) ($change['from'] ?? '');
+                    $to = (string) ($change['to'] ?? '');
+                    $parts[] = $field . ': ' . $from . ' → ' . $to;
+                }
+                $details = implode('; ', $parts);
+                $msg = 'Grievance ' . $caseNum . ' updated';
+                if ($details !== '') {
+                    $msg .= ' (' . $details . ')';
+                }
+                \App\NotificationService::notifyGrievanceUpdated($id, $projectId, $msg);
+            }
         }
         $attachCountBefore = count(GrievanceAttachment::byGrievance($id));
         $this->processAttachmentCards($id, true);

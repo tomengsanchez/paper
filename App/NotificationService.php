@@ -4,10 +4,15 @@ namespace App;
 use Core\Auth;
 use Core\Database;
 use App\Models\AppSettings;
+use App\Models\Profile;
+use App\Models\Grievance;
+use App\Models\Structure;
+use App\Models\GrievanceProgressLevel;
 
 /**
  * Creates and manages user notifications for profile/grievance events.
- * When admin enables "notification emails", users linked to the project receive an email for each in-app notification.
+ * When admin enables "notification emails", messages are queued (email_queue) and sent in the background
+ * by cli/send_queued_emails.php (cron), so save/update requests return immediately.
  */
 class NotificationService
 {
@@ -15,6 +20,7 @@ class NotificationService
     public const TYPE_PROFILE_UPDATED = 'profile_updated';
     public const TYPE_NEW_GRIEVANCE = 'new_grievance';
     public const TYPE_GRIEVANCE_STATUS_CHANGE = 'grievance_status_change';
+    public const TYPE_GRIEVANCE_UPDATED = 'grievance_updated';
     public const TYPE_NEW_STRUCTURE = 'new_structure';
 
     public const RELATED_PROFILE = 'profile';
@@ -78,6 +84,21 @@ class NotificationService
         );
     }
 
+    public static function notifyGrievanceUpdated(int $grievanceId, ?int $projectId, string $message): void
+    {
+        if (!$projectId) {
+            return;
+        }
+        self::notifyUsersForProject(
+            $projectId,
+            UserNotificationSettings::NOTIFY_GRIEVANCE_UPDATED,
+            self::TYPE_GRIEVANCE_UPDATED,
+            self::RELATED_GRIEVANCE,
+            $grievanceId,
+            $message
+        );
+    }
+
     public static function notifyNewStructure(int $structureId, int $projectId, string $message): void
     {
         if (!$projectId) {
@@ -129,10 +150,175 @@ class NotificationService
             if ($sendNotificationEmail && $notificationId && !empty(trim($u->email ?? ''))) {
                 $clickUrl = $baseUrl . '/notifications/click/' . $notificationId;
                 $subject = 'PAPeR: ' . $message;
-                $body = $message . "\n\nView notification: " . $clickUrl;
-                \Core\Mailer::send(trim($u->email), $subject, $body);
+                try {
+                    $body = self::buildNotificationEmailBody($relatedType, $relatedId, $type, $message, $clickUrl);
+                    $bodyFormat = 'html';
+                } catch (\Throwable $e) {
+                    \Core\Logger::log('notification_error.log', 'buildNotificationEmailBody failed', [
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'relatedType' => $relatedType,
+                        'relatedId' => $relatedId,
+                    ]);
+                    $body = self::fallbackEmailBody($message, $clickUrl);
+                    $bodyFormat = 'html';
+                }
+                $db->prepare('INSERT INTO email_queue (to_email, subject, body, body_format) VALUES (?, ?, ?, ?)')
+                    ->execute([trim($u->email), $subject, $body, $bodyFormat]);
             }
         }
+    }
+
+    /**
+     * Build HTML email body with full record details; changed fields (from audit) highlighted in yellow.
+     */
+    private static function buildNotificationEmailBody(string $relatedType, int $relatedId, string $type, string $message, string $viewUrl): string
+    {
+        $changes = [];
+        if (in_array($type, [self::TYPE_PROFILE_UPDATED, self::TYPE_GRIEVANCE_STATUS_CHANGE, self::TYPE_GRIEVANCE_UPDATED], true)) {
+            $history = AuditLog::for($relatedType, $relatedId, 1);
+            $action = $history[0]->action ?? '';
+            $wantAction = ($type === self::TYPE_GRIEVANCE_UPDATED) ? 'updated' : (($type === self::TYPE_GRIEVANCE_STATUS_CHANGE) ? 'status_changed' : 'updated');
+            if (!empty($history) && $action === $wantAction) {
+                $changes = is_array($history[0]->changes ?? null) ? $history[0]->changes : [];
+            }
+        }
+
+        $rows = '';
+        if ($relatedType === self::RELATED_PROFILE) {
+            $record = Profile::find($relatedId);
+            if (!$record) {
+                return self::fallbackEmailBody($message, $viewUrl);
+            }
+            $fields = [
+                'papsid' => 'PAPSID',
+                'control_number' => 'Control Number',
+                'full_name' => 'Full Name',
+                'age' => 'Age',
+                'contact_number' => 'Contact Number',
+                'project_name' => 'Project',
+                'residing_in_project_affected' => 'Residing in project affected?',
+                'residing_in_project_affected_note' => 'Residing note',
+                'structure_owners' => 'Structure owners?',
+                'structure_owners_note' => 'Structure owners note',
+                'if_not_structure_owner_what' => 'If not owner, what?',
+                'own_property_elsewhere' => 'Own property elsewhere?',
+                'own_property_elsewhere_note' => 'Own elsewhere note',
+                'availed_government_housing' => 'Availed govt housing?',
+                'availed_government_housing_note' => 'Availed housing note',
+                'hh_income' => 'HH Income',
+            ];
+            foreach ($fields as $key => $label) {
+                $val = $record->$key ?? null;
+                if ($key === 'residing_in_project_affected' || $key === 'structure_owners' || $key === 'own_property_elsewhere' || $key === 'availed_government_housing') {
+                    $val = !empty($val) ? 'Yes' : 'No';
+                } else {
+                    $val = $val === null || $val === '' ? '-' : (string) $val;
+                }
+                $rows .= self::emailRow($label, $val, $changes[$key] ?? null);
+            }
+        } elseif ($relatedType === self::RELATED_GRIEVANCE) {
+            $record = Grievance::find($relatedId);
+            if (!$record) {
+                return self::fallbackEmailBody($message, $viewUrl);
+            }
+            $statusLabel = match ($record->status ?? '') {
+                'open' => 'Open',
+                'in_progress' => 'In Progress',
+                'closed' => 'Closed',
+                default => (string) ($record->status ?? '-'),
+            };
+            $progressLevelId = isset($record->progress_level) ? (int) $record->progress_level : null;
+            $plRecord = $progressLevelId ? GrievanceProgressLevel::find($progressLevelId) : null;
+            $progressLevelName = $plRecord ? $plRecord->name : ($progressLevelId ? (string) $progressLevelId : '-');
+            $progressLevelChange = null;
+            if (!empty($changes['progress_level']) && (isset($changes['progress_level']['from']) || isset($changes['progress_level']['to']))) {
+                $plFrom = $changes['progress_level']['from'] ?? null;
+                $plTo = $changes['progress_level']['to'] ?? null;
+                $resolvedFrom = ($plFrom !== null && $plFrom !== '') ? GrievanceProgressLevel::find((int) $plFrom) : null;
+                $resolvedTo = ($plTo !== null && $plTo !== '') ? GrievanceProgressLevel::find((int) $plTo) : null;
+                $progressLevelChange = [
+                    'from' => $resolvedFrom ? $resolvedFrom->name : (string) $plFrom,
+                    'to' => $resolvedTo ? $resolvedTo->name : (string) $plTo,
+                ];
+            }
+            $fields = [
+                'date_recorded' => 'Date Recorded',
+                'grievance_case_number' => 'Case Number',
+                'project_name' => 'Project',
+                'status' => 'Status',
+                'progress_level' => 'Progress Level',
+                'profile_name' => 'Profile (PAPS)',
+                'respondent_full_name' => 'Respondent Name',
+                'gender' => 'Gender',
+                'home_business_address' => 'Address',
+                'mobile_number' => 'Mobile',
+                'email' => 'Email',
+                'nature_of_grievance' => 'Nature of Grievance',
+                'desired_outcome' => 'Desired Outcome',
+            ];
+            $overrides = ['status' => $statusLabel, 'progress_level' => $progressLevelName];
+            foreach ($fields as $key => $label) {
+                $val = $overrides[$key] ?? $record->$key ?? null;
+                $val = $val === null || $val === '' ? '-' : (string) $val;
+                if ($key === 'date_recorded' && $val !== '-') {
+                    $val = date('M j, Y H:i', strtotime($val));
+                }
+                $changeForRow = $key === 'progress_level' ? $progressLevelChange : ($changes[$key] ?? null);
+                $rows .= self::emailRow($label, $val, $changeForRow);
+            }
+        } elseif ($relatedType === self::RELATED_STRUCTURE) {
+            $record = Structure::find($relatedId);
+            if (!$record) {
+                return self::fallbackEmailBody($message, $viewUrl);
+            }
+            $fields = [
+                'strid' => 'Structure ID',
+                'owner_name' => 'Owner',
+                'structure_tag' => 'Structure Tag',
+                'description' => 'Description',
+                'other_details' => 'Other Details',
+            ];
+            foreach ($fields as $key => $label) {
+                $val = $record->$key ?? null;
+                $val = $val === null || $val === '' ? '-' : (string) $val;
+                $rows .= self::emailRow($label, $val, $changes[$key] ?? null);
+            }
+        } else {
+            return self::fallbackEmailBody($message, $viewUrl);
+        }
+
+        $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family: sans-serif; font-size: 14px;">';
+        $html .= '<h2 style="margin-bottom: 1em;">' . htmlspecialchars($message) . '</h2>';
+        $html .= '<p style="margin-bottom: 0.5em;"><strong>Record details</strong></p>';
+        $html .= '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin-bottom: 1.5em;">';
+        $html .= $rows;
+        $html .= '</table>';
+        $html .= '<p><a href="' . htmlspecialchars($viewUrl) . '">View in PAPeR</a></p>';
+        $html .= '</body></html>';
+        return $html;
+    }
+
+    private static function emailRow(string $label, string $value, ?array $change): string
+    {
+        if ($change !== null && (isset($change['to']) || isset($change['from']))) {
+            $oldVal = (string) ($change['from'] ?? '');
+            $display = '<span style="background-color: #ffff00;">' . htmlspecialchars($value ?: '-') . '</span>';
+            if ($oldVal !== '') {
+                $display .= ' <span style="color: #666; font-size: 0.9em;">(was: ' . htmlspecialchars($oldVal) . ')</span>';
+            }
+        } else {
+            $display = htmlspecialchars($value);
+        }
+        return '<tr><td style="vertical-align: top; font-weight: bold;">' . htmlspecialchars($label) . '</td><td>' . $display . '</td></tr>';
+    }
+
+    private static function fallbackEmailBody(string $message, string $viewUrl): string
+    {
+        return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family: sans-serif;">'
+            . '<p>' . htmlspecialchars($message) . '</p>'
+            . '<p><a href="' . htmlspecialchars($viewUrl) . '">View in PAPeR</a></p></body></html>';
     }
 
     private static function getPrefsForUser(\PDO $db, int $userId): array
@@ -147,7 +333,7 @@ class NotificationService
         if (!is_array($d)) {
             return UserNotificationSettings::defaultConfig();
         }
-        // Merge stored values with defaults to ensure any new prefs default to true.
+        // Merge stored values with defaults so new prefs (e.g. notify_grievance_updated) default to true.
         $merged = UserNotificationSettings::defaultConfig();
         foreach ($merged as $key => $defaultVal) {
             if (array_key_exists($key, $d)) {

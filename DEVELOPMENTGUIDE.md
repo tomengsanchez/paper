@@ -103,6 +103,7 @@ paper/
 
 - **user_dashboard_config** – user_id, module, config (JSON), updated_at. Modules: `ui` (UserUiSettings), `notification_preferences` (UserNotificationSettings), grievance dashboard widgets, list columns (migration_004), etc.
 - **notifications** – id, user_id, type, related_type, related_id, project_id (migration_019), message, created_at, clicked_at (migration_019). Used for in-app notifications; bell shows unread (clicked_at IS NULL); history page shows all with filters.
+- **email_queue** – id, to_email, subject, body, created_at, sent_at, status (pending/sent/failed), error_message (migration_021). Notification emails are enqueued here; sent in background by `php cli/send_queued_emails.php` (run via cron every 1–5 min).
 
 ### 4.5 Audit and history
 
@@ -115,7 +116,7 @@ paper/
 - Format: PHP file returning `['name' => 'migration_XXX_description', 'up' => function (\PDO $db): void { ... }, 'down' => function (\PDO $db): void { ... }]`.
 - Run: `php cli/migrate.php`. Status: `php cli/migrate.php --status`.
 - Migrations run in filename order; applied names stored in `migrations` table.
-- List (as of this guide): 000 (initial), 001 (EAV→flat), 002–014 (scalability, profile fields, list columns, grievance, status, progress levels, dashboard config, grievance attachments, indexes, etc.), 015 (display_name, user_projects), 016 (notifications), 017 (notification defaults for all users), 018 (audit_log), 019 (notifications project_id, clicked_at).
+- List (as of this guide): 000 (initial), 001 (EAV→flat), 002–014 (scalability, profile fields, list columns, grievance, status, progress levels, dashboard config, grievance attachments, indexes, etc.), 015 (display_name, user_projects), 016 (notifications), 017 (notification defaults for all users), 018 (audit_log), 019 (notifications project_id, clicked_at), 020 (api_tokens), 021 (email_queue).
 
 ---
 
@@ -123,7 +124,7 @@ paper/
 
 - **Capabilities:** Defined in `App\Capabilities`. Menu visibility and controller access use `Auth::can('capability_name')`. Add new entities/capabilities there and seed role_capabilities if needed.
 - **User projects:** `App\UserProjects::allowedProjectIds()` – null = all projects (e.g. admin), empty array = none, else list of project IDs. Used to restrict profile/structure/grievance/list and notification project filter.
-- **Notifications:** `App\NotificationService` – notifyNewProfile, notifyProfileUpdated, notifyNewGrievance, notifyGrievanceStatusChange, notifyNewStructure. Preferences in UserNotificationSettings; stored in user_dashboard_config. Profile-update notification message includes modified fields (same style as Activity History).
+- **Notifications:** `App\NotificationService` – notifyNewProfile, notifyProfileUpdated, notifyNewGrievance, notifyGrievanceStatusChange, notifyNewStructure. Preferences in UserNotificationSettings; stored in user_dashboard_config. When "Send email for project notifications" is on (Email settings), emails are queued in email_queue and sent by `php cli/send_queued_emails.php` (schedule via cron so save/update responses stay fast).
 - **Audit log:** `App\AuditLog::record($entityType, $entityId, $action, $changes)`. Used in Profile, Structure, Grievance controllers for create/update/status. View via `AuditLog::for($entityType, $entityId)` and `partials/history_sidebar.php`.
 - **Views:** Layout in `App/Views/layout/main.php`; `$currentPage` and `$pageTitle` for nav/title; `$content` for main body (views often use ob_start() and then require main.php).
 - **List pages:** Use list_pagination.php and list_toolbar.php; pass listPagination, listBaseUrl, listExtraParams for filters (e.g. notifications page).

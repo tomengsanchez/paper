@@ -79,7 +79,11 @@ ob_start();
                 </label>
                 <label class="d-flex align-items-center gap-2">
                     <input type="checkbox" name="notify_grievance_status_change" value="1" class="form-check-input" <?= !empty($notifyPrefs['notify_grievance_status_change']) ? 'checked' : '' ?>>
-                    <span>Grievance Change Status on the linked projects</span>
+                    <span>Grievance status change on the linked projects</span>
+                </label>
+                <label class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="notify_grievance_updated" value="1" class="form-check-input" <?= !empty($notifyPrefs['notify_grievance_updated']) ? 'checked' : '' ?>>
+                    <span>Grievance updated (edit) on the linked projects</span>
                 </label>
             </div>
             <button type="submit" class="btn btn-primary mt-3">Save notification preferences</button>
