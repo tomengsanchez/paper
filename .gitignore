@@ -4,6 +4,7 @@ php_error.log
 # Application logs
 logs/*.log
 logs/*
+/postman/*
 
 config/database.php
 config/app.php

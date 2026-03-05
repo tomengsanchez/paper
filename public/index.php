@@ -150,6 +150,13 @@ $router->get('/api/dashboard', 'Api\DashboardController@index');
 // API for grievance dashboard aggregates (AJAX)
 $router->get('/api/grievance/dashboard', 'Api\GrievanceController@dashboard');
 
+// Profile API (CRUD + list)
+$router->get('/api/profile/list', 'Api\ProfileController@listApi');
+$router->get('/api/profile/{id}', 'Api\ProfileController@getApi');
+$router->post('/api/profile/store', 'Api\ProfileController@storeApi');
+$router->post('/api/profile/update/{id}', 'Api\ProfileController@updateApi');
+$router->post('/api/profile/delete/{id}', 'Api\ProfileController@deleteApi');
+
 // Structure API (for Profile lightbox CRUD)
 $router->get('/api/structure/next-strid', 'Api\StructureController@nextStridApi');
 $router->get('/api/structure/{id}', 'Api\StructureController@getApi');
