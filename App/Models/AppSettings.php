@@ -57,6 +57,18 @@ class AppSettings
             'enable_email_2fa' => $enabled,
             '2fa_expiration_minutes' => (int) self::get('2fa_expiration_minutes', 15),
             'user_logout_after_minutes' => (int) self::get('user_logout_after_minutes', 30),
+            // Login throttling / brute-force protection
+            'login_throttle_enabled' => self::get('login_throttle_enabled', '1') === '1',
+            'login_throttle_max_attempts' => (int) self::get('login_throttle_max_attempts', 5),
+            'login_throttle_lockout_minutes' => (int) self::get('login_throttle_lockout_minutes', 15),
+            // Password policy
+            'password_min_length' => (int) self::get('password_min_length', 8),
+            'password_require_upper' => self::get('password_require_upper', '1') === '1',
+            'password_require_lower' => self::get('password_require_lower', '1') === '1',
+            'password_require_number' => self::get('password_require_number', '1') === '1',
+            'password_require_symbol' => self::get('password_require_symbol', '0') === '1',
+            'password_expiry_days' => (int) self::get('password_expiry_days', 0),
+            'password_history_limit' => (int) self::get('password_history_limit', 5),
         ];
     }
 
@@ -70,5 +82,41 @@ class AppSettings
         }
         $logoutMins = max(0, min(10080, (int) ($data['user_logout_after_minutes'] ?? 30)));
         self::set('user_logout_after_minutes', (string) $logoutMins);
+
+        // Login throttling settings
+        $loginThrottleEnabled = !empty($data['login_throttle_enabled']);
+        self::set('login_throttle_enabled', $loginThrottleEnabled ? '1' : '0');
+        // When disabled we still persist last configured values so re-enabling restores them.
+        $maxAttempts = (int) ($data['login_throttle_max_attempts'] ?? 5);
+        // Hard bounds to keep values reasonable
+        $maxAttempts = max(1, min(50, $maxAttempts));
+        self::set('login_throttle_max_attempts', (string) $maxAttempts);
+
+        $lockoutMinutes = (int) ($data['login_throttle_lockout_minutes'] ?? 15);
+        // 1–1440 minutes (1 day) to allow flexibility but prevent absurd values
+        $lockoutMinutes = max(1, min(1440, $lockoutMinutes));
+        self::set('login_throttle_lockout_minutes', (string) $lockoutMinutes);
+
+        // Password policy settings
+        $minLength = (int) ($data['password_min_length'] ?? 8);
+        $minLength = max(1, min(128, $minLength));
+        self::set('password_min_length', (string) $minLength);
+
+        $requireUpper = !empty($data['password_require_upper']);
+        $requireLower = !empty($data['password_require_lower']);
+        $requireNumber = !empty($data['password_require_number']);
+        $requireSymbol = !empty($data['password_require_symbol']);
+        self::set('password_require_upper', $requireUpper ? '1' : '0');
+        self::set('password_require_lower', $requireLower ? '1' : '0');
+        self::set('password_require_number', $requireNumber ? '1' : '0');
+        self::set('password_require_symbol', $requireSymbol ? '1' : '0');
+
+        $expiryDays = (int) ($data['password_expiry_days'] ?? 0);
+        $expiryDays = max(0, min(3650, $expiryDays));
+        self::set('password_expiry_days', (string) $expiryDays);
+
+        $historyLimit = (int) ($data['password_history_limit'] ?? 5);
+        $historyLimit = max(0, min(50, $historyLimit));
+        self::set('password_history_limit', (string) $historyLimit);
     }
 }

@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         try {
             $db = Database::getInstance();
-            $stmt = $db->prepare('SELECT id, username, password_hash, email, display_name FROM users WHERE username = ?');
+            $stmt = $db->prepare('SELECT id, username, password_hash, email, display_name, password_changed_at, created_at FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch(\PDO::FETCH_OBJ);
 
@@ -53,6 +53,22 @@ class AuthController extends Controller
             }
 
             $security = AppSettings::getSecurityConfig();
+            $expiryDays = (int) ($security->password_expiry_days ?? 0);
+            if ($expiryDays > 0) {
+                $changedAt = $user->password_changed_at ?? $user->created_at ?? null;
+                if ($changedAt) {
+                    $changedTs = strtotime($changedAt);
+                    if ($changedTs !== false) {
+                        $expirySeconds = $expiryDays * 86400;
+                        if (time() - $changedTs > $expirySeconds) {
+                            Logger::auth('API login blocked: password expired', ['user_id' => $user->id, 'expiry_days' => $expiryDays]);
+                            http_response_code(403);
+                            $this->json(['error' => 'Forbidden', 'message' => 'Password has expired. Please contact your administrator.']);
+                            return;
+                        }
+                    }
+                }
+            }
             if ($security->enable_email_2fa) {
                 Logger::auth('API login blocked: 2FA enabled', ['user_id' => $user->id]);
                 http_response_code(403);

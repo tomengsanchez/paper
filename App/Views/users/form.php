@@ -12,6 +12,11 @@ ob_start();
     <div class="card-body">
         <form method="post" action="<?= $user ? "/users/update/{$user->id}" : '/users/store' ?>" id="userForm">
             <?= \Core\Csrf::field() ?>
+            <?php if (!empty($_SESSION['user_password_error'])): ?>
+            <div class="alert alert-danger">
+                <?= htmlspecialchars($_SESSION['user_password_error']) ?>
+            </div>
+            <?php unset($_SESSION['user_password_error']); endif; ?>
             <div class="mb-3">
                 <label class="form-label">Username</label>
                 <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($user->username ?? '') ?>" required>
