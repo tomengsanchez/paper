@@ -80,8 +80,10 @@ ob_start();
                 $repeatable = !empty($field->is_repeatable);
                 $fieldError = $errors[$key] ?? null;
                 $oldValue = $old['values'][$key] ?? null;
+                $conditionJson = trim($field->condition_json ?? '');
+                $conditionAttr = $conditionJson !== '' ? htmlspecialchars($conditionJson, ENT_QUOTES) : '';
                 ?>
-                <div class="mb-3" data-field-key="<?= htmlspecialchars($key) ?>">
+                <div class="mb-3" data-field-key="<?= htmlspecialchars($key) ?>"<?= $conditionAttr !== '' ? ' data-condition="' . $conditionAttr . '"' : '' ?>>
                     <label class="form-label">
                         <?= htmlspecialchars($label) ?>
                         <?php if ($required): ?><span class="text-danger">*</span><?php endif; ?>
@@ -90,6 +92,15 @@ ob_start();
                         <div class="text-danger small mb-1"><?= htmlspecialchars($fieldError) ?></div>
                     <?php endif; ?>
 
+                    <?php
+                    $options = [];
+                    if (!empty($field->settings_json)) {
+                        $cfg = json_decode($field->settings_json, true);
+                        if (!empty($cfg['options']) && is_array($cfg['options'])) {
+                            $options = $cfg['options'];
+                        }
+                    }
+                    ?>
                     <?php if ($type === 'custom_html'): ?>
                         <div class="border rounded p-2 bg-light-subtle">
                             <?= $field->custom_html ?? '' ?>
@@ -112,6 +123,16 @@ ob_start();
                                         <input type="number" name="values[<?= htmlspecialchars($key) ?>][]" class="form-control form-control-sm" value="<?= htmlspecialchars((string)$val) ?>">
                                     <?php elseif ($type === 'date'): ?>
                                         <input type="date" name="values[<?= htmlspecialchars($key) ?>][]" class="form-control form-control-sm" value="<?= htmlspecialchars((string)$val) ?>">
+                                    <?php elseif ($type === 'select' && $options): ?>
+                                        <select name="values[<?= htmlspecialchars($key) ?>][]" class="form-select form-select-sm">
+                                            <option value="">-- Select --</option>
+                                            <?php foreach ($options as $opt): ?>
+                                                <?php $ov = (string)($opt['value'] ?? ''); $ol = (string)($opt['label'] ?? $ov); ?>
+                                                <option value="<?= htmlspecialchars($ov) ?>" <?= (string)$val === $ov ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($ol) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     <?php elseif ($type === 'paps'): ?>
                                         <select name="values[<?= htmlspecialchars($key) ?>][]" class="form-select form-select-sm paps-select">
                                             <option value="<?= htmlspecialchars((string)$val) ?>" <?= $val ? 'selected' : '' ?>>
@@ -137,6 +158,16 @@ ob_start();
                             <input type="number" name="values[<?= htmlspecialchars($key) ?>]" class="form-control" value="<?= htmlspecialchars((string)$val) ?>">
                         <?php elseif ($type === 'date'): ?>
                             <input type="date" name="values[<?= htmlspecialchars($key) ?>]" class="form-control" value="<?= htmlspecialchars((string)$val) ?>">
+                        <?php elseif ($type === 'select' && $options): ?>
+                            <select name="values[<?= htmlspecialchars($key) ?>]" class="form-select">
+                                <option value="">-- Select --</option>
+                                <?php foreach ($options as $opt): ?>
+                                    <?php $ov = (string)($opt['value'] ?? ''); $ol = (string)($opt['label'] ?? $ov); ?>
+                                    <option value="<?= htmlspecialchars($ov) ?>" <?= (string)$val === $ov ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($ol) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         <?php elseif ($type === 'checkbox'): ?>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="values[<?= htmlspecialchars($key) ?>]" value="1" <?= $val ? 'checked' : '' ?>>
@@ -284,7 +315,183 @@ $(function(){
 
     $(document).on('click', '.remove-repeatable', function(){
         $(this).closest('.repeatable-item').remove();
+        applyFieldConditions();
     });
+
+    // --- Conditional visibility based on Condition (JSON) ---
+
+    function getFieldValueByKey(key) {
+        var wrap = $('[data-field-key=\"' + key + '\"]');
+        if (!wrap.length) return null;
+        var inputs = wrap.find('[name^=\"values[' + key + ']\"]');
+        if (!inputs.length) return null;
+
+        // Detect repeatable by name pattern [] or multiple inputs
+        var isRepeat = false;
+        inputs.each(function () {
+            if (this.name.indexOf('[]') !== -1) {
+                isRepeat = true;
+            }
+        });
+        if (inputs.length > 1) {
+            isRepeat = true;
+        }
+
+        if (isRepeat) {
+            var arr = [];
+            inputs.each(function () {
+                var el = $(this);
+                var type = (el.attr('type') || '').toLowerCase();
+                if (type === 'checkbox') {
+                    if (el.is(':checked')) {
+                        arr.push(el.val() || '1');
+                    }
+                } else {
+                    var v = el.val();
+                    if (v !== '' && v != null) {
+                        arr.push(v);
+                    }
+                }
+            });
+            return arr;
+        } else {
+            var el0 = $(inputs[0]);
+            var type0 = (el0.attr('type') || '').toLowerCase();
+            if (type0 === 'checkbox') {
+                return el0.is(':checked') ? (el0.val() || '1') : '';
+            }
+            return el0.val();
+        }
+    }
+
+    function isEmptyValue(v) {
+        if (v === null || v === undefined) return true;
+        if (Array.isArray(v)) {
+            return v.filter(function (x) { return x !== '' && x !== null && x !== undefined; }).length === 0;
+        }
+        return v === '';
+    }
+
+    function evaluateRule(rule) {
+        if (!rule || !rule.field) return false;
+        var v = getFieldValueByKey(rule.field);
+        var op = rule.operator || 'equals';
+        var target = rule.value;
+
+        // Normalize
+        var vArr = Array.isArray(v) ? v : null;
+        var vStr = vArr ? null : (v != null ? String(v) : '');
+
+        if (op === 'is_empty') {
+            return isEmptyValue(v);
+        }
+        if (op === 'is_not_empty') {
+            return !isEmptyValue(v);
+        }
+
+        if (op === 'in' || op === 'not_in') {
+            var list = Array.isArray(target) ? target : (target != null ? [target] : []);
+            var present;
+            if (vArr) {
+                present = vArr.some(function (item) {
+                    return list.map(String).indexOf(String(item)) !== -1;
+                });
+            } else {
+                present = list.map(String).indexOf(vStr) !== -1;
+            }
+            return op === 'in' ? present : !present;
+        }
+
+        if (op === 'contains') {
+            if (vArr) {
+                return vArr.map(String).indexOf(String(target)) !== -1;
+            }
+            return vStr != null && String(vStr).indexOf(String(target)) !== -1;
+        }
+
+        // Numeric ops
+        if (op === '>' || op === '<' || op === '>=' || op === '<=') {
+            var num = parseFloat(vStr);
+            var tgt = parseFloat(target);
+            if (isNaN(num) || isNaN(tgt)) return false;
+            if (op === '>') return num > tgt;
+            if (op === '<') return num < tgt;
+            if (op === '>=') return num >= tgt;
+            if (op === '<=') return num <= tgt;
+        }
+
+        // equals / not_equals
+        if (vArr) {
+            var has = vArr.map(String).indexOf(String(target)) !== -1;
+            return op === 'equals' ? has : !has;
+        } else {
+            if (op === 'equals') {
+                return String(vStr) === String(target);
+            }
+            if (op === 'not_equals') {
+                return String(vStr) !== String(target);
+            }
+        }
+        return false;
+    }
+
+    function evaluateConditionObject(cond) {
+        if (!cond || !Array.isArray(cond.rules) || cond.rules.length === 0) {
+            return true;
+        }
+        var logic = (cond.logic || 'AND').toUpperCase();
+        if (logic === 'OR') {
+            for (var i = 0; i < cond.rules.length; i++) {
+                if (evaluateRule(cond.rules[i])) return true;
+            }
+            return false;
+        } else {
+            for (var j = 0; j < cond.rules.length; j++) {
+                if (!evaluateRule(cond.rules[j])) return false;
+            }
+            return true;
+        }
+    }
+
+    function applyFieldConditions() {
+        $('[data-field-key]').each(function () {
+            var wrap = $(this);
+            var condStr = wrap.attr('data-condition');
+            if (!condStr) {
+                wrap.removeClass('d-none');
+                return;
+            }
+            var cond;
+            try {
+                cond = JSON.parse(condStr);
+            } catch (e) {
+                // Invalid JSON: do not hide
+                wrap.removeClass('d-none');
+                return;
+            }
+            var rulesTrue = evaluateConditionObject(cond);
+            var action = (cond.action || 'show').toLowerCase();
+            var shouldShow;
+            if (action === 'hide') {
+                shouldShow = !rulesTrue;
+            } else {
+                shouldShow = rulesTrue;
+            }
+            if (shouldShow) {
+                wrap.removeClass('d-none');
+            } else {
+                wrap.addClass('d-none');
+            }
+        });
+    }
+
+    // Re-evaluate whenever any form field changes
+    $(document).on('change keyup', 'input[name^=\"values[\"], select[name^=\"values[\"], textarea[name^=\"values[\"]', function () {
+        applyFieldConditions();
+    });
+
+    // Initial evaluation on load
+    applyFieldConditions();
 });
 </script>
 ";

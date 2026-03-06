@@ -61,6 +61,7 @@ class FormsController extends Controller
         // Save fields if any were posted
         $fields = $_POST['fields'] ?? [];
         if (is_array($fields) && !empty($fields)) {
+            $fields = self::prepareSocioFieldSettings($fields);
             SocioEconomicField::replaceForForm($id, $fields);
         }
 
@@ -112,6 +113,7 @@ class FormsController extends Controller
         if (!is_array($fields)) {
             $fields = [];
         }
+        $fields = self::prepareSocioFieldSettings($fields);
         SocioEconomicField::replaceForForm($id, $fields);
 
         $this->redirect('/forms/socio-economic/edit/' . $id);
@@ -242,6 +244,41 @@ class FormsController extends Controller
     {
         $this->requireAuth();
         $this->view('forms/condition_json_help');
+    }
+
+    /**
+     * Normalize field options from simple textarea format into settings_json.
+     *
+     * @param array<int, array<string,mixed>> $fields
+     * @return array<int, array<string,mixed>>
+     */
+    private static function prepareSocioFieldSettings(array $fields): array
+    {
+        foreach ($fields as &$row) {
+            $raw = trim($row['options_raw'] ?? '');
+            if ($raw !== '') {
+                $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+                $options = [];
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if ($line === '') continue;
+                    $value = $line;
+                    $label = $line;
+                    if (strpos($line, '|') !== false) {
+                        [$v, $lab] = explode('|', $line, 2);
+                        $value = trim($v);
+                        $label = trim($lab) !== '' ? trim($lab) : $value;
+                    }
+                    if ($value === '') continue;
+                    $options[] = ['value' => $value, 'label' => $label];
+                }
+                if (!empty($options)) {
+                    $row['settings_json'] = json_encode(['options' => $options], JSON_UNESCAPED_UNICODE);
+                }
+            }
+            unset($row['options_raw']);
+        }
+        return $fields;
     }
 
     public function perception(): void

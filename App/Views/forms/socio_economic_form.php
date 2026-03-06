@@ -126,6 +126,31 @@ ob_start();
                             <input type="number" name="fields[<?= $idx ?>][sort_order]" class="form-control form-control-sm"
                                    value="<?= htmlspecialchars((string)($f->sort_order ?? 0)) ?>">
                         </div>
+                        <?php
+                        $optionsRaw = '';
+                        if (!empty($f->settings_json)) {
+                            $cfg = json_decode($f->settings_json, true);
+                            if (!empty($cfg['options']) && is_array($cfg['options'])) {
+                                $lines = [];
+                                foreach ($cfg['options'] as $opt) {
+                                    $val = isset($opt['value']) ? (string)$opt['value'] : '';
+                                    $lab = isset($opt['label']) ? (string)$opt['label'] : $val;
+                                    if ($val === '') {
+                                        continue;
+                                    }
+                                    $lines[] = $val === $lab ? $val : ($val . '|' . $lab);
+                                }
+                                $optionsRaw = implode("\n", $lines);
+                            }
+                        }
+                        ?>
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label small">
+                                Options (for Select/Combo)
+                            </label>
+                            <textarea name="fields[<?= $idx ?>][options_raw]" rows="3" class="form-control form-control-sm"
+                                      placeholder="One per line, e.g.&#10;yes|Yes&#10;no|No"><?= htmlspecialchars($optionsRaw) ?></textarea>
+                        </div>
                         <div class="col-md-6 mt-2">
                             <label class="form-label small d-flex justify-content-between align-items-center">
                                 <span>
@@ -190,6 +215,13 @@ ob_start();
                         <div class="col-md-2">
                             <label class="form-label small">Sort order</label>
                             <input type="number" name="__NAME__[sort_order]" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label small">
+                                Options (for Select/Combo)
+                            </label>
+                            <textarea name="__NAME__[options_raw]" rows="3" class="form-control form-control-sm"
+                                      placeholder="One per line, e.g.&#10;yes|Yes&#10;no|No"></textarea>
                         </div>
                         <div class="col-md-6 mt-2">
                             <label class="form-label small d-flex justify-content-between align-items-center">
