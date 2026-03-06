@@ -31,6 +31,18 @@ $router->post('/structure/store', 'StructureController@store');
 $router->get('/structure/edit/{id}', 'StructureController@edit');
 $router->post('/structure/update/{id}', 'StructureController@update');
 $router->post('/structure/delete/{id}', 'StructureController@delete');
+// Forms - Socio Economic & Perception
+$router->get('/forms/socio-economic', 'FormsController@socioEconomic');
+$router->get('/forms/socio-economic/create', 'FormsController@socioEconomicCreate');
+$router->post('/forms/socio-economic/store', 'FormsController@socioEconomicStore');
+$router->get('/forms/socio-economic/edit/{id}', 'FormsController@socioEconomicEdit');
+$router->post('/forms/socio-economic/update/{id}', 'FormsController@socioEconomicUpdate');
+$router->post('/forms/socio-economic/delete/{id}', 'FormsController@socioEconomicDelete');
+$router->get('/forms/socio-economic/entries/{id}', 'FormsController@socioEconomicEntries');
+$router->get('/forms/socio-economic/fill/{id}', 'FormsController@socioEconomicFill');
+$router->post('/forms/socio-economic/fill/{id}', 'FormsController@socioEconomicFillStore');
+$router->get('/forms/condition-json-help', 'FormsController@conditionJsonHelp');
+$router->get('/forms/perception', 'FormsController@perception');
 // Grievance module
 $router->get('/grievance', 'GrievanceController@dashboard');
 $router->post('/grievance/dashboard-config', 'GrievanceController@dashboardSaveConfig');

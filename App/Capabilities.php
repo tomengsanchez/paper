@@ -60,6 +60,9 @@ class Capabilities
             'view_roles'  => 'View List',
             'edit_roles'  => 'Edit',
         ],
+        'Forms' => [
+            'view_forms' => 'View Forms',
+        ],
     ];
 
     /** Map page/menu to view capability for visibility */
@@ -81,6 +84,7 @@ class Capabilities
         'security-settings' => 'view_security_settings',
         'users'         => 'view_users',
         'user-roles'    => 'view_roles',
+        'forms'         => 'view_forms',
     ];
 
     public static function entities(): array

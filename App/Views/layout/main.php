@@ -147,6 +147,16 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
             </ul>
         </div>
         <?php endif; ?>
+        <?php if (\Core\Auth::can('view_forms') || \Core\Auth::isAdmin()): ?>
+        <?php $formsActive = in_array($currentPage, ['forms-socio-economic', 'forms-perception']); ?>
+        <div class="dropdown">
+            <a href="#" class="nav-link dropdown-toggle <?= $formsActive ? 'active' : '' ?>" data-bs-toggle="dropdown">Forms</a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item <?= $currentPage === 'forms-socio-economic' ? 'active' : '' ?>" href="/forms/socio-economic">Socio Economic</a></li>
+                <li><a class="dropdown-item <?= $currentPage === 'forms-perception' ? 'active' : '' ?>" href="/forms/perception">Perception</a></li>
+            </ul>
+        </div>
+        <?php endif; ?>
         <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
         <?php $settingsActive = in_array($currentPage, ['settings']); ?>
         <div class="dropdown">
@@ -260,6 +270,14 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
             <div class="nav-parent <?= $currentPage === 'library' ? 'open' : '' ?>">Library</div>
             <div class="nav-sub">
                 <a href="/library" class="<?= $currentPage === 'library' ? 'active' : '' ?>">Project</a>
+            </div>
+            <?php endif; ?>
+            <?php if (\Core\Auth::can('view_forms') || \Core\Auth::isAdmin()): ?>
+            <?php $formsActive = in_array($currentPage, ['forms-socio-economic', 'forms-perception']); ?>
+            <div class="nav-parent <?= $formsActive ? 'open' : '' ?>">Forms</div>
+            <div class="nav-sub">
+                <a href="/forms/socio-economic" class="<?= $currentPage === 'forms-socio-economic' ? 'active' : '' ?>">Socio Economic</a>
+                <a href="/forms/perception" class="<?= $currentPage === 'forms-perception' ? 'active' : '' ?>">Perception</a>
             </div>
             <?php endif; ?>
             <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
