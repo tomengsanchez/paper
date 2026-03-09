@@ -30,7 +30,7 @@ paper/
 │   ├── Auth.php           # Session auth, capabilities, login/logout
 │   ├── Database.php       # PDO singleton
 │   ├── Csrf.php           # CSRF token generation/validation
-│   ├── MigrationRunner.php # Runs database/migration_*.php
+│   ├── MigrationRunner.php # Runs and rolls back database/migration_*.php
 │   ├── Logger.php         # Error logging
 │   ├── Mailer.php         # SMTP mail
 │   └── LoginThrottle.php  # Login attempt throttling (configurable via Security Settings)
@@ -43,7 +43,7 @@ paper/
 │   ├── seed_profiles_structures.php
 │   └── seed_grievances.php
 ├── cli/
-│   ├── migrate.php        # Run migrations or php cli/migrate.php --status
+│   ├── migrate.php        # Run migrations; --status; --rollback [--steps=N]
 │   ├── truncate_seed_tables.php  # Truncate notifications, audit_log, structures, profiles, projects
 │   └── truncate_grievances.php  # Truncate grievance_status_log, grievances
 ├── public/                # Web root (DocumentRoot should point here)
@@ -117,8 +117,9 @@ paper/
 
 ## 5. Migrations
 
-- Format: PHP file returning `['name' => 'migration_XXX_description', 'up' => function (\PDO $db): void { ... }, 'down' => function (\PDO $db): void { ... }]`.
+- Format: PHP file returning `['name' => 'migration_XXX_description', 'up' => function (\PDO $db): void { ... }, 'down' => function (\PDO $db): void { ... }]`. The `down` callable is required for rollback.
 - Run: `php cli/migrate.php`. Status: `php cli/migrate.php --status`.
+- Rollback: `php cli/migrate.php --rollback` (undo last migration) or `php cli/migrate.php --rollback --steps=2` (undo last 2 migrations). Rollback runs in LIFO order (most recently applied first). Each migration must have a callable `down` to be rolled back.
 - Migrations run in filename order; applied names stored in `migrations` table.
 - List (as of this guide): 000 (initial), 001 (EAV→flat), 002–014 (scalability, profile fields, list columns, grievance, status, progress levels, dashboard config, grievance attachments, indexes, etc.), 015 (display_name, user_projects), 016 (notifications), 017 (notification defaults for all users), 018 (audit_log), 019 (notifications project_id, clicked_at), 020 (api_tokens), 021 (email_queue), 022 (password policy: password_changed_at, user_password_history).
 

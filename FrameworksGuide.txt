@@ -18,7 +18,7 @@ App\Views\ – module-based PHP templates with a shared layout (layout/main.php)
 Clear MVC pattern with role/capability-based access checks in controllers and menus.
 Database layer & schema
 DB config via config/database.php, used by Core\Database (PDO singleton).
-Schema defined by PHP migration scripts under database/migration_*.php and seeders under database/seed_*.php.
+Schema defined by PHP migration scripts under database/migration_*.php and seeders under database/seed_*.php. Migrations: run via php cli/migrate.php; status via --status; rollback via --rollback or --rollback --steps=N (LIFO, requires callable 'down' in each migration).
 Main domains: users/roles/capabilities, projects, profiles, structures, grievances + grievance status/history, app/user settings, notifications, audit log, API tokens.
 Security-related schema additions:
 - app_settings: stores security and UI configuration (2FA, login throttling, password policy, email settings, UI preferences, etc.).

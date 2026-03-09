@@ -6,6 +6,10 @@
  * Run from project root: php database/seed_profiles_structures.php
  *
  * Config variables below control seed volumes.
+ *
+ * Behaviour:
+ * - Profile names (full_name) are unique per project; duplicates get suffix " (2)", " (3)", etc.
+ * - Projects are created only on first run (when no projects exist). Re-runs use existing projects.
  */
 
 require_once __DIR__ . '/../bootstrap.php';
@@ -19,7 +23,7 @@ use Core\Database;
 const SEED_PROFILE_COUNT = 100000;
 const SEED_STRUCTURES_MIN = 0;  // 0 = structure owners may have 0 structures when structure_owners is no
 const SEED_STRUCTURES_MAX = 20;
-const SEED_PROJECT_COUNT = 50;
+const SEED_PROJECT_COUNT = 20;
 const SEED_BATCH_SIZE = 50;
 const SEED_TAGGING_IMAGES = 8;
 const SEED_STRUCTURE_IMAGES = 10;
@@ -386,12 +390,13 @@ echo "Images/structure: " . SEED_TAGGING_IMAGES . " tagging + " . SEED_STRUCTURE
 
 $db = Database::getInstance();
 
-// 1. Ensure projects
+// 1. Ensure projects (only create on first run when no projects exist)
 $existingProjects = Project::all();
 $projectIds = array_map(fn($p) => $p->id, $existingProjects);
 
-if (count($projectIds) < SEED_PROJECT_COUNT) {
-    $toCreate = SEED_PROJECT_COUNT - count($projectIds);
+$isFirstRun = count($projectIds) === 0;
+if ($isFirstRun) {
+    $toCreate = min(SEED_PROJECT_COUNT, count(PROJECTS));
     echo "Creating $toCreate Philippine Government Project(s)...\n";
     for ($i = 0; $i < $toCreate && $i < count(PROJECTS); $i++) {
         $src = PROJECTS[$i];
@@ -413,8 +418,9 @@ if (count($projectIds) < SEED_PROJECT_COUNT) {
     }
     echo "  Total projects: " . count($projectIds) . "\n";
 }
+// On re-runs, use existing projects; limit to SEED_PROJECT_COUNT for assignment
 $projectIds = array_slice($projectIds, 0, SEED_PROJECT_COUNT);
-echo "Assigning profiles randomly to " . count($projectIds) . " projects.\n";
+echo "Assigning profiles randomly to " . count($projectIds) . " project(s)" . ($isFirstRun ? '' : ' (re-run: no new projects created)') . ".\n";
 
 // 1b. Seed demo users (Standard Users + Coordinators) with linked projects
 seedDemoUsersWithProjects($db, $projectIds);
@@ -432,6 +438,28 @@ $existingProfiles = (int) $db->query("SELECT COUNT(*) FROM profiles")->fetchColu
 $ctrlNumStart = 100000 + $existingProfiles;
 $totalBatches = (int) ceil(SEED_PROFILE_COUNT / SEED_BATCH_SIZE);
 
+// Track used full_name per project to avoid duplicates (preload existing profiles)
+$usedNamesByProject = [];
+$existingRows = $db->query("SELECT project_id, full_name FROM profiles")->fetchAll(\PDO::FETCH_OBJ);
+foreach ($existingRows as $row) {
+    $pid = (int) $row->project_id;
+    if (!isset($usedNamesByProject[$pid])) $usedNamesByProject[$pid] = [];
+    $usedNamesByProject[$pid][$row->full_name] = true;
+}
+
+function ensureUniqueNameForProject(array &$usedNamesByProject, int $projectId, string $baseName): string
+{
+    if (!isset($usedNamesByProject[$projectId])) $usedNamesByProject[$projectId] = [];
+    $name = $baseName;
+    $suffix = 1;
+    while (isset($usedNamesByProject[$projectId][$name])) {
+        $suffix++;
+        $name = $baseName . ' (' . $suffix . ')';
+    }
+    $usedNamesByProject[$projectId][$name] = true;
+    return $name;
+}
+
 for ($batch = 0; $batch < $totalBatches; $batch++) {
     $batchStart = $batch * SEED_BATCH_SIZE;
     $batchCount = min(SEED_BATCH_SIZE, SEED_PROFILE_COUNT - $batchStart);
@@ -445,8 +473,9 @@ for ($batch = 0; $batch < $totalBatches; $batch++) {
         $idx = $batchStart + $i;
         $firstName = randomElement(FIRST_NAMES);
         $surname = randomElement(SURNAMES);
-        $fullName = $firstName . ' ' . $surname;
         $projectId = randomElement($projectIds);
+        $baseName = $firstName . ' ' . $surname;
+        $fullName = ensureUniqueNameForProject($usedNamesByProject, (int) $projectId, $baseName);
 
         $residing = (bool) random_int(0, 1);
         $structureOwners = (bool) random_int(0, 1);

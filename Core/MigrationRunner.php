@@ -99,4 +99,64 @@ class MigrationRunner
         usort($all, fn($a, $b) => strcmp($a['name'], $b['name']));
         return $all;
     }
+
+    /**
+     * Build a map of migration name => file path by scanning migration files.
+     * @return array<string, string>
+     */
+    private function getNameToFileMap(): array
+    {
+        $files = glob($this->migrationsDir . '/migration_*.php');
+        $map = [];
+        foreach ($files as $f) {
+            $m = require $f;
+            $name = is_array($m) && isset($m['name']) ? $m['name'] : basename($f, '.php');
+            $map[$name] = $f;
+        }
+        return $map;
+    }
+
+    /**
+     * Roll back the last N migrations (LIFO: most recently run first).
+     * Each migration must have a callable 'down' in its return array.
+     *
+     * @param int $steps Number of migrations to roll back (default 1)
+     * @return array{rolled: int, errors: array}
+     */
+    public function rollback(int $steps = 1): array
+    {
+        $this->ensureMigrationsTable();
+        $ran = $this->getRanMigrations();
+        if (empty($ran)) {
+            return ['rolled' => 0, 'errors' => []];
+        }
+        $toRoll = array_slice(array_reverse($ran), 0, max(1, $steps));
+        $nameToFile = $this->getNameToFileMap();
+        $rolled = 0;
+        $errors = [];
+
+        $deleteStmt = $this->db->prepare("DELETE FROM {$this->table} WHERE name = ?");
+
+        foreach ($toRoll as $name) {
+            $file = $nameToFile[$name] ?? null;
+            if (!$file) {
+                $errors[] = "{$name}: migration file not found (cannot roll back)";
+                continue;
+            }
+            try {
+                $m = require $file;
+                if (!is_array($m) || !isset($m['down']) || !is_callable($m['down'])) {
+                    $errors[] = "{$name}: no callable 'down' (cannot roll back)";
+                    continue;
+                }
+                ($m['down'])($this->db);
+                $deleteStmt->execute([$name]);
+                $rolled++;
+            } catch (\Throwable $e) {
+                $errors[] = "{$name}: " . $e->getMessage();
+            }
+        }
+
+        return ['rolled' => $rolled, 'errors' => $errors];
+    }
 }
