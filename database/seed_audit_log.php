@@ -5,6 +5,9 @@
  *
  * Run from project root: php database/seed_audit_log.php
  * Safe to re-run: adds entries; does not truncate.
+ *
+ * The pattern and output are kept consistent with the sample seeding
+ * at the end of database/seed_profiles_structures.php.
  */
 
 require_once __DIR__ . '/../bootstrap.php';
@@ -20,7 +23,9 @@ $structureIds = $db->query('SELECT id FROM structures ORDER BY id DESC LIMIT 80'
 $auditStmt = $db->prepare('INSERT INTO audit_log (entity_type, entity_id, action, changes, created_by) VALUES (?, ?, ?, ?, ?)');
 $auditCount = 0;
 
-// Users: login, viewed, logout
+echo "\nSeeding audit log (sample) for profiles and structures...\n";
+
+// User login/logout and viewed (Users module)
 $auditStmt->execute(['user', $firstUserId, 'login', null, $firstUserId]);
 $auditCount++;
 $auditStmt->execute(['user', $firstUserId, 'viewed', null, $firstUserId]);
@@ -70,4 +75,4 @@ foreach (array_slice($structureIds, 0, 8) as $sid) {
     $auditCount++;
 }
 
-echo "Audit log seeded: " . number_format($auditCount) . " entries (users, profiles, structures).\n";
+echo "  Audit log entries: " . number_format($auditCount) . "\n";
