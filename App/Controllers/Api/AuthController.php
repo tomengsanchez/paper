@@ -78,7 +78,7 @@ class AuthController extends Controller
 
             LoginThrottle::clear($ip);
             $result = ApiToken::create((int) $user->id);
-            \App\AuditLog::record('user', (int) $user->id, 'login');
+            \App\AuditLog::record('user', (int) $user->id, 'login', ['ip' => $ip]);
 
             $this->json([
                 'token'      => $result['token'],
