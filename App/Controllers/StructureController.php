@@ -7,6 +7,7 @@ use App\NotificationService;
 use App\Models\Structure;
 use App\Models\Profile;
 use App\ListConfig;
+use App\CsvExporter;
 
 class StructureController extends Controller
 {
@@ -59,6 +60,48 @@ class StructureController extends Controller
             'listPagination' => $pagination,
             'listHasCustomColumns' => ListConfig::hasCustomColumns(self::LIST_MODULE),
         ]);
+    }
+
+    public function export(): void
+    {
+        $this->requireCapability('export_structure');
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'desc';
+
+        $scope = $_GET['scope'] ?? 'filtered';
+        $selectedCols = $_GET['col'] ?? [];
+        if (!is_array($selectedCols) || empty($selectedCols)) {
+            $selectedCols = $columns;
+        }
+
+        $allCols = ListConfig::getColumns(self::LIST_MODULE);
+        $validKeys = [];
+        $headers = [];
+        foreach ($allCols as $col) {
+            if (in_array($col['key'], $selectedCols, true)) {
+                $validKeys[] = $col['key'];
+                $headers[] = $col['label'];
+            }
+        }
+        if (empty($validKeys)) {
+            $validKeys = array_column($allCols, 'key');
+            $headers = array_column($allCols, 'label');
+        }
+
+        if ($scope === 'page') {
+            $page = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+        } else {
+            $page = 1;
+            $perPage = 10000;
+        }
+
+        $pagination = Structure::listPaginated($search, $columns, $sort, $order, $page, $perPage, null, null);
+        $rows = $pagination['items'] ?? [];
+
+        CsvExporter::stream('structures', $headers, $rows, $validKeys);
     }
 
     public function create(): void

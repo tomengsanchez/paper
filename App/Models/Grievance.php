@@ -118,6 +118,18 @@ class Grievance
             $params[] = \App\DevClock::today();
         }
 
+        // Date range filter on date_recorded
+        $dateFrom = trim((string)($filters['date_from'] ?? ''));
+        if ($dateFrom !== '') {
+            $whereCond .= ' AND g.date_recorded >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        $dateTo = trim((string)($filters['date_to'] ?? ''));
+        if ($dateTo !== '') {
+            $whereCond .= ' AND g.date_recorded <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
+
         $limit = max(1, min(100, $perPage));
         $cursorCond = '';
         if ($afterId !== null) {

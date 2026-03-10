@@ -7,6 +7,7 @@ use App\Models\Profile;
 use App\Models\Project;
 use App\Models\Structure;
 use App\ListConfig;
+use App\CsvExporter;
 
 class ProfileController extends Controller
 {
@@ -127,6 +128,50 @@ class ProfileController extends Controller
             'listPagination' => $pagination,
             'listHasCustomColumns' => ListConfig::hasCustomColumns(self::MODULE),
         ]);
+    }
+
+    public function export(): void
+    {
+        $this->requireCapability('export_profiles');
+        $columns = ListConfig::resolveFromRequest(self::MODULE);
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'desc';
+
+        $scope = $_GET['scope'] ?? 'filtered';
+        $selectedCols = $_GET['col'] ?? [];
+        if (!is_array($selectedCols) || empty($selectedCols)) {
+            $selectedCols = $columns;
+        }
+
+        // Map selected column keys to configured labels and ensure they are valid
+        $allCols = ListConfig::getColumns(self::MODULE);
+        $validKeys = [];
+        $headers = [];
+        foreach ($allCols as $col) {
+            if (in_array($col['key'], $selectedCols, true)) {
+                $validKeys[] = $col['key'];
+                $headers[] = $col['label'];
+            }
+        }
+        if (empty($validKeys)) {
+            $validKeys = array_column($allCols, 'key');
+            $headers = array_column($allCols, 'label');
+        }
+
+        // For export-all, fetch a large page
+        if ($scope === 'page') {
+            $page = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+        } else {
+            $page = 1;
+            $perPage = 10000;
+        }
+
+        $pagination = Profile::listPaginated($search, $columns, $sort, $order, $page, $perPage, null, null);
+        $rows = $pagination['items'] ?? [];
+
+        CsvExporter::stream('profiles', $headers, $rows, $validKeys);
     }
 
     public function create(): void

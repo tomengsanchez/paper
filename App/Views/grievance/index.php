@@ -9,6 +9,8 @@ $filterStatus = $filterStatus ?? '';
 $filterProjectId = $filterProjectId ?? 0;
 $filterStageId = $filterStageId ?? 0;
 $filterNeedsEscalation = $filterNeedsEscalation ?? '';
+$filterDateFrom = $filterDateFrom ?? '';
+$filterDateTo = $filterDateTo ?? '';
 $projects = $projects ?? [];
 
 // Base query for sort links, including active filters
@@ -18,7 +20,9 @@ $baseQuery = '?q=' . urlencode($listSearch ?? '')
     . '&status=' . urlencode($filterStatus)
     . '&project_id=' . (int)$filterProjectId
     . '&progress_level=' . (int)$filterStageId
-    . '&needs_escalation=' . urlencode($filterNeedsEscalation);
+    . '&needs_escalation=' . urlencode($filterNeedsEscalation)
+    . '&date_from=' . urlencode($filterDateFrom)
+    . '&date_to=' . urlencode($filterDateTo);
 
 // Extra params for shared toolbar/pagination partials
 $listExtraParams = [
@@ -26,6 +30,8 @@ $listExtraParams = [
     'project_id' => $filterProjectId ?: '',
     'progress_level' => $filterStageId ?: '',
     'needs_escalation' => $filterNeedsEscalation,
+    'date_from' => $filterDateFrom,
+    'date_to' => $filterDateTo,
 ];
 ob_start();
 ?>
@@ -74,13 +80,25 @@ ob_start();
             <option value="1" <?= $filterNeedsEscalation === '1' ? 'selected' : '' ?>>Needs escalation / close</option>
         </select>
     </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1 small">Date from</label>
+        <input type="date" name="date_from" class="form-control form-control-sm" value="<?= htmlspecialchars($filterDateFrom) ?>">
+    </div>
+    <div class="col-6 col-md-3">
+        <label class="form-label form-label-sm mb-1 small">Date to</label>
+        <input type="date" name="date_to" class="form-control form-control-sm" value="<?= htmlspecialchars($filterDateTo) ?>">
+    </div>
     <div class="col-12 d-flex gap-2 mt-1">
         <button type="submit" class="btn btn-sm btn-primary">Apply filters</button>
         <a href="<?= htmlspecialchars($listBaseUrl) ?>?columns=<?= htmlspecialchars(implode(',', $listColumns)) ?>&sort=<?= htmlspecialchars($listSort) ?>&order=<?= htmlspecialchars($listOrder) ?>&per_page=<?= (int)($listPagination['per_page'] ?? 15) ?>" class="btn btn-sm btn-outline-secondary">Clear</a>
     </div>
 </form>
 
-<?php require __DIR__ . '/../partials/list_toolbar.php'; ?>
+<?php
+$listCanExport = \Core\Auth::can('export_grievance');
+$listExportUrl = '/grievance/export';
+require __DIR__ . '/../partials/list_toolbar.php';
+?>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">

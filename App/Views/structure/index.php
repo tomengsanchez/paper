@@ -10,7 +10,10 @@ ob_start();
     <h2>Structure</h2>
     <?php if (\Core\Auth::can('add_structure')): ?><a href="/structure/create" class="btn btn-primary">Add Structure</a><?php endif; ?>
 </div>
-<?php require __DIR__ . '/../partials/list_toolbar.php'; ?>
+<?php
+$listCanExport = \Core\Auth::can('export_structure');
+require __DIR__ . '/../partials/list_toolbar.php';
+?>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">

@@ -18,6 +18,7 @@ $router->get('/notifications/click/{id}', 'NotificationController@click');
 $router->get('/help', 'HelpController@index');
 $router->get('/admin-guide', 'AdminGuideController@index');
 $router->get('/profile', 'ProfileController@index');
+$router->get('/profile/export', 'ProfileController@export');
 $router->get('/profile/view/{id}', 'ProfileController@show');
 $router->get('/profile/create', 'ProfileController@create');
 $router->post('/profile/store', 'ProfileController@store');
@@ -25,6 +26,7 @@ $router->get('/profile/edit/{id}', 'ProfileController@edit');
 $router->post('/profile/update/{id}', 'ProfileController@update');
 $router->post('/profile/delete/{id}', 'ProfileController@delete');
 $router->get('/structure', 'StructureController@index');
+$router->get('/structure/export', 'StructureController@export');
 $router->get('/structure/view/{id}', 'StructureController@show');
 $router->get('/structure/create', 'StructureController@create');
 $router->post('/structure/store', 'StructureController@store');
@@ -35,6 +37,7 @@ $router->post('/structure/delete/{id}', 'StructureController@delete');
 $router->get('/grievance', 'GrievanceController@dashboard');
 $router->post('/grievance/dashboard-config', 'GrievanceController@dashboardSaveConfig');
 $router->get('/grievance/list', 'GrievanceController@index');
+$router->get('/grievance/export', 'GrievanceController@export');
 $router->get('/grievance/create', 'GrievanceController@create');
 $router->post('/grievance/store', 'GrievanceController@store');
 $router->get('/grievance/view/{id}', 'GrievanceController@show');
@@ -86,6 +89,7 @@ $router->get('/grievance/options/progress-levels/edit/{id}', 'GrievanceOptionsCo
 $router->post('/grievance/options/progress-levels/update/{id}', 'GrievanceOptionsController@progressLevelUpdate');
 $router->post('/grievance/options/progress-levels/delete/{id}', 'GrievanceOptionsController@progressLevelDelete');
 $router->get('/library', 'LibraryController@index');
+$router->get('/library/export', 'LibraryController@export');
 $router->get('/library/view/{id}', 'LibraryController@show');
 $router->get('/library/create', 'LibraryController@create');
 $router->post('/library/store', 'LibraryController@store');
@@ -114,6 +118,7 @@ $router->post('/system/development/clear-simulated-time', 'DevelopmentController
 
 // User Management (Admin) — User Profile merged into Users
 $router->get('/users', 'UserController@index');
+$router->get('/users/export', 'UserController@export');
 $router->get('/users/view/{id}', 'UserController@show');
 $router->get('/users/create', 'UserController@create');
 $router->post('/users/store', 'UserController@store');
