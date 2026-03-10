@@ -13,7 +13,10 @@ ob_start();
 <?php if (isset($_GET['error']) && $_GET['error'] === 'self'): ?>
 <div class="alert alert-warning">You cannot delete your own account.</div>
 <?php endif; ?>
-<?php require __DIR__ . '/../partials/list_toolbar.php'; ?>
+<?php
+$listCanExport = \Core\Auth::can('export_users');
+require __DIR__ . '/../partials/list_toolbar.php';
+?>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">

@@ -108,9 +108,11 @@ class Structure
                     $searchCond = ' AND (' . implode(' OR ', $conds) . ')';
                 }
             }
-        }
+            }
 
-        $limit = max(1, min(100, $perPage));
+        // Allow larger page sizes for exports while keeping UI lists reasonable.
+        // Controllers already clamp per_page for standard list views.
+        $limit = max(1, min(10000, $perPage));
         $cursorCond = '';
         if ($afterId !== null) {
             $cursorCond = $dir === 'DESC' ? ' AND s.id < ?' : ' AND s.id > ?';

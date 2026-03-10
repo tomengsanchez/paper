@@ -1,6 +1,7 @@
 <?php
 // Expects: $listModule, $listBaseUrl, $listSearch, $listSort, $listOrder, $listColumns, $listAllColumns, $listPagination, $listHasCustomColumns
 // Optional: $listExtraParams (associative array of extra query params to preserve across actions)
+// Optional: $listCanExport (bool), $listExportUrl (string)
 $listModule = $listModule ?? '';
 $listBaseUrl = $listBaseUrl ?? '';
 $listSearch = $listSearch ?? '';
@@ -11,8 +12,11 @@ $listAllColumns = $listAllColumns ?? [];
 $listPagination = $listPagination ?? ['total' => 0, 'page' => 1, 'per_page' => 15, 'total_pages' => 0];
 $listHasCustomColumns = $listHasCustomColumns ?? false;
 $listExtraParams = $listExtraParams ?? [];
+$listCanExport = $listCanExport ?? false;
+$listExportUrl = $listExportUrl ?? ($listBaseUrl !== '' ? $listBaseUrl . '/export' : '');
 $p = $listPagination;
 $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
+$exportModalId = 'listExportModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
 
 $extraQuery = '';
 foreach ($listExtraParams as $k => $v) {
@@ -44,6 +48,9 @@ foreach ($listExtraParams as $k => $v) {
             </ul>
         </div>
         <button type="button" class="btn btn-sm btn-outline-secondary position-relative" data-bs-toggle="modal" data-bs-target="#<?= $modalId ?>" title="Customize columns">Columns<?php if ($listHasCustomColumns): ?><span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size:0.5rem" title="Custom columns saved">●</span><?php endif; ?></button>
+        <?php if ($listCanExport && $listExportUrl !== ''): ?>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#<?= $exportModalId ?>">Export</button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -67,3 +74,83 @@ foreach ($listExtraParams as $k => $v) {
         </div>
     </div>
 </div>
+
+<?php if ($listCanExport && $listExportUrl !== ''): ?>
+<div class="modal fade" id="<?= $exportModalId ?>" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export <?= htmlspecialchars($listModule) ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="get" action="<?= htmlspecialchars($listExportUrl) ?>">
+                <div class="modal-body">
+                    <input type="hidden" name="q" value="<?= htmlspecialchars($listSearch) ?>">
+                    <input type="hidden" name="sort" value="<?= htmlspecialchars($listSort) ?>">
+                    <input type="hidden" name="order" value="<?= htmlspecialchars($listOrder) ?>">
+                    <?php foreach ($listExtraParams as $k => $v):
+                        if ($v === '' || $v === null) continue;
+                        // For grievance export, show date range as explicit fields instead of hidden inputs
+                        if ($listModule === 'grievance' && ($k === 'date_from' || $k === 'date_to')) continue;
+                    ?>
+                    <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars((string)$v) ?>">
+                    <?php endforeach; ?>
+
+                    <div class="mb-3">
+                        <label class="form-label form-label-sm">Format</label>
+                        <select name="format" class="form-select form-select-sm">
+                            <option value="csv">CSV</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label form-label-sm">Scope</label>
+                        <select name="scope" class="form-select form-select-sm">
+                            <option value="filtered">All filtered results</option>
+                            <option value="page">Current page only</option>
+                        </select>
+                    </div>
+
+                    <?php if ($listModule === 'grievance'): ?>
+                    <div class="mb-3">
+                        <label class="form-label form-label-sm">Date range</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="date"
+                                       name="date_from"
+                                       class="form-control form-control-sm"
+                                       value="<?= htmlspecialchars($listExtraParams['date_from'] ?? '') ?>">
+                            </div>
+                            <div class="col-6">
+                                <input type="date"
+                                       name="date_to"
+                                       class="form-control form-control-sm"
+                                       value="<?= htmlspecialchars($listExtraParams['date_to'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-0">If left blank, all dates in the current filters are included.</p>
+                    </div>
+                    <?php endif; ?>
+
+                    <div class="mb-2">
+                        <div class="form-label form-label-sm mb-1">Columns</div>
+                        <p class="text-muted small mb-1">Select which columns to include in the export.</p>
+                        <?php foreach ($listAllColumns as $col): $checked = in_array($col['key'], $listColumns, true); ?>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="col[]" value="<?= htmlspecialchars($col['key']) ?>" id="exportcol_<?= $exportModalId ?>_<?= htmlspecialchars($col['key']) ?>" <?= $checked ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="exportcol_<?= $exportModalId ?>_<?= htmlspecialchars($col['key']) ?>">
+                                <?= htmlspecialchars($col['label']) ?>
+                            </label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Download</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>

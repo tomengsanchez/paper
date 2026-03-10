@@ -6,6 +6,7 @@ use Core\Auth;
 use Core\Database;
 use App\ListConfig;
 use App\ListHelper;
+use App\CsvExporter;
 
 class UserController extends Controller
 {
@@ -58,6 +59,61 @@ class UserController extends Controller
             'listPagination' => $pagination,
             'listHasCustomColumns' => ListConfig::hasCustomColumns(self::LIST_MODULE),
         ]);
+    }
+
+    public function export(): void
+    {
+        $this->requireCapability('export_users');
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? '';
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'desc';
+
+        $db = Database::getInstance();
+        $stmt = $db->query('
+            SELECT u.*, r.name AS role_name,
+                   COALESCE(link_counts.cnt, 0) AS linked_projects_count
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            LEFT JOIN (
+                SELECT up.user_id, COUNT(*) AS cnt
+                FROM user_projects up
+                GROUP BY up.user_id
+            ) AS link_counts ON link_counts.user_id = u.id
+            ORDER BY u.id
+        ');
+        $rows = $stmt->fetchAll(\PDO::FETCH_OBJ);
+        $rows = ListHelper::search($rows, $search, $columns, self::LIST_MODULE);
+        $rows = ListHelper::sort($rows, $sort ?: ($columns[0] ?? 'id'), $order, $columns, self::LIST_MODULE);
+
+        $scope = $_GET['scope'] ?? 'filtered';
+        $selectedCols = $_GET['col'] ?? [];
+        if (!is_array($selectedCols) || empty($selectedCols)) {
+            $selectedCols = $columns;
+        }
+
+        $allCols = ListConfig::getColumns(self::LIST_MODULE);
+        $validKeys = [];
+        $headers = [];
+        foreach ($allCols as $col) {
+            if (in_array($col['key'], $selectedCols, true)) {
+                $validKeys[] = $col['key'];
+                $headers[] = $col['label'];
+            }
+        }
+        if (empty($validKeys)) {
+            $validKeys = array_column($allCols, 'key');
+            $headers = array_column($allCols, 'label');
+        }
+
+        if ($scope === 'page') {
+            $page = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+            $pagination = ListHelper::paginate($rows, $page, $perPage);
+            $rows = $pagination['items'] ?? [];
+        }
+
+        CsvExporter::stream('users', $headers, $rows, $validKeys);
     }
 
     public function create(): void

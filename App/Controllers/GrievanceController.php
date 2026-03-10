@@ -18,6 +18,7 @@ use App\Models\Profile as ProfileModel;
 use App\ListConfig;
 use App\DashboardConfig;
 use Core\Logger;
+use App\CsvExporter;
 
 class GrievanceController extends Controller
 {
@@ -119,6 +120,10 @@ class GrievanceController extends Controller
         $filterProjectId = isset($_GET['project_id']) ? (int) $_GET['project_id'] : 0;
         $filterStageId = isset($_GET['progress_level']) ? (int) $_GET['progress_level'] : 0;
         $filterNeedsEscalation = $_GET['needs_escalation'] ?? '';
+        $filterDateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+        $filterDateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+        $filterDateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+        $filterDateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
 
         $pagination = Grievance::listPaginated(
             $search,
@@ -134,6 +139,8 @@ class GrievanceController extends Controller
                 'project_id' => $filterProjectId,
                 'progress_level' => $filterStageId,
                 'needs_escalation' => $filterNeedsEscalation,
+                'date_from' => $filterDateFrom,
+                'date_to' => $filterDateTo,
             ]
         );
 
@@ -223,6 +230,8 @@ class GrievanceController extends Controller
             'filterProjectId' => $filterProjectId,
             'filterStageId' => $filterStageId,
             'filterNeedsEscalation' => $filterNeedsEscalation,
+            'filterDateFrom' => $filterDateFrom,
+            'filterDateTo' => $filterDateTo,
             'listModule' => self::LIST_MODULE,
             'listBaseUrl' => self::LIST_BASE,
             'listSearch' => $search,
@@ -233,6 +242,73 @@ class GrievanceController extends Controller
             'listPagination' => $pagination,
             'listHasCustomColumns' => ListConfig::hasCustomColumns(self::LIST_MODULE),
         ]);
+    }
+
+    public function export(): void
+    {
+        $this->requireCapability('export_grievance');
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'desc';
+
+        $filterStatus = $_GET['status'] ?? '';
+        $filterProjectId = isset($_GET['project_id']) ? (int) $_GET['project_id'] : 0;
+        $filterStageId = isset($_GET['progress_level']) ? (int) $_GET['progress_level'] : 0;
+        $filterNeedsEscalation = $_GET['needs_escalation'] ?? '';
+        $filterDateFrom = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
+        $filterDateTo = isset($_GET['date_to']) ? trim($_GET['date_to']) : '';
+
+        $scope = $_GET['scope'] ?? 'filtered';
+        $selectedCols = $_GET['col'] ?? [];
+        if (!is_array($selectedCols) || empty($selectedCols)) {
+            $selectedCols = $columns;
+        }
+
+        $allCols = ListConfig::getColumns(self::LIST_MODULE);
+        $validKeys = [];
+        $headers = [];
+        foreach ($allCols as $col) {
+            if (in_array($col['key'], $selectedCols, true)) {
+                $validKeys[] = $col['key'];
+                $headers[] = $col['label'];
+            }
+        }
+        if (empty($validKeys)) {
+            $validKeys = array_column($allCols, 'key');
+            $headers = array_column($allCols, 'label');
+        }
+
+        if ($scope === 'page') {
+            $page = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+        } else {
+            $page = 1;
+            $perPage = 10000;
+        }
+
+        $pagination = Grievance::listPaginated(
+            $search,
+            $columns,
+            $sort,
+            $order,
+            $page,
+            $perPage,
+            null,
+            null,
+            [
+                'status' => $filterStatus,
+                'project_id' => $filterProjectId,
+                'progress_level' => $filterStageId,
+                'needs_escalation' => $filterNeedsEscalation,
+                'date_from' => $filterDateFrom,
+                'date_to' => $filterDateTo,
+            ]
+        );
+
+        $rows = $pagination['items'] ?? [];
+
+        CsvExporter::stream('grievances', $headers, $rows, $validKeys);
     }
 
     public function create(): void

@@ -15,12 +15,14 @@ class Capabilities
             'add_profiles'    => 'Add',
             'edit_profiles'   => 'Edit',
             'delete_profiles' => 'Delete',
+            'export_profiles' => 'Export',
         ],
         'Structure' => [
             'view_structure'   => 'View List',
             'add_structure'    => 'Add',
             'edit_structure'   => 'Edit',
             'delete_structure' => 'Delete',
+            'export_structure' => 'Export',
         ],
         'Grievance' => [
             'view_grievance'        => 'View List',
@@ -28,6 +30,7 @@ class Capabilities
             'edit_grievance'        => 'Edit',
             'delete_grievance'      => 'Delete',
             'change_grievance_status' => 'Change Status',
+            'export_grievance'        => 'Export',
         ],
         'Grievance Options' => [
             'manage_grievance_options' => 'Manage Options Library',
@@ -55,6 +58,7 @@ class Capabilities
             'add_users'    => 'Add',
             'edit_users'   => 'Edit',
             'delete_users' => 'Delete',
+            'export_users' => 'Export',
         ],
         'User Roles & Capabilities' => [
             'view_roles'  => 'View List',

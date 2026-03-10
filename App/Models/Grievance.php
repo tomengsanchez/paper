@@ -118,7 +118,21 @@ class Grievance
             $params[] = \App\DevClock::today();
         }
 
-        $limit = max(1, min(100, $perPage));
+        // Date range filter on date_recorded
+        $dateFrom = trim((string)($filters['date_from'] ?? ''));
+        if ($dateFrom !== '') {
+            $whereCond .= ' AND g.date_recorded >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        $dateTo = trim((string)($filters['date_to'] ?? ''));
+        if ($dateTo !== '') {
+            $whereCond .= ' AND g.date_recorded <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
+
+        // Allow larger page sizes for exports while keeping UI lists reasonable.
+        // Controllers already clamp per_page for standard list views.
+        $limit = max(1, min(10000, $perPage));
         $cursorCond = '';
         if ($afterId !== null) {
             $cursorCond = $dir === 'DESC' ? ' AND g.id < ?' : ' AND g.id > ?';
