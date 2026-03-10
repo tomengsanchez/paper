@@ -18,6 +18,8 @@ $router->get('/notifications/click/{id}', 'NotificationController@click');
 $router->get('/help', 'HelpController@index');
 $router->get('/admin-guide', 'AdminGuideController@index');
 
+$router->get('/serve/company-logo', 'ServeController@companyLogo');
+
 $router->get('/settings', 'SettingsController@index');
 $router->post('/settings/ui', 'SettingsController@updateUi');
 $router->post('/settings/notifications', 'SettingsController@updateNotifications');

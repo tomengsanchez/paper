@@ -1,9 +1,10 @@
+<?php $branding = \App\Models\AppSettings::getAppBranding(); $appName = trim($branding->app_name ?? '') ?: 'PAPeR'; $companyName = trim($branding->company_name ?? ''); $logoUrl = !empty($branding->company_logo) ? ((defined('BASE_URL') && BASE_URL ? rtrim(BASE_URL, '/') : '') . '/serve/company-logo') : ''; ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - PAPeR</title>
+    <title>Login - <?= htmlspecialchars($appName) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -13,7 +14,9 @@
 <body>
     <div class="card login-card">
         <div class="card-body p-4">
-            <h4 class="mb-4 text-center">PAPeR Login</h4>
+            <?php if ($logoUrl): ?><div class="text-center mb-3"><img src="<?= htmlspecialchars($logoUrl) ?>" alt="" class="rounded" style="width: 64px; height: 64px; object-fit: cover;"></div><?php endif; ?>
+            <?php if ($companyName): ?><p class="text-muted text-center small mb-1"><?= htmlspecialchars($companyName) ?></p><?php endif; ?>
+            <h4 class="mb-4 text-center"><?= htmlspecialchars($appName) ?> Login</h4>
             <?php if (!empty($error)): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>

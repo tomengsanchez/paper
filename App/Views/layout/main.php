@@ -6,6 +6,12 @@ $uiMobileFriendly = !empty($ui['mobile_friendly']);
 $currentPage = $currentPage ?? '';
 $devClockSimulated = \Core\Auth::id() && \App\DevClock::isOverridden();
 $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
+$branding = \App\Models\AppSettings::getAppBranding();
+$appName = trim($branding->app_name ?? '') ?: 'PAPeR';
+$companyName = trim($branding->company_name ?? '');
+$companyLogo = trim($branding->company_logo ?? '');
+$defaultTitle = $companyName ? $companyName . ' - ' . $appName : $appName;
+$logoUrl = $companyLogo ? ((defined('BASE_URL') && BASE_URL ? rtrim(BASE_URL, '/') : '') . '/serve/company-logo') : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,7 +19,7 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= htmlspecialchars(\Core\Csrf::token()) ?>">
-    <title><?= htmlspecialchars($pageTitle ?? 'PAPeR - Project Affected Profiles and Redress') ?></title>
+    <title><?= htmlspecialchars($pageTitle ?? $defaultTitle) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
@@ -22,8 +28,8 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
             --nav-bg: #1e293b; --nav-border: #334155; --nav-text: #cbd5f5; --nav-text-hover: #f9fafb; --nav-active-bg: #334155; --nav-sub-bg: #0f172a; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f6fa; }
         .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: var(--nav-bg); color: var(--nav-text); z-index: 1000; }
-        .sidebar .brand { display: block; padding: 1rem 1.25rem; font-weight: 700; color: var(--nav-text-hover); border-bottom: 1px solid var(--nav-border); text-decoration: none; transition: opacity 0.2s; }
-.sidebar .brand:hover { color: var(--nav-text-hover); opacity: 0.9; }
+        .sidebar .brand { display: flex; align-items: center; padding: 1rem 1.25rem; font-weight: 700; color: var(--nav-text-hover); border-bottom: 1px solid var(--nav-border); text-decoration: none; transition: opacity 0.2s; gap: 0.5rem; }
+        .sidebar .brand:hover { color: var(--nav-text-hover); opacity: 0.9; }
         .sidebar nav a { display: block; padding: 0.75rem 1.25rem; color: var(--nav-text); text-decoration: none; transition: all 0.2s; }
         .sidebar nav a:hover, .sidebar nav a.active { background: var(--nav-active-bg); color: var(--nav-text-hover); }
         .sidebar .nav-parent { padding: 0.75rem 1.25rem; color: var(--nav-text); cursor: pointer; transition: all 0.2s; user-select: none; }
@@ -41,7 +47,7 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
         .select2-container--bootstrap-5 .select2-selection { min-height: 38px; }
         /* Top menu */
         .topnav { position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); background: var(--nav-bg); color: var(--nav-text); z-index: 1000; display: flex; align-items: center; padding: 0 1rem; gap: 0.5rem; border-bottom: 1px solid var(--nav-border); }
-        .topnav .brand { font-weight: 700; color: var(--nav-text-hover); margin-right: 1rem; text-decoration: none; }
+        .topnav .brand { display: flex; align-items: center; font-weight: 700; color: var(--nav-text-hover); margin-right: 1rem; text-decoration: none; gap: 0.5rem; }
         .topnav .nav-link { color: var(--nav-text); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 4px; }
         .topnav .nav-link:hover, .topnav .nav-link.active { background: var(--nav-active-bg); color: var(--nav-text-hover); }
         .topnav .dropdown-menu { background: var(--nav-sub-bg); border: 1px solid var(--nav-border); }
@@ -110,7 +116,10 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
 <body class="ui-theme-<?= htmlspecialchars($uiTheme) ?> ui-layout-<?= htmlspecialchars($uiLayout) ?><?= $uiMobileFriendly ? ' ui-mobile-friendly' : '' ?>">
 <?php if ($uiLayout === 'top'): ?>
     <nav class="topnav">
-        <a href="/" class="brand">PAPeR</a>
+        <a href="/" class="brand">
+            <?php if ($logoUrl): ?><img src="<?= htmlspecialchars($logoUrl) ?>" alt="" class="rounded" style="width: 32px; height: 32px; object-fit: cover;"><?php endif; ?>
+            <span><?= htmlspecialchars($appName) ?></span>
+        </a>
         <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
         <?php $settingsActive = in_array($currentPage, ['settings']); ?>
         <div class="dropdown">
@@ -192,7 +201,10 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
 <?php else: ?>
     <?php if ($uiMobileFriendly): ?><div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div><?php endif; ?>
     <aside class="sidebar" id="main-sidebar">
-        <a href="/" class="brand">PAPeR</a>
+        <a href="/" class="brand">
+            <?php if ($logoUrl): ?><img src="<?= htmlspecialchars($logoUrl) ?>" alt="" class="rounded" style="width: 32px; height: 32px; object-fit: cover;"><?php endif; ?>
+            <span><?= htmlspecialchars($appName) ?></span>
+        </a>
         <nav class="py-2">
             <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
             <?php $settingsActive = in_array($currentPage, ['settings']); ?>

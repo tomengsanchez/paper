@@ -21,6 +21,25 @@ class AppSettings
         $stmt->execute([$key, $value]);
     }
 
+    /** Company name, app name, and logo for branding (System > General). */
+    public static function getAppBranding(): object
+    {
+        return (object) [
+            'company_name' => self::get('company_name', ''),
+            'app_name'     => self::get('app_name', 'PAPeR'),
+            'company_logo' => self::get('company_logo', ''),
+        ];
+    }
+
+    public static function saveAppBranding(array $data): void
+    {
+        self::set('company_name', trim((string) ($data['company_name'] ?? '')));
+        self::set('app_name', trim((string) ($data['app_name'] ?? 'PAPeR')) ?: 'PAPeR');
+        if (isset($data['company_logo'])) {
+            self::set('company_logo', trim((string) $data['company_logo']));
+        }
+    }
+
     public static function getEmailConfig(): object
     {
         return (object) [

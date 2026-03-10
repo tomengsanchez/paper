@@ -8,7 +8,7 @@ logs/*
 
 config/database.php
 config/app.php
-
+xyz/*
 public/uploads/*
 
 dbdump/*
