@@ -10,34 +10,6 @@ class Capabilities
 {
     /** [entity_key => [capability_key => label]] */
     private static array $entities = [
-        'Profile' => [
-            'view_profiles'   => 'View List',
-            'add_profiles'    => 'Add',
-            'edit_profiles'   => 'Edit',
-            'delete_profiles' => 'Delete',
-        ],
-        'Structure' => [
-            'view_structure'   => 'View List',
-            'add_structure'    => 'Add',
-            'edit_structure'   => 'Edit',
-            'delete_structure' => 'Delete',
-        ],
-        'Grievance' => [
-            'view_grievance'        => 'View List',
-            'add_grievance'         => 'Add',
-            'edit_grievance'        => 'Edit',
-            'delete_grievance'      => 'Delete',
-            'change_grievance_status' => 'Change Status',
-        ],
-        'Grievance Options' => [
-            'manage_grievance_options' => 'Manage Options Library',
-        ],
-        'Library - Project' => [
-            'view_projects'   => 'View List',
-            'add_projects'    => 'Add',
-            'edit_projects'   => 'Edit',
-            'delete_projects' => 'Delete',
-        ],
         'Settings' => [
             'view_settings' => 'View',
             'manage_settings' => 'Manage',
@@ -64,18 +36,6 @@ class Capabilities
 
     /** Map page/menu to view capability for visibility */
     private static array $menuCapability = [
-        'profile'       => 'view_profiles',
-        'structure'     => 'view_structure',
-        'grievance'     => 'view_grievance',
-        'grievance-dashboard' => 'view_grievance',
-        'grievance-list' => 'view_grievance',
-        'grievance-vulnerabilities' => 'manage_grievance_options',
-        'grievance-respondent-types' => 'manage_grievance_options',
-        'grievance-grm-channels' => 'manage_grievance_options',
-        'grievance-preferred-languages' => 'manage_grievance_options',
-        'grievance-types' => 'manage_grievance_options',
-        'grievance-categories' => 'manage_grievance_options',
-        'library'       => 'view_projects',
         'settings'      => 'view_settings',
         'email-settings' => 'view_email_settings',
         'security-settings' => 'view_security_settings',

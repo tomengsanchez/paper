@@ -4,7 +4,6 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Auth;
 use App\NotificationService;
-use App\Models\Project;
 
 class NotificationController extends Controller
 {
@@ -30,13 +29,11 @@ class NotificationController extends Controller
         ];
 
         $result = NotificationService::listForUser($userId, $filters, $page, 20);
-        $projects = Project::all();
 
         $this->view('notifications/index', [
             'notifications' => $result['items'],
             'filters'       => $filters,
             'pagination'    => $result,
-            'projects'      => $projects,
         ]);
     }
 

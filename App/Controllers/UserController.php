@@ -30,15 +30,9 @@ class UserController extends Controller
 
         $db = Database::getInstance();
         $stmt = $db->query('
-            SELECT u.*, r.name AS role_name,
-                   COALESCE(link_counts.cnt, 0) AS linked_projects_count
+            SELECT u.*, r.name AS role_name
             FROM users u
             LEFT JOIN roles r ON u.role_id = r.id
-            LEFT JOIN (
-                SELECT up.user_id, COUNT(*) AS cnt
-                FROM user_projects up
-                GROUP BY up.user_id
-            ) AS link_counts ON link_counts.user_id = u.id
             ORDER BY u.id
         ');
         $rows = $stmt->fetchAll(\PDO::FETCH_OBJ);
@@ -64,7 +58,7 @@ class UserController extends Controller
     {
         $this->requireCapability('add_users');
         $roles = Database::getInstance()->query('SELECT * FROM roles')->fetchAll(\PDO::FETCH_OBJ);
-        $this->view('users/form', ['user' => null, 'roles' => $roles, 'linkedProjects' => []]);
+        $this->view('users/form', ['user' => null, 'roles' => $roles]);
     }
 
     public function store(): void
@@ -76,8 +70,6 @@ class UserController extends Controller
         $displayName = trim($_POST['display_name'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
-        $projectIds = isset($_POST['project_ids']) && is_array($_POST['project_ids'])
-            ? array_map('intval', array_filter($_POST['project_ids'])) : [];
 
         if (empty($username) || empty($password) || !$roleId) {
             $this->redirect('/users/create?error=1');
@@ -97,7 +89,6 @@ class UserController extends Controller
         $stmt->execute([$username, $email ?: null, $displayName ?: null, $passwordHash, $roleId]);
         $userId = (int) $db->lastInsertId();
         \App\PasswordPolicy::recordPasswordChange($userId, $passwordHash);
-        $this->saveUserProjects($db, $userId, $projectIds);
         \App\AuditLog::record('user', $userId, 'created');
         $this->redirect('/users/view/' . $userId);
     }
@@ -113,9 +104,8 @@ class UserController extends Controller
             $this->redirect('/users');
             return;
         }
-        $linkedProjects = $this->getLinkedProjects($db, $id);
         \App\AuditLog::record('user', (int) $id, 'viewed');
-        $this->view('users/view', ['user' => $user, 'linkedProjects' => $linkedProjects]);
+        $this->view('users/view', ['user' => $user]);
     }
 
     public function edit(int $id): void
@@ -130,8 +120,7 @@ class UserController extends Controller
             return;
         }
         $roles = $db->query('SELECT * FROM roles')->fetchAll(\PDO::FETCH_OBJ);
-        $linkedProjects = $this->getLinkedProjects($db, $id);
-        $this->view('users/form', ['user' => $user, 'roles' => $roles, 'linkedProjects' => $linkedProjects]);
+        $this->view('users/form', ['user' => $user, 'roles' => $roles]);
     }
 
     public function update(int $id): void
@@ -143,8 +132,6 @@ class UserController extends Controller
         $displayName = trim($_POST['display_name'] ?? '');
         $password = $_POST['password'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
-        $projectIds = isset($_POST['project_ids']) && is_array($_POST['project_ids'])
-            ? array_map('intval', array_filter($_POST['project_ids'])) : [];
 
         $db = Database::getInstance();
         $stmt = $db->prepare('SELECT username, email, display_name, role_id FROM users WHERE id = ?');
@@ -169,7 +156,6 @@ class UserController extends Controller
             $stmt = $db->prepare('UPDATE users SET username = ?, email = ?, display_name = ?, role_id = ? WHERE id = ?');
             $stmt->execute([$username, $email ?: null, $displayName ?: null, $roleId, $id]);
         }
-        $this->saveUserProjects($db, $id, $projectIds);
         $changes = [];
         if ((string)($old->username ?? '') !== (string)$username) {
             $changes['username'] = ['from' => $old->username, 'to' => $username];
@@ -199,32 +185,5 @@ class UserController extends Controller
         }
         Database::getInstance()->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
         $this->redirect('/users');
-    }
-
-    private function getLinkedProjects(\PDO $db, int $userId): array
-    {
-        $stmt = $db->prepare('
-            SELECT p.id, p.name
-            FROM user_projects up
-            JOIN projects p ON p.id = up.project_id
-            WHERE up.user_id = ?
-            ORDER BY p.name
-        ');
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll(\PDO::FETCH_OBJ);
-    }
-
-    private function saveUserProjects(\PDO $db, int $userId, array $projectIds): void
-    {
-        $db->prepare('DELETE FROM user_projects WHERE user_id = ?')->execute([$userId]);
-        if (empty($projectIds)) {
-            return;
-        }
-        $stmt = $db->prepare('INSERT INTO user_projects (user_id, project_id) VALUES (?, ?)');
-        foreach (array_unique($projectIds) as $pid) {
-            if ($pid > 0) {
-                $stmt->execute([$userId, $pid]);
-            }
-        }
     }
 }

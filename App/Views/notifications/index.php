@@ -2,7 +2,6 @@
 $notifications = $notifications ?? [];
 $filters = $filters ?? ['from' => '', 'to' => '', 'module' => '', 'project_id' => null];
 $pagination = $pagination ?? ['page' => 1, 'per_page' => 20, 'total' => 0, 'total_pages' => 0];
-$projects = $projects ?? [];
 ob_start();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -26,17 +25,6 @@ ob_start();
                     <option value="<?= \App\NotificationService::RELATED_PROFILE ?>" <?= ($filters['module'] ?? '') === \App\NotificationService::RELATED_PROFILE ? 'selected' : '' ?>>Profile</option>
                     <option value="<?= \App\NotificationService::RELATED_STRUCTURE ?>" <?= ($filters['module'] ?? '') === \App\NotificationService::RELATED_STRUCTURE ? 'selected' : '' ?>>Structure</option>
                     <option value="<?= \App\NotificationService::RELATED_GRIEVANCE ?>" <?= ($filters['module'] ?? '') === \App\NotificationService::RELATED_GRIEVANCE ? 'selected' : '' ?>>Grievance</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="project_id" class="form-label">Project</label>
-                <select id="project_id" name="project_id" class="form-select">
-                    <option value="">All</option>
-                    <?php foreach ($projects as $p): ?>
-                    <option value="<?= (int)$p->id ?>" <?= (string)($filters['project_id'] ?? '') === (string)$p->id ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($p->name ?? ('Project #' . (int)$p->id)) ?>
-                    </option>
-                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-12 d-flex gap-2">
