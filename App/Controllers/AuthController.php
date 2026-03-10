@@ -53,7 +53,7 @@ class AuthController extends Controller
 
         try {
             $db = Database::getInstance();
-            $stmt = $db->prepare('SELECT id, username, password_hash, email, password_changed_at, created_at FROM users WHERE username = ?');
+            $stmt = $db->prepare('SELECT id, username, password_hash, email, password_changed_at, created_at, is_active FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch(\PDO::FETCH_OBJ);
 
@@ -80,6 +80,13 @@ class AuthController extends Controller
                 LoginThrottle::recordFailure($ip);
                 Logger::auth('Login failed: wrong password', ['username' => $username]);
                 $this->view('auth/login', ['error' => 'Invalid credentials']);
+                return;
+            }
+
+            if (empty($user->is_active)) {
+                LoginThrottle::recordFailure($ip);
+                Logger::auth('Login blocked: inactive user', ['username' => $username, 'user_id' => $user->id]);
+                $this->view('auth/login', ['error' => 'This account is inactive. Please contact your administrator.']);
                 return;
             }
 

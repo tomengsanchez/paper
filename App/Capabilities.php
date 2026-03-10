@@ -32,10 +32,17 @@ class Capabilities
             'view_roles'  => 'View List',
             'edit_roles'  => 'Edit',
         ],
+        'Employees' => [
+            'view_employees'   => 'View List',
+            'add_employees'    => 'Add',
+            'edit_employees'   => 'Edit',
+            'delete_employees' => 'Delete',
+        ],
     ];
 
     /** Map page/menu to view capability for visibility */
     private static array $menuCapability = [
+        'employees'     => 'view_employees',
         'settings'      => 'view_settings',
         'email-settings' => 'view_email_settings',
         'security-settings' => 'view_security_settings',

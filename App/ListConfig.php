@@ -26,6 +26,13 @@ class ListConfig
             ['key' => 'display_name', 'label' => 'Display name', 'sortable' => true],
             ['key' => 'email', 'label' => 'Email', 'sortable' => true],
         ],
+        'employees' => [
+            ['key' => 'id', 'label' => 'ID', 'sortable' => true],
+            ['key' => 'name', 'label' => 'Name', 'sortable' => true],
+            ['key' => 'email', 'label' => 'Email', 'sortable' => true],
+            ['key' => 'department', 'label' => 'Department', 'sortable' => true],
+            ['key' => 'position', 'label' => 'Position', 'sortable' => true],
+        ],
     ];
 
     public static function getColumns(string $module): array

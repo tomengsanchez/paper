@@ -120,6 +120,15 @@ $logoUrl = $companyLogo ? ((defined('BASE_URL') && BASE_URL ? rtrim(BASE_URL, '/
             <?php if ($logoUrl): ?><img src="<?= htmlspecialchars($logoUrl) ?>" alt="" class="rounded" style="width: 32px; height: 32px; object-fit: cover;"><?php endif; ?>
             <span><?= htmlspecialchars($appName) ?></span>
         </a>
+        <?php if (\Core\Auth::can('view_employees')): ?>
+        <?php $hrActive = in_array($currentPage, ['employees']); ?>
+        <div class="dropdown">
+            <a href="#" class="nav-link dropdown-toggle <?= $hrActive ? 'active' : '' ?>" data-bs-toggle="dropdown">Human Resources</a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item <?= $currentPage === 'employees' ? 'active' : '' ?>" href="/hr/employees">Employees</a></li>
+            </ul>
+        </div>
+        <?php endif; ?>
         <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
         <?php $settingsActive = in_array($currentPage, ['settings']); ?>
         <div class="dropdown">
@@ -206,6 +215,13 @@ $logoUrl = $companyLogo ? ((defined('BASE_URL') && BASE_URL ? rtrim(BASE_URL, '/
             <span><?= htmlspecialchars($appName) ?></span>
         </a>
         <nav class="py-2">
+            <?php if (\Core\Auth::can('view_employees')): ?>
+            <?php $hrActive = in_array($currentPage, ['employees']); ?>
+            <div class="nav-parent <?= $hrActive ? 'open' : '' ?>">Human Resources</div>
+            <div class="nav-sub">
+                <a href="/hr/employees" class="<?= $currentPage === 'employees' ? 'active' : '' ?>">Employees</a>
+            </div>
+            <?php endif; ?>
             <?php if (\Core\Auth::can('view_settings') || \Core\Auth::can('view_security_settings')): ?>
             <?php $settingsActive = in_array($currentPage, ['settings']); ?>
             <div class="nav-parent <?= $settingsActive ? 'open' : '' ?>">Settings</div>

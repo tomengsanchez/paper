@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         try {
             $db = Database::getInstance();
-            $stmt = $db->prepare('SELECT id, username, password_hash, email, display_name, password_changed_at, created_at FROM users WHERE username = ?');
+            $stmt = $db->prepare('SELECT id, username, password_hash, email, display_name, password_changed_at, created_at, is_active FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch(\PDO::FETCH_OBJ);
 
@@ -49,6 +49,14 @@ class AuthController extends Controller
                 Logger::auth('API login failed: invalid credentials', ['username' => $username]);
                 http_response_code(401);
                 $this->json(['error' => 'Unauthorized', 'message' => 'Invalid credentials']);
+                return;
+            }
+
+            if (empty($user->is_active)) {
+                LoginThrottle::recordFailure($ip);
+                Logger::auth('API login blocked: inactive user', ['username' => $username, 'user_id' => $user->id]);
+                http_response_code(403);
+                $this->json(['error' => 'Forbidden', 'message' => 'This account is inactive. Please contact your administrator.']);
                 return;
             }
 

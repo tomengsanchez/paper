@@ -20,6 +20,15 @@ $router->get('/admin-guide', 'AdminGuideController@index');
 
 $router->get('/serve/company-logo', 'ServeController@companyLogo');
 
+// Human Resources
+$router->get('/hr/employees', 'EmployeeController@index');
+$router->get('/hr/employees/view/{id}', 'EmployeeController@show');
+$router->get('/hr/employees/create', 'EmployeeController@create');
+$router->post('/hr/employees/store', 'EmployeeController@store');
+$router->get('/hr/employees/edit/{id}', 'EmployeeController@edit');
+$router->post('/hr/employees/update/{id}', 'EmployeeController@update');
+$router->post('/hr/employees/delete/{id}', 'EmployeeController@delete');
+
 $router->get('/settings', 'SettingsController@index');
 $router->post('/settings/ui', 'SettingsController@updateUi');
 $router->post('/settings/notifications', 'SettingsController@updateNotifications');
