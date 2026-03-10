@@ -6,6 +6,8 @@ logs/*.log
 logs/*
 /postman/*
 
+xyz/*
+
 config/database.php
 config/app.php
 
