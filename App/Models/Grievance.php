@@ -225,24 +225,12 @@ class Grievance
         foreach ($fullRows as $r) {
             $fullById[(int) $r->id] = $r;
         }
-        $vulnNames = self::resolveLookupNames($db, 'grievance_vulnerabilities', array_unique(array_merge(...array_map(function ($r) {
-            return Grievance::parseJson($r->vulnerability_ids ?? '');
-        }, $fullRows))));
-        $respNames = self::resolveLookupNames($db, 'grievance_respondent_types', array_unique(array_merge(...array_map(function ($r) {
-            return Grievance::parseJson($r->respondent_type_ids ?? '');
-        }, $fullRows))));
-        $grmNames = self::resolveLookupNames($db, 'grievance_grm_channels', array_unique(array_merge(...array_map(function ($r) {
-            return Grievance::parseJson($r->grm_channel_ids ?? '');
-        }, $fullRows))));
-        $langNames = self::resolveLookupNames($db, 'grievance_preferred_languages', array_unique(array_merge(...array_map(function ($r) {
-            return Grievance::parseJson($r->preferred_language_ids ?? '');
-        }, $fullRows))));
-        $typeNames = self::resolveLookupNames($db, 'grievance_types', array_unique(array_merge(...array_map(function ($r) {
-            return Grievance::parseJson($r->grievance_type_ids ?? '');
-        }, $fullRows))));
-        $catNames = self::resolveLookupNames($db, 'grievance_categories', array_unique(array_merge(...array_map(function ($r) {
-            return Grievance::parseJson($r->grievance_category_ids ?? '');
-        }, $fullRows))));
+        $vulnNames = self::resolveLookupNames($db, 'grievance_vulnerabilities', self::collectLookupIds($fullRows, 'vulnerability_ids'));
+        $respNames = self::resolveLookupNames($db, 'grievance_respondent_types', self::collectLookupIds($fullRows, 'respondent_type_ids'));
+        $grmNames = self::resolveLookupNames($db, 'grievance_grm_channels', self::collectLookupIds($fullRows, 'grm_channel_ids'));
+        $langNames = self::resolveLookupNames($db, 'grievance_preferred_languages', self::collectLookupIds($fullRows, 'preferred_language_ids'));
+        $typeNames = self::resolveLookupNames($db, 'grievance_types', self::collectLookupIds($fullRows, 'grievance_type_ids'));
+        $catNames = self::resolveLookupNames($db, 'grievance_categories', self::collectLookupIds($fullRows, 'grievance_category_ids'));
 
         $ordered = [];
         foreach ($result['items'] as $r) {
@@ -275,12 +263,34 @@ class Grievance
         return $result;
     }
 
+    /**
+     * Collect unique integer IDs from a JSON field across grievance rows.
+     */
+    private static function collectLookupIds(array $rows, string $field): array
+    {
+        $seen = [];
+        foreach ($rows as $r) {
+            $raw = $r->$field ?? null;
+            $ids = self::parseJson(is_string($raw) ? $raw : null);
+            if (!is_array($ids)) {
+                continue;
+            }
+            foreach ($ids as $id) {
+                $id = (int) $id;
+                if ($id > 0) {
+                    $seen[$id] = true;
+                }
+            }
+        }
+        return array_keys($seen);
+    }
+
     private static function resolveLookupNames(\PDO $db, string $table, array $ids): array
     {
         if (empty($ids)) {
             return [];
         }
-        $ids = array_unique(array_filter(array_map('intval', $ids)));
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if (empty($ids)) {
             return [];
         }
