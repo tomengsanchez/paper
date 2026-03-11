@@ -99,9 +99,11 @@ ob_start();
             <h5 class="mb-2">Steps</h5>
             <ol class="mb-0">
                 <li>Use the list to search or filter existing structures.</li>
+                <li>Optionally click <strong>Select Columns</strong> (when available) to customize which fields are shown in the table.</li>
                 <li>Click <strong>Create</strong> to add a new structure, filling in required details.</li>
                 <li>Attach images and link the structure to the correct profile when needed.</li>
                 <li>Use <strong>Edit</strong> to correct or update structure information.</li>
+                <li>Use <strong>Export</strong> to download a CSV of the current list based on your filters and selected columns.</li>
             </ol>
         </div>
     </div>
@@ -110,7 +112,7 @@ ob_start();
             <h5 class="mb-2">Parts</h5>
             <ul class="mb-0">
                 <li><strong>Filters / search</strong> – Narrow down the list of structures.</li>
-                <li><strong>Table of structures</strong> – Shows key fields like ID, profile, location, and status.</li>
+                <li><strong>Table of structures</strong> – Shows key fields like ID, profile, location, and status; can be customized via <em>Select Columns</em> in list pages.</li>
                 <li><strong>Actions</strong> – View, edit, or delete a structure (based on your permissions).</li>
             </ul>
         </div>
@@ -249,6 +251,13 @@ ob_start();
                     or click <strong>Create</strong> to log a new grievance.
                 </li>
                 <li>
+                    Use <strong>Select Columns</strong> (when available) to choose which fields appear in the table,
+                    for both on-screen viewing and export.
+                </li>
+                <li>
+                    Click <strong>Export</strong> to download a CSV of grievances using your current filters and column selection.
+                </li>
+                <li>
                     When creating a grievance, fill in complainant details, choose the correct category, channel, and
                     preferred language, and describe the issue clearly.
                 </li>
@@ -283,7 +292,7 @@ ob_start();
                 </li>
                 <li>
                     <strong>Grievance list</strong> – Searchable, filterable table of grievances with quick access
-                    to view or edit, depending on your permissions.
+                    to view or edit, depending on your permissions; supports <em>Select Columns</em> and CSV <em>Export</em>.
                 </li>
                 <li>
                     <strong>Grievance detail</strong> – Full information for a single grievance, including history and
@@ -337,8 +346,10 @@ ob_start();
             <ol class="mb-0">
                 <li>Open <strong>Library</strong> &rarr; <em>Project</em> from the navigation.</li>
                 <li>Use filters or search to find an existing project.</li>
+                <li>Optionally use <strong>Select Columns</strong> (when available) to customize which project fields are shown in the table.</li>
                 <li>Click <strong>Create</strong> to add a new project and fill in the required details.</li>
                 <li>Use <strong>Edit</strong> to update project information when names or statuses change.</li>
+                <li>Use <strong>Export</strong> to download a CSV of projects based on your current filters and selected columns.</li>
                 <li>Confirm that projects are correctly linked to profiles and users where applicable.</li>
             </ol>
         </div>
@@ -348,7 +359,7 @@ ob_start();
             <h5 class="mb-2">Parts</h5>
             <ul class="mb-0">
                 <li><strong>Filters and search</strong> – Narrow down projects by keywords or other fields.</li>
-                <li><strong>Project list</strong> – Shows project identifiers, names, and statuses.</li>
+                <li><strong>Project list</strong> – Shows project identifiers, names, and statuses; can be customized via <em>Select Columns</em> and exported to CSV.</li>
                 <li><strong>Actions</strong> – View, edit, or delete (if allowed) individual projects.</li>
             </ul>
         </div>
@@ -368,8 +379,8 @@ ob_start();
         <div class="card-body">
             <h5 class="mb-2">Overview of the module</h5>
             <p class="mb-0">
-                The Settings module controls application-level configuration such as general settings, email (SMTP),
-                security options, and UI preferences.
+                The Settings and System configuration screens control application-level behavior such as branding,
+                general options, email (SMTP), security, and UI/notification preferences.
             </p>
         </div>
     </div>
@@ -377,11 +388,11 @@ ob_start();
         <div class="card-body">
             <h5 class="mb-2">Steps</h5>
             <ol class="mb-0">
-                <li>Open <strong>Settings</strong> from the main navigation.</li>
-                <li>Review the available sections (General, Email, Security, UI) depending on your permissions.</li>
+                <li>Open <strong>System &rarr; General</strong> to configure branding (app name, company name, logo) and core general options like region and timezone.</li>
+                <li>Open <strong>Settings</strong> for application-level settings such as Email and Security, depending on your permissions.</li>
                 <li>Change values carefully and click <strong>Save</strong> on each section you modify.</li>
                 <li>Use the <strong>Test email</strong> function in Email settings to verify SMTP configuration.</li>
-                <li>After changes, confirm that logins, notifications, and security features still work as expected.</li>
+                <li>After changes, confirm that logins, notifications, branding, and security features still work as expected.</li>
             </ol>
         </div>
     </div>
@@ -389,9 +400,10 @@ ob_start();
         <div class="card-body">
             <h5 class="mb-2">Parts</h5>
             <ul class="mb-0">
-                <li><strong>General</strong> – Application name, base URL, and other global options.</li>
+                <li><strong>Branding (System &rarr; General)</strong> – App name, company/organization name, and logo upload (also used as favicon).</li>
+                <li><strong>General options</strong> – Region and timezone used for date/time display and other global behavior.</li>
                 <li><strong>Email (SMTP)</strong> – SMTP host, port, encryption, and credentials; includes a test mail action.</li>
-                <li><strong>Security</strong> – Password policies, 2FA, and other hardening options.</li>
+                <li><strong>Security</strong> – Password policies, 2FA, login throttling, and other hardening options.</li>
                 <li><strong>UI / Notifications</strong> – User interface preferences and notification defaults.</li>
             </ul>
         </div>
@@ -400,7 +412,7 @@ ob_start();
         <div class="card-body">
             <h5 class="mb-2">FAQs</h5>
             <ul class="mb-0">
-                <li><strong>My changes did not apply.</strong> – Ensure you clicked Save on the correct section and have the required capability.</li>
+                <li><strong>My branding changes did not appear.</strong> – Ensure you saved on the <strong>System &rarr; General</strong> page and refresh your browser cache.</li>
                 <li><strong>Test email fails.</strong> – Double-check SMTP credentials, server, and firewall rules from the PAPeR server.</li>
                 <li><strong>I can’t see Security settings.</strong> – Only users with security-related capabilities can view or edit that section.</li>
             </ul>
@@ -423,6 +435,8 @@ ob_start();
             <ol class="mb-0">
                 <li>Open <strong>User Management</strong> and choose either <em>Users</em> or <em>User Roles &amp; Capabilities</em>.</li>
                 <li>In <strong>Users</strong>, search for an existing user or click <strong>Create</strong> to add a new account.</li>
+                <li>Optionally use <strong>Select Columns</strong> (when available) on the Users list to show the fields you care about most.</li>
+                <li>Use <strong>Export</strong> on the Users list to download a CSV of users based on your filters and selected columns.</li>
                 <li>Assign an appropriate role and, if needed, link the user to specific projects.</li>
                 <li>In <strong>User Roles &amp; Capabilities</strong>, adjust which modules and actions each role is allowed to access.</li>
                 <li>Save changes and confirm that users can access the intended modules (and not more than necessary).</li>
@@ -433,7 +447,7 @@ ob_start();
         <div class="card-body">
             <h5 class="mb-2">Parts</h5>
             <ul class="mb-0">
-                <li><strong>Users</strong> – List and manage individual user accounts (login, name, email, role, status).</li>
+                <li><strong>Users</strong> – List and manage individual user accounts (login, name, email, role, status), with optional <em>Select Columns</em> and CSV <em>Export</em>.</li>
                 <li><strong>User Roles &amp; Capabilities</strong> – Configure which actions and modules each role can use.</li>
             </ul>
         </div>
@@ -716,7 +730,6 @@ ob_start();
         </p>
     </div>
 </div>
-                              ,,,,,,,,,,,
 <?php
 $content = ob_get_clean();
 $currentPage = '';

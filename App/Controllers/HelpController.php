@@ -35,9 +35,12 @@ class HelpController extends Controller
                 return 'structure';
             case 'library':
                 return 'library';
+            case 'notifications':
+                return 'notifications';
             case 'settings':
             case 'security-settings':
             case 'general':
+            case 'email-settings':
                 return 'settings';
             case 'users':
             case 'user-roles':
@@ -54,6 +57,12 @@ class HelpController extends Controller
             case 'grievance-categories':
             case 'grievance-progress-levels':
                 return 'grievance';
+            case 'audit-trail':
+                return 'audit-trail';
+            case 'debug-log':
+                return 'debug-log';
+            case 'development':
+                return 'development';
             case 'account':
                 return 'account';
             default:
