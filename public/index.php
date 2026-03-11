@@ -136,6 +136,7 @@ $router->get('/serve/structure', 'StructureController@serveImage');
 $router->get('/serve/profile', 'ProfileController@serveProfileFile');
 $router->get('/serve/grievance', 'GrievanceController@serveGrievanceAttachment');
 $router->get('/serve/grievance-card-attachment', 'GrievanceController@serveGrievanceCardAttachment');
+$router->get('/serve/app-logo', 'AssetController@logo');
 
 // REST API Auth (token-based)
 $router->post('/api/auth/login', 'Api\AuthController@login');

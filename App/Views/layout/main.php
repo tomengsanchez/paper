@@ -6,6 +6,16 @@ $uiMobileFriendly = !empty($ui['mobile_friendly']);
 $currentPage = $currentPage ?? '';
 $devClockSimulated = \Core\Auth::id() && \App\DevClock::isOverridden();
 $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
+$branding = \App\Models\AppSettings::getBrandingConfig();
+$defaultTitle = $branding->app_name ?? 'PAPeR';
+if (!empty($branding->company_name)) {
+    $defaultTitle .= ' - ' . $branding->company_name;
+} else {
+    $defaultTitle .= ' - Project Affected Profiles and Redress';
+}
+$baseUrl = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+$logoPath = $branding->logo_path ?? '';
+$logoUrl = $logoPath !== '' ? $baseUrl . '/serve/app-logo' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,7 +23,10 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= htmlspecialchars(\Core\Csrf::token()) ?>">
-    <title><?= htmlspecialchars($pageTitle ?? 'PAPeR - Project Affected Profiles and Redress') ?></title>
+    <title><?= htmlspecialchars($pageTitle ?? $defaultTitle) ?></title>
+    <?php if ($logoUrl !== ''): ?>
+    <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoUrl) ?>">
+    <?php endif; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
@@ -110,7 +123,12 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
 <body class="ui-theme-<?= htmlspecialchars($uiTheme) ?> ui-layout-<?= htmlspecialchars($uiLayout) ?><?= $uiMobileFriendly ? ' ui-mobile-friendly' : '' ?>">
 <?php if ($uiLayout === 'top'): ?>
     <nav class="topnav">
-        <a href="/" class="brand">PAPeR</a>
+        <a href="/" class="brand">
+            <?php if ($logoUrl !== ''): ?>
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="<?= htmlspecialchars($branding->app_name ?? 'Logo') ?>" style="height:24px;width:auto;margin-right:0.4rem;vertical-align:middle;object-fit:contain;">
+            <?php endif; ?>
+            <?= htmlspecialchars($branding->app_name ?? 'PAPeR') ?>
+        </a>
         <?php if (\Core\Auth::can('view_profiles')): ?>
         <a href="/profile" class="nav-link <?= $currentPage === 'profile' ? 'active' : '' ?>">Profile</a>
         <?php endif; ?>
@@ -228,7 +246,12 @@ $devClockDate = $devClockSimulated ? \App\DevClock::getOverride() : null;
 <?php else: ?>
     <?php if ($uiMobileFriendly): ?><div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div><?php endif; ?>
     <aside class="sidebar" id="main-sidebar">
-        <a href="/" class="brand">PAPeR</a>
+        <a href="/" class="brand">
+            <?php if ($logoUrl !== ''): ?>
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="<?= htmlspecialchars($branding->app_name ?? 'Logo') ?>" style="height:24px;width:auto;margin-right:0.4rem;vertical-align:middle;object-fit:contain;">
+            <?php endif; ?>
+            <?= htmlspecialchars($branding->app_name ?? 'PAPeR') ?>
+        </a>
         <nav class="py-2">
             <?php if (\Core\Auth::can('view_profiles')): ?>
             <a href="/profile" class="<?= $currentPage === 'profile' ? 'active' : '' ?>">Profile</a>
