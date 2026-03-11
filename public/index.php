@@ -156,6 +156,13 @@ $router->get('/api/dashboard', 'Api\DashboardController@index');
 // API for grievance dashboard aggregates (AJAX)
 $router->get('/api/grievance/dashboard', 'Api\GrievanceController@dashboard');
 
+// API – settings & system configuration (admin / power users)
+$router->get('/api/settings/ui', 'Api\SettingsController@ui');
+$router->get('/api/settings/email', 'Api\SettingsController@email');
+$router->get('/api/settings/security', 'Api\SettingsController@security');
+$router->get('/api/system/general', 'Api\SettingsController@general');
+$router->get('/api/system/development', 'Api\SettingsController@development');
+
 // Profile API (CRUD + list)
 $router->get('/api/profile/list', 'Api\ProfileController@listApi');
 $router->get('/api/profile/{id}', 'Api\ProfileController@getApi');
