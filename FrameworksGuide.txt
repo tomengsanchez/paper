@@ -12,10 +12,10 @@ Main layout supports:
   - Makes tables more compact with horizontal scrolling.
   - Turns the sidebar into an overlay drawer with a hamburger toggle and backdrop.
 Application structure
-App\Controllers\ – HTTP and API controllers (e.g. dashboard, profile, structure, grievance, users, settings, security, notifications, etc.).
-App\Models\ – PDO-based models, no heavy ORM; mostly one model per table/domain.
+App\Controllers\ – HTTP and API controllers (e.g. dashboard, profile, structure, grievance, users, settings, security, notifications, etc.). – PDO-based models, no heavy ORM; mostly one model per table/domain.
 App\Views\ – module-based PHP templates with a shared layout (layout/main.php) and partials (pagination, toolbars, sidebars).
 Clear MVC pattern with role/capability-based access checks in controllers and menus.
+Export: CSV export from Profile, Structure, Grievance, Users, and Library. Select Columns and Export dialogs show all available fields (ListConfig::getExportColumns). CsvExporter streams CSV; Grievance::listForExport resolves lookup names.
 Database layer & schema
 DB config via config/database.php, used by Core\Database (PDO singleton).
 Schema defined by PHP migration scripts under database/migration_*.php and seeders under database/seed_*.php. Migrations: run via php cli/migrate.php; status via --status; rollback via --rollback or --rollback --steps=N (LIFO, requires callable 'down' in each migration).

@@ -194,6 +194,106 @@ class Grievance
         ];
     }
 
+    /**
+     * List grievances for export with full fields and resolved lookup names.
+     * Same filters as listPaginated; returns rows with vulnerability_names, respondent_type_names, etc.
+     */
+    public static function listForExport(string $search, array $searchColumns, string $sortBy, string $sortOrder, int $page, int $perPage, array $filters = []): array
+    {
+        $result = self::listPaginated($search, $searchColumns, $sortBy, $sortOrder, $page, $perPage, null, null, $filters);
+        $ids = array_map(fn($r) => (int) $r->id, $result['items']);
+        if (empty($ids)) {
+            return $result;
+        }
+        $db = self::db();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("
+            SELECT g.*,
+                COALESCE(p.full_name, g.respondent_full_name) as respondent_name,
+                p.full_name as profile_name,
+                proj.name as project_name,
+                pl.name as progress_level_name
+            FROM grievances g
+            LEFT JOIN profiles p ON p.id = g.profile_id
+            LEFT JOIN projects proj ON proj.id = g.project_id
+            LEFT JOIN grievance_progress_levels pl ON pl.id = g.progress_level
+            WHERE g.id IN ($placeholders)
+        ");
+        $stmt->execute($ids);
+        $fullRows = $stmt->fetchAll(\PDO::FETCH_OBJ);
+        $fullById = [];
+        foreach ($fullRows as $r) {
+            $fullById[(int) $r->id] = $r;
+        }
+        $vulnNames = self::resolveLookupNames($db, 'grievance_vulnerabilities', array_unique(array_merge(...array_map(function ($r) {
+            return Grievance::parseJson($r->vulnerability_ids ?? '');
+        }, $fullRows))));
+        $respNames = self::resolveLookupNames($db, 'grievance_respondent_types', array_unique(array_merge(...array_map(function ($r) {
+            return Grievance::parseJson($r->respondent_type_ids ?? '');
+        }, $fullRows))));
+        $grmNames = self::resolveLookupNames($db, 'grievance_grm_channels', array_unique(array_merge(...array_map(function ($r) {
+            return Grievance::parseJson($r->grm_channel_ids ?? '');
+        }, $fullRows))));
+        $langNames = self::resolveLookupNames($db, 'grievance_preferred_languages', array_unique(array_merge(...array_map(function ($r) {
+            return Grievance::parseJson($r->preferred_language_ids ?? '');
+        }, $fullRows))));
+        $typeNames = self::resolveLookupNames($db, 'grievance_types', array_unique(array_merge(...array_map(function ($r) {
+            return Grievance::parseJson($r->grievance_type_ids ?? '');
+        }, $fullRows))));
+        $catNames = self::resolveLookupNames($db, 'grievance_categories', array_unique(array_merge(...array_map(function ($r) {
+            return Grievance::parseJson($r->grievance_category_ids ?? '');
+        }, $fullRows))));
+
+        $ordered = [];
+        foreach ($result['items'] as $r) {
+            $id = (int) $r->id;
+            $full = $fullById[$id] ?? $r;
+            $full->vulnerability_names = implode(', ', array_map(fn($id) => $vulnNames[$id] ?? '', Grievance::parseJson($full->vulnerability_ids ?? '')));
+            $full->respondent_type_names = implode(', ', array_map(fn($id) => $respNames[$id] ?? '', Grievance::parseJson($full->respondent_type_ids ?? '')));
+            $full->grm_channel_names = implode(', ', array_map(fn($id) => $grmNames[$id] ?? '', Grievance::parseJson($full->grm_channel_ids ?? '')));
+            $full->preferred_language_names = implode(', ', array_map(fn($id) => $langNames[$id] ?? '', Grievance::parseJson($full->preferred_language_ids ?? '')));
+            $full->grievance_type_names = implode(', ', array_map(fn($id) => $typeNames[$id] ?? '', Grievance::parseJson($full->grievance_type_ids ?? '')));
+            $full->grievance_category_names = implode(', ', array_map(fn($id) => $catNames[$id] ?? '', Grievance::parseJson($full->grievance_category_ids ?? '')));
+            if (isset($full->is_paps)) {
+                $full->is_paps = $full->is_paps ? 'Yes' : 'No';
+            }
+            if (isset($full->location_same_as_address)) {
+                $full->location_same_as_address = $full->location_same_as_address ? 'Yes' : 'No';
+            }
+            if (isset($full->incident_one_time)) {
+                $full->incident_one_time = $full->incident_one_time ? 'Yes' : 'No';
+            }
+            if (isset($full->incident_multiple)) {
+                $full->incident_multiple = $full->incident_multiple ? 'Yes' : 'No';
+            }
+            if (isset($full->incident_ongoing)) {
+                $full->incident_ongoing = $full->incident_ongoing ? 'Yes' : 'No';
+            }
+            $ordered[] = $full;
+        }
+        $result['items'] = $ordered;
+        return $result;
+    }
+
+    private static function resolveLookupNames(\PDO $db, string $table, array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+        $ids = array_unique(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT id, name FROM {$table} WHERE id IN ($placeholders)");
+        $stmt->execute($ids);
+        $out = [];
+        while ($row = $stmt->fetch(\PDO::FETCH_OBJ)) {
+            $out[(int) $row->id] = $row->name;
+        }
+        return $out;
+    }
+
     public static function create(array $data): int
     {
         $db = self::db();

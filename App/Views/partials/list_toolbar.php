@@ -2,6 +2,7 @@
 // Expects: $listModule, $listBaseUrl, $listSearch, $listSort, $listOrder, $listColumns, $listAllColumns, $listPagination, $listHasCustomColumns
 // Optional: $listExtraParams (associative array of extra query params to preserve across actions)
 // Optional: $listCanExport (bool), $listExportUrl (string)
+// Optional: $listExportColumns (array) - all fields for both Select Columns and Export dialogs; if not set, falls back to $listAllColumns
 $listModule = $listModule ?? '';
 $listBaseUrl = $listBaseUrl ?? '';
 $listSearch = $listSearch ?? '';
@@ -13,6 +14,7 @@ $listPagination = $listPagination ?? ['total' => 0, 'page' => 1, 'per_page' => 1
 $listHasCustomColumns = $listHasCustomColumns ?? false;
 $listExtraParams = $listExtraParams ?? [];
 $listCanExport = $listCanExport ?? false;
+$listExportColumns = $listExportColumns ?? $listAllColumns ?? [];
 $listExportUrl = $listExportUrl ?? ($listBaseUrl !== '' ? $listBaseUrl . '/export' : '');
 $p = $listPagination;
 $modalId = 'listColumnsModal_' . preg_replace('/[^a-z0-9]/', '_', $listModule);
@@ -64,16 +66,41 @@ foreach ($listExtraParams as $k => $v) {
                     <input type="hidden" name="sort" value="<?= htmlspecialchars($listSort) ?>">
                     <input type="hidden" name="order" value="<?= htmlspecialchars($listOrder) ?>">
                     <input type="hidden" name="per_page" value="<?= (int)($p['per_page'] ?? 15) ?>">
-                    <p class="text-muted small">Selected columns are shown and used for search.</p>
-                    <?php foreach ($listAllColumns as $col): $checked = in_array($col['key'], $listColumns); ?>
-                    <div class="form-check"><input class="form-check-input list-col-cb" type="checkbox" name="col[]" value="<?= htmlspecialchars($col['key']) ?>" id="col_<?= $modalId ?>_<?= htmlspecialchars($col['key']) ?>" <?= $checked ? 'checked' : '' ?>><label class="form-check-label" for="col_<?= $modalId ?>_<?= htmlspecialchars($col['key']) ?>"><?= htmlspecialchars($col['label']) ?></label></div>
+                    <?php foreach ($listExtraParams as $k => $v): if ($v === '' || $v === null) continue; ?>
+                    <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars((string)$v) ?>">
                     <?php endforeach; ?>
+                    <div class="mb-2">
+                        <div class="form-label form-label-sm mb-1 d-flex justify-content-between align-items-center">
+                            <span>Columns</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="columnsSelectAll_<?= $modalId ?>">Select all</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="columnsDeselectAll_<?= $modalId ?>">Deselect all</button>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-1">Selected columns are shown in the table and used for search. All available fields are listed below.</p>
+                        <div class="border rounded p-2" style="max-height: 280px; overflow-y: auto;">
+                        <?php foreach ($listExportColumns as $col): $checked = in_array($col['key'], $listColumns, true); ?>
+                        <div class="form-check"><input class="form-check-input list-col-cb columns-col-cb" type="checkbox" name="col[]" value="<?= htmlspecialchars($col['key']) ?>" id="col_<?= $modalId ?>_<?= htmlspecialchars($col['key']) ?>" data-columns-modal="<?= $modalId ?>" <?= $checked ? 'checked' : '' ?>><label class="form-check-label" for="col_<?= $modalId ?>_<?= htmlspecialchars($col['key']) ?>"><?= htmlspecialchars($col['label']) ?></label></div>
+                        <?php endforeach; ?>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Apply</button></div>
             </form>
         </div>
     </div>
 </div>
+<script>
+(function() {
+    var mid = '<?= $modalId ?>';
+    document.getElementById('columnsSelectAll_' + mid)?.addEventListener('click', function() {
+        document.querySelectorAll('#<?= $modalId ?> .columns-col-cb').forEach(function(cb) { cb.checked = true; });
+    });
+    document.getElementById('columnsDeselectAll_' + mid)?.addEventListener('click', function() {
+        document.querySelectorAll('#<?= $modalId ?> .columns-col-cb').forEach(function(cb) { cb.checked = false; });
+    });
+})();
+</script>
 
 <?php if ($listCanExport && $listExportUrl !== ''): ?>
 <div class="modal fade" id="<?= $exportModalId ?>" tabindex="-1">
@@ -133,16 +160,24 @@ foreach ($listExtraParams as $k => $v) {
                     <?php endif; ?>
 
                     <div class="mb-2">
-                        <div class="form-label form-label-sm mb-1">Columns</div>
-                        <p class="text-muted small mb-1">Select which columns to include in the export.</p>
-                        <?php foreach ($listAllColumns as $col): $checked = in_array($col['key'], $listColumns, true); ?>
+                        <div class="form-label form-label-sm mb-1 d-flex justify-content-between align-items-center">
+                            <span>Columns</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="exportSelectAll_<?= $exportModalId ?>">Select all</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="exportDeselectAll_<?= $exportModalId ?>">Deselect all</button>
+                            </div>
+                        </div>
+                        <p class="text-muted small mb-1">Select which columns to include in the export. All available fields are listed below.</p>
+                        <div class="border rounded p-2" style="max-height: 280px; overflow-y: auto;">
+                        <?php foreach ($listExportColumns as $col): $checked = in_array($col['key'], $listColumns, true); ?>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="col[]" value="<?= htmlspecialchars($col['key']) ?>" id="exportcol_<?= $exportModalId ?>_<?= htmlspecialchars($col['key']) ?>" <?= $checked ? 'checked' : '' ?>>
+                            <input class="form-check-input export-col-cb" type="checkbox" name="col[]" value="<?= htmlspecialchars($col['key']) ?>" id="exportcol_<?= $exportModalId ?>_<?= htmlspecialchars($col['key']) ?>" data-export-modal="<?= $exportModalId ?>" <?= $checked ? 'checked' : '' ?>>
                             <label class="form-check-label" for="exportcol_<?= $exportModalId ?>_<?= htmlspecialchars($col['key']) ?>">
                                 <?= htmlspecialchars($col['label']) ?>
                             </label>
                         </div>
                         <?php endforeach; ?>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -153,4 +188,15 @@ foreach ($listExtraParams as $k => $v) {
         </div>
     </div>
 </div>
+<script>
+(function() {
+    var mid = '<?= $exportModalId ?>';
+    document.getElementById('exportSelectAll_' + mid)?.addEventListener('click', function() {
+        document.querySelectorAll('#<?= $exportModalId ?> .export-col-cb').forEach(function(cb) { cb.checked = true; });
+    });
+    document.getElementById('exportDeselectAll_' + mid)?.addEventListener('click', function() {
+        document.querySelectorAll('#<?= $exportModalId ?> .export-col-cb').forEach(function(cb) { cb.checked = false; });
+    });
+})();
+</script>
 <?php endif; ?>

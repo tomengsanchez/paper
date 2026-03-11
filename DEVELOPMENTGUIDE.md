@@ -23,6 +23,8 @@ paper/
 │   ├── UserProjects.php    # Resolve allowed project IDs for current user
 │   ├── DashboardConfig.php # Grievance dashboard widget config
 │   ├── ListHelper.php     # List column helpers
+│   ├── ListConfig.php     # Column config (table + export); getExportColumns for all available fields
+│   ├── CsvExporter.php    # CSV stream export
 │   └── ...
 ├── Core/                  # Framework core
 │   ├── Router.php         # Route registration and dispatch (Controller@action)
@@ -135,6 +137,7 @@ paper/
 - **Password policy:** `App\PasswordPolicy` enforces admin-configured rules on new/changed passwords: minimum length, required character classes, optional expiry (`password_expiry_days`), and history (`password_history_limit`). UserController uses this when creating/updating users; Auth controllers enforce expiry on login (web and API).
 - **Views:** Layout in `App/Views/layout/main.php`; `$currentPage` and `$pageTitle` for nav/title; `$content` for main body (views often use ob_start() and then require main.php).
 - **List pages:** Use list_pagination.php and list_toolbar.php; pass listPagination, listBaseUrl, listExtraParams for filters (e.g. notifications page).
+- **List columns and export:** `App\ListConfig` defines table columns (`getColumns`) and export columns (`getExportColumns`). Both the **Select Columns** and **Export** dialogs use `listExportColumns` (from `getExportColumns`) so users can choose from all available fields, not just table columns. Pass `listExportColumns` in index view data; controllers validate selected columns against export config. Export routes: `/profile/export`, `/structure/export`, `/grievance/export`, `/users/export`, `/library/export`. `App\CsvExporter::stream($filename, $headers, $rows, $keys)` produces CSV. Grievance export uses `Grievance::listForExport()` to fetch full rows with resolved lookup names (vulnerabilities, respondent types, GRM channels, etc.).
 - **Truncate scripts:** `truncate_seed_tables.php` truncates notifications, audit_log, structures, profiles, projects (with FOREIGN_KEY_CHECKS). `truncate_grievances.php` truncates grievance_status_log, grievances. After truncate, re-seed as needed; migrations and user/preference data remain.
 
 ---

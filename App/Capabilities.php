@@ -40,6 +40,7 @@ class Capabilities
             'add_projects'    => 'Add',
             'edit_projects'   => 'Edit',
             'delete_projects' => 'Delete',
+            'export_projects' => 'Export',
         ],
         'Settings' => [
             'view_settings' => 'View',

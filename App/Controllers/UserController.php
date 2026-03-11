@@ -56,6 +56,7 @@ class UserController extends Controller
             'listOrder' => $order,
             'listColumns' => $columns,
             'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listExportColumns' => ListConfig::getExportColumns(self::LIST_MODULE),
             'listPagination' => $pagination,
             'listHasCustomColumns' => ListConfig::hasCustomColumns(self::LIST_MODULE),
         ]);
@@ -89,21 +90,21 @@ class UserController extends Controller
         $scope = $_GET['scope'] ?? 'filtered';
         $selectedCols = $_GET['col'] ?? [];
         if (!is_array($selectedCols) || empty($selectedCols)) {
-            $selectedCols = $columns;
+            $selectedCols = array_column(ListConfig::getExportColumns(self::LIST_MODULE), 'key');
         }
 
-        $allCols = ListConfig::getColumns(self::LIST_MODULE);
+        $exportCols = ListConfig::getExportColumns(self::LIST_MODULE);
         $validKeys = [];
         $headers = [];
-        foreach ($allCols as $col) {
+        foreach ($exportCols as $col) {
             if (in_array($col['key'], $selectedCols, true)) {
                 $validKeys[] = $col['key'];
                 $headers[] = $col['label'];
             }
         }
         if (empty($validKeys)) {
-            $validKeys = array_column($allCols, 'key');
-            $headers = array_column($allCols, 'label');
+            $validKeys = array_column($exportCols, 'key');
+            $headers = array_column($exportCols, 'label');
         }
 
         if ($scope === 'page') {

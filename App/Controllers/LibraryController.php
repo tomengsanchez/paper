@@ -4,6 +4,7 @@ namespace App\Controllers;
 use Core\Controller;
 use App\Models\Project;
 use App\ListConfig;
+use App\CsvExporter;
 
 class LibraryController extends Controller
 {
@@ -37,6 +38,7 @@ class LibraryController extends Controller
             'listOrder' => $order,
             'listColumns' => $columns,
             'listAllColumns' => ListConfig::getColumns(self::LIST_MODULE),
+            'listExportColumns' => ListConfig::getExportColumns(self::LIST_MODULE),
             'listPagination' => $pagination,
             'listHasCustomColumns' => ListConfig::hasCustomColumns(self::LIST_MODULE),
         ]);
@@ -98,5 +100,47 @@ class LibraryController extends Controller
         $this->requireCapability('delete_projects');
         Project::delete($id);
         $this->redirect('/library');
+    }
+
+    public function export(): void
+    {
+        $this->requireCapability('export_projects');
+        $columns = ListConfig::resolveFromRequest(self::LIST_MODULE);
+        $search = trim($_GET['q'] ?? '');
+        $sort = $_GET['sort'] ?? ($columns[0] ?? 'id');
+        $order = in_array(strtolower($_GET['order'] ?? ''), ['asc', 'desc']) ? strtolower($_GET['order']) : 'desc';
+
+        $scope = $_GET['scope'] ?? 'filtered';
+        $selectedCols = $_GET['col'] ?? [];
+        if (!is_array($selectedCols) || empty($selectedCols)) {
+            $selectedCols = array_column(ListConfig::getExportColumns(self::LIST_MODULE), 'key');
+        }
+
+        $exportCols = ListConfig::getExportColumns(self::LIST_MODULE);
+        $validKeys = [];
+        $headers = [];
+        foreach ($exportCols as $col) {
+            if (in_array($col['key'], $selectedCols, true)) {
+                $validKeys[] = $col['key'];
+                $headers[] = $col['label'];
+            }
+        }
+        if (empty($validKeys)) {
+            $validKeys = array_column($exportCols, 'key');
+            $headers = array_column($exportCols, 'label');
+        }
+
+        if ($scope === 'page') {
+            $page = max(1, (int) ($_GET['page'] ?? 1));
+            $perPage = max(10, min(100, (int) ($_GET['per_page'] ?? 15)));
+        } else {
+            $page = 1;
+            $perPage = 10000;
+        }
+
+        $pagination = Project::listPaginated($search, $columns, $sort, $order, $page, $perPage);
+        $rows = $pagination['items'] ?? [];
+
+        CsvExporter::stream('projects', $headers, $rows, $validKeys);
     }
 }
