@@ -119,4 +119,34 @@ class AppSettings
         $historyLimit = max(0, min(50, $historyLimit));
         self::set('password_history_limit', (string) $historyLimit);
     }
+
+    /**
+     * Branding (app name, company name, logo).
+     */
+    public static function getBrandingConfig(): object
+    {
+        // Defaults keep existing behavior if not configured
+        $appName = self::get('app_name', 'PAPeR');
+        $companyName = self::get('company_name', '');
+        $logoPath = self::get('app_logo_path', '');
+        return (object) [
+            'app_name' => $appName,
+            'company_name' => $companyName,
+            'logo_path' => $logoPath,
+        ];
+    }
+
+    public static function saveBrandingConfig(array $data): void
+    {
+        $appName = trim($data['app_name'] ?? '');
+        $companyName = trim($data['company_name'] ?? '');
+        if ($appName === '') {
+            $appName = 'PAPeR';
+        }
+        self::set('app_name', $appName);
+        self::set('company_name', $companyName);
+        if (!empty($data['logo_path'])) {
+            self::set('app_logo_path', (string) $data['logo_path']);
+        }
+    }
 }
