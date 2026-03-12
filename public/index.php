@@ -25,6 +25,7 @@ $router->post('/profile/store', 'ProfileController@store');
 $router->get('/profile/edit/{id}', 'ProfileController@edit');
 $router->post('/profile/update/{id}', 'ProfileController@update');
 $router->post('/profile/delete/{id}', 'ProfileController@delete');
+$router->post('/profile/import', 'ProfileController@import');
 $router->get('/structure', 'StructureController@index');
 $router->get('/structure/export', 'StructureController@export');
 $router->get('/structure/view/{id}', 'StructureController@show');

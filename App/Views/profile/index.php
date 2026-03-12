@@ -8,7 +8,12 @@ ob_start();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Profiles</h2>
-    <?php if (\Core\Auth::can('add_profiles')): ?><a href="/profile/create" class="btn btn-primary">Add Profile</a><?php endif; ?>
+    <div class="d-flex gap-2">
+        <?php if (\Core\Auth::can('add_profiles')): ?>
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#profileImportModal">Import</button>
+            <a href="/profile/create" class="btn btn-primary">Add Profile</a>
+        <?php endif; ?>
+    </div>
 </div>
 <?php
 $listCanExport = \Core\Auth::can('export_profiles');
@@ -87,11 +92,44 @@ require __DIR__ . '/../partials/list_toolbar.php';
     </div>
 </div>
 <?php require __DIR__ . '/../partials/list_pagination.php'; ?>
+
+<div class="modal fade" id="profileImportModal" tabindex="-1" aria-labelledby="profileImportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileImportModalLabel">Import Profiles from CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="profile-import-form" action="/profile/import" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <?= \Core\Csrf::field() ?>
+                    <div class="mb-3">
+                        <label for="profiles_file" class="form-label">CSV file</label>
+                        <input type="file" name="profiles_file" id="profiles_file" class="form-control" accept=".csv" required>
+                        <div class="form-text">
+                            Expected columns (header row, case-insensitive):
+                            <code>papsid</code> (optional), <code>control_number</code> (optional, but either PAPSID or control_number is required),
+                            <code>full_name</code> (required), <code>age</code>, <code>contact_number</code>, <code>project_id</code> (numeric project ID).
+                            Rows with unknown <code>project_id</code> will fail and be listed in the error summary.
+                        </div>
+                    </div>
+                    <div id="profile-import-result" class="alert alert-info small d-none" role="status"></div>
+                    <div id="profile-import-errors" class="alert alert-warning small d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" id="profile-import-submit" class="btn btn-primary">Validate &amp; Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <?php
 $content = ob_get_clean();
 $pageTitle = 'Profile';
 $currentPage = 'profile';
-$scripts = '<script>
+$scripts = <<<HTML
+<script>
 $(function(){
     $(document).on("click", ".profile-other-details", function(e){
         e.preventDefault();
@@ -99,7 +137,60 @@ $(function(){
         wrap.find(".profile-other-expanded").toggleClass("d-none");
         wrap.find(".profile-other-summary").toggleClass("d-none");
     });
+
+    var \$importForm = $('#profile-import-form');
+    if (\$importForm.length) {
+        \$importForm.on('submit', function(e){
+            e.preventDefault();
+            var form = this;
+            var formData = new FormData(form);
+            $('#profile-import-result').removeClass('d-none').text('Validating and importing, please wait...');
+            $('#profile-import-errors').addClass('d-none').empty();
+            $('#profile-import-submit').prop('disabled', true);
+
+            $.ajax({
+                url: form.action,
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json'
+            }).done(function(resp){
+                if (!resp || !resp.status) {
+                    $('#profile-import-result').text('Unexpected response from server.');
+                    return;
+                }
+                var summary = 'Import completed. Total rows: ' + (resp.total_rows || 0)
+                    + ', Inserted: ' + (resp.inserted || 0)
+                    + ', Updated: ' + (resp.updated || 0)
+                    + ', Failed: ' + (resp.failed || 0) + '.';
+                $('#profile-import-result').text(summary);
+
+                if (resp.errors && resp.errors.length) {
+                    var html = '<h6>Row errors</h6><ul class="mb-0">';
+                    resp.errors.forEach(function(err){
+                        var msg = (err.messages || []).join('; ');
+                        html += '<li><strong>Row ' + (err.row || '?') + ':</strong> ' + $('<div>').text(msg).html() + '</li>';
+                    });
+                    html += '</ul>';
+                    $('#profile-import-errors').html(html).removeClass('d-none');
+                } else {
+                    // If no errors, refresh page to show new/updated records
+                    setTimeout(function(){ window.location.reload(); }, 1500);
+                }
+            }).fail(function(xhr){
+                var msg = 'Import failed.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg += ' ' + xhr.responseJSON.message;
+                }
+                $('#profile-import-result').text(msg);
+            }).always(function(){
+                $('#profile-import-submit').prop('disabled', false);
+            });
+        });
+    }
 });
-</script>';
+</script>
+HTML;
 require __DIR__ . '/../layout/main.php';
 ?>
