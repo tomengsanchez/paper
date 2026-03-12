@@ -174,6 +174,29 @@ class Profile
         return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
+    /**
+     * Find a profile by PAPSID or, if PAPSID is empty, by control number.
+     * Used by import routines to make re-imports idempotent.
+     */
+    public static function findByIdentifiers(?string $papsid, ?string $controlNumber): ?object
+    {
+        $papsid = trim((string) $papsid);
+        $controlNumber = trim((string) $controlNumber);
+        if ($papsid === '' && $controlNumber === '') {
+            return null;
+        }
+        $db = self::db();
+        if ($papsid !== '') {
+            $stmt = $db->prepare('SELECT * FROM profiles WHERE papsid = ?');
+            $stmt->execute([$papsid]);
+        } else {
+            $stmt = $db->prepare('SELECT * FROM profiles WHERE control_number = ?');
+            $stmt->execute([$controlNumber]);
+        }
+        $row = $stmt->fetch(\PDO::FETCH_OBJ);
+        return $row ?: null;
+    }
+
     public static function parseAttachments(?string $json): array
     {
         if (empty(trim($json ?? ''))) return [];

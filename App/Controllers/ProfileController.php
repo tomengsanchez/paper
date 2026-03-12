@@ -405,4 +405,196 @@ class ProfileController extends Controller
         Profile::delete($id);
         $this->redirect('/profile');
     }
+
+    /**
+     * Import profiles from an uploaded CSV file.
+     * - Validates each row before insert/update.
+     * - Uses PAPSID (if provided) or control_number as the natural key.
+     * - Hard-fails rows whose project_id does not exist.
+     * - Returns JSON summary for AJAX consumption.
+     */
+    public function import(): void
+    {
+        $this->validateCsrf();
+        // Treat import as an admin-level bulk add/update operation.
+        $this->requireCapability('add_profiles');
+
+        if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'XMLHttpRequest') {
+            http_response_code(400);
+            $this->json(['error' => 'Bad Request', 'message' => 'AJAX request required']);
+        }
+
+        $file = $_FILES['profiles_file'] ?? null;
+        if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+            http_response_code(400);
+            $this->json(['error' => 'NoFile', 'message' => 'No import file uploaded or upload failed.']);
+        }
+
+        $fp = fopen($file['tmp_name'], 'r');
+        if ($fp === false) {
+            http_response_code(500);
+            $this->json(['error' => 'FileReadError', 'message' => 'Unable to read uploaded file.']);
+        }
+
+        // Expect header row
+        $header = fgetcsv($fp);
+        if ($header === false || count($header) === 0) {
+            fclose($fp);
+            http_response_code(400);
+            $this->json(['error' => 'EmptyFile', 'message' => 'Import file is empty or has no header row.']);
+        }
+
+        $columns = array_map('trim', $header);
+        $colIndex = [];
+        foreach ($columns as $idx => $name) {
+            if ($name !== '') {
+                $colIndex[strtolower($name)] = $idx;
+            }
+        }
+
+        // Minimal required logical fields
+        $requiredCols = ['full_name'];
+        $missingRequired = [];
+        foreach ($requiredCols as $req) {
+            if (!array_key_exists($req, $colIndex)) {
+                $missingRequired[] = $req;
+            }
+        }
+        if (!empty($missingRequired)) {
+            fclose($fp);
+            http_response_code(400);
+            $this->json([
+                'error' => 'MissingColumns',
+                'message' => 'Import file is missing required column(s): ' . implode(', ', $missingRequired),
+            ]);
+        }
+
+        $rowNumber = 1; // header already read
+        $total = 0;
+        $inserted = 0;
+        $updated = 0;
+        $failed = 0;
+        $errors = [];
+
+        while (($row = fgetcsv($fp)) !== false) {
+            $rowNumber++;
+            // Skip completely empty lines
+            $nonEmpty = false;
+            foreach ($row as $cell) {
+                if (trim((string) $cell) !== '') {
+                    $nonEmpty = true;
+                    break;
+                }
+            }
+            if (!$nonEmpty) {
+                continue;
+            }
+            $total++;
+
+            $get = function (string $key) use ($colIndex, $row): string {
+                $key = strtolower($key);
+                if (!array_key_exists($key, $colIndex)) {
+                    return '';
+                }
+                $idx = $colIndex[$key];
+                return isset($row[$idx]) ? trim((string) $row[$idx]) : '';
+            };
+
+            $rowErrors = [];
+            $papsid = $get('papsid');
+            $controlNumber = $get('control_number');
+            $fullName = $get('full_name');
+            $ageStr = $get('age');
+            $contactNumber = $get('contact_number');
+            $projectIdStr = $get('project_id');
+
+            if ($papsid === '' && $controlNumber === '') {
+                $rowErrors[] = 'Either PAPSID or control_number must be provided.';
+            }
+            if ($fullName === '') {
+                $rowErrors[] = 'full_name is required.';
+            }
+
+            $age = null;
+            if ($ageStr !== '') {
+                if (!ctype_digit($ageStr)) {
+                    $rowErrors[] = 'age must be a whole number.';
+                } else {
+                    $age = (int) $ageStr;
+                    if ($age < 0 || $age > 120) {
+                        $rowErrors[] = 'age must be between 0 and 120.';
+                    }
+                }
+            }
+
+            $projectId = null;
+            if ($projectIdStr !== '') {
+                if (!ctype_digit($projectIdStr)) {
+                    $rowErrors[] = 'project_id must be a numeric ID.';
+                } else {
+                    $projectId = (int) $projectIdStr;
+                    if ($projectId > 0 && !Project::find($projectId)) {
+                        $rowErrors[] = 'Unknown project_id: ' . $projectId;
+                    }
+                }
+            }
+
+            if (!empty($rowErrors)) {
+                $failed++;
+                $errors[] = [
+                    'row' => $rowNumber,
+                    'messages' => $rowErrors,
+                ];
+                continue;
+            }
+
+            // Build data array compatible with Profile::create / update
+            $data = [
+                'papsid' => $papsid,
+                'control_number' => $controlNumber,
+                'full_name' => $fullName,
+                'age' => $age,
+                'contact_number' => $contactNumber,
+                'project_id' => $projectId,
+                'residing_in_project_affected' => false,
+                'residing_in_project_affected_note' => '',
+                'residing_in_project_affected_attachments' => json_encode([]),
+                'structure_owners' => false,
+                'structure_owners_note' => '',
+                'structure_owners_attachments' => json_encode([]),
+                'if_not_structure_owner_what' => '',
+                'if_not_structure_owner_attachments' => json_encode([]),
+                'own_property_elsewhere' => false,
+                'own_property_elsewhere_note' => '',
+                'own_property_elsewhere_attachments' => json_encode([]),
+                'availed_government_housing' => false,
+                'availed_government_housing_note' => '',
+                'availed_government_housing_attachments' => json_encode([]),
+                'hh_income' => null,
+            ];
+
+            $existing = Profile::findByIdentifiers($papsid, $controlNumber);
+            if ($existing) {
+                Profile::update((int) $existing->id, $data);
+                $updated++;
+            } else {
+                if ($papsid !== '') {
+                    Profile::createWithPapsid($papsid, $data);
+                } else {
+                    Profile::create($data);
+                }
+                $inserted++;
+            }
+        }
+        fclose($fp);
+
+        $this->json([
+            'status' => 'completed',
+            'total_rows' => $total,
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'failed' => $failed,
+            'errors' => $errors,
+        ]);
+    }
 }
